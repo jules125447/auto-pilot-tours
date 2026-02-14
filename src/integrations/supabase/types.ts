@@ -14,16 +14,252 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audio_zones: {
+        Row: {
+          audio_text: string | null
+          audio_url: string | null
+          auto_play: boolean | null
+          circuit_id: string
+          created_at: string
+          id: string
+          lat: number
+          lng: number
+          radius_meters: number | null
+          sort_order: number | null
+        }
+        Insert: {
+          audio_text?: string | null
+          audio_url?: string | null
+          auto_play?: boolean | null
+          circuit_id: string
+          created_at?: string
+          id?: string
+          lat: number
+          lng: number
+          radius_meters?: number | null
+          sort_order?: number | null
+        }
+        Update: {
+          audio_text?: string | null
+          audio_url?: string | null
+          auto_play?: boolean | null
+          circuit_id?: string
+          created_at?: string
+          id?: string
+          lat?: number
+          lng?: number
+          radius_meters?: number | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_zones_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      circuit_stops: {
+        Row: {
+          circuit_id: string
+          created_at: string
+          description: string | null
+          duration: string | null
+          id: string
+          lat: number
+          lng: number
+          photo_url: string | null
+          sort_order: number | null
+          stop_type: string | null
+          title: string
+        }
+        Insert: {
+          circuit_id: string
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          id?: string
+          lat: number
+          lng: number
+          photo_url?: string | null
+          sort_order?: number | null
+          stop_type?: string | null
+          title: string
+        }
+        Update: {
+          circuit_id?: string
+          created_at?: string
+          description?: string | null
+          duration?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          photo_url?: string | null
+          sort_order?: number | null
+          stop_type?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circuit_stops_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      circuits: {
+        Row: {
+          created_at: string
+          creator_id: string
+          description: string | null
+          difficulty: string | null
+          distance: string | null
+          duration: string | null
+          id: string
+          image_url: string | null
+          price: number
+          published: boolean | null
+          rating: number | null
+          region: string | null
+          review_count: number | null
+          route: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          difficulty?: string | null
+          distance?: string | null
+          duration?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number
+          published?: boolean | null
+          rating?: number | null
+          region?: string | null
+          review_count?: number | null
+          route?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          difficulty?: string | null
+          distance?: string | null
+          duration?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number
+          published?: boolean | null
+          rating?: number | null
+          region?: string | null
+          review_count?: number | null
+          route?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      purchases: {
+        Row: {
+          amount: number
+          circuit_id: string
+          id: string
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          circuit_id: string
+          id?: string
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          circuit_id?: string
+          id?: string
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "creator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +386,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "creator", "user"],
+    },
   },
 } as const
