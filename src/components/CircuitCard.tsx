@@ -1,10 +1,10 @@
 import { MapPin, Clock, Route, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import type { Circuit } from "@/data/circuits";
+import type { CircuitWithStops } from "@/hooks/useCircuits";
 
 interface CircuitCardProps {
-  circuit: Circuit;
+  circuit: CircuitWithStops;
   index?: number;
 }
 
@@ -16,21 +16,13 @@ const difficultyColor: Record<string, string> = {
 
 const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }}>
       <Link to={`/circuit/${circuit.id}`} className="block group">
         <div className="rounded-xl overflow-hidden bg-card shadow-card hover:shadow-elevated transition-all duration-500 hover:-translate-y-1">
           <div className="relative aspect-[4/3] overflow-hidden">
-            <img
-              src={circuit.image}
-              alt={circuit.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
+            <img src={circuit.image} alt={circuit.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
             <div className="absolute top-3 left-3">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${difficultyColor[circuit.difficulty]}`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${difficultyColor[circuit.difficulty || "Facile"]}`}>
                 {circuit.difficulty}
               </span>
             </div>
@@ -55,7 +47,7 @@ const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
               </div>
               <span className="flex items-center gap-1 text-accent">
                 <Star className="w-3.5 h-3.5 fill-current" /> {circuit.rating}
-                <span className="text-muted-foreground">({circuit.reviewCount})</span>
+                <span className="text-muted-foreground">({circuit.review_count})</span>
               </span>
             </div>
           </div>

@@ -1,19 +1,28 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, MapPin, Compass, Car } from "lucide-react";
+import { Search, MapPin, Compass, Car, Loader2 } from "lucide-react";
 import CircuitCard from "@/components/CircuitCard";
 import Header from "@/components/Header";
-import { circuits, regions } from "@/data/circuits";
+import { useCircuits } from "@/hooks/useCircuits";
 import heroImage from "@/assets/hero-jura.jpg";
+
+const regions = [
+  { name: "Jura" },
+  { name: "Côte d'Azur" },
+  { name: "Provence" },
+  { name: "Alpes" },
+];
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const { data: circuits = [], isLoading } = useCircuits();
 
   const filteredCircuits = circuits.filter((c) => {
-    const matchSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || c.region.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchRegion = !selectedRegion || c.region.includes(selectedRegion);
+    const matchSearch =
+      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.region || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchRegion = !selectedRegion || (c.region || "").includes(selectedRegion);
     return matchSearch && matchRegion;
   });
 
@@ -23,45 +32,18 @@ const Index = () => {
 
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
-        <img
-          src={heroImage}
-          alt="Route panoramique"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        <img src={heroImage} alt="Route panoramique" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-foreground/40 via-foreground/30 to-background" />
         <div className="relative z-10 text-center px-4 max-w-3xl">
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="font-display text-4xl md:text-6xl font-bold text-primary-foreground mb-4 leading-tight"
-          >
-            Explorez la France
-            <br />
-            <span className="text-accent">au volant</span>
+          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="font-display text-4xl md:text-6xl font-bold text-primary-foreground mb-4 leading-tight">
+            Explorez la France<br /><span className="text-accent">au volant</span>
           </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-primary-foreground/80 text-lg md:text-xl mb-8"
-          >
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }} className="text-primary-foreground/80 text-lg md:text-xl mb-8">
             Des circuits touristiques guidés par GPS avec commentaires audio automatiques
           </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="relative max-w-lg mx-auto"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="relative max-w-lg mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Rechercher un circuit ou une région..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-card/95 backdrop-blur-sm text-foreground shadow-elevated text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
+            <input type="text" placeholder="Rechercher un circuit ou une région..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-4 rounded-2xl bg-card/95 backdrop-blur-sm text-foreground shadow-elevated text-base focus:outline-none focus:ring-2 focus:ring-primary/50" />
           </motion.div>
         </div>
       </section>
@@ -75,13 +57,7 @@ const Index = () => {
               { icon: MapPin, title: "Audio géolocalisé", desc: "Commentaires automatiques déclenchés par votre position" },
               { icon: Car, title: "Mode conduite", desc: "Interface plein écran optimisée pour le volant" },
             ].map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 + i * 0.1 }}
-                className="flex items-start gap-4 p-4"
-              >
+              <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.1 }} className="flex items-start gap-4 p-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <f.icon className="w-6 h-6 text-primary" />
                 </div>
@@ -99,26 +75,11 @@ const Index = () => {
       <section className="py-8">
         <div className="container">
           <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            <button
-              onClick={() => setSelectedRegion(null)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                !selectedRegion
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
+            <button onClick={() => setSelectedRegion(null)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${!selectedRegion ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
               Tous les circuits
             </button>
             {regions.map((r) => (
-              <button
-                key={r.name}
-                onClick={() => setSelectedRegion(r.name)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                  selectedRegion === r.name
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
+              <button key={r.name} onClick={() => setSelectedRegion(r.name)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${selectedRegion === r.name ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
                 {r.name}
               </button>
             ))}
@@ -132,7 +93,11 @@ const Index = () => {
           <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-6">
             {selectedRegion ? `Circuits en ${selectedRegion}` : "Circuits populaires"}
           </h2>
-          {filteredCircuits.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : filteredCircuits.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               <Compass className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg">Aucun circuit trouvé</p>
@@ -148,7 +113,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="container text-center text-sm text-muted-foreground">
           <p>© 2026 RoadTrip — Circuits touristiques guidés en France</p>
