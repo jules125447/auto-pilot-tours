@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark } from "lucide-react";
-import { circuits } from "@/data/circuits";
+import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2 } from "lucide-react";
+import { useCircuit } from "@/hooks/useCircuits";
 import RouteMap from "@/components/RouteMap";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
@@ -20,7 +20,15 @@ const stopTypeLabels: Record<string, string> = {
 
 const CircuitDetail = () => {
   const { id } = useParams();
-  const circuit = circuits.find((c) => c.id === id);
+  const { data: circuit, isLoading } = useCircuit(id);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!circuit) {
     return (
@@ -35,7 +43,6 @@ const CircuitDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero */}
       <div className="relative h-[50vh] min-h-[350px]">
         <img src={circuit.image} alt={circuit.title} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-foreground/30 to-background" />
@@ -47,11 +54,7 @@ const CircuitDetail = () => {
       </div>
 
       <div className="container relative -mt-24 z-10 pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-card rounded-2xl shadow-elevated p-6 md:p-8 mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl shadow-elevated p-6 md:p-8 mb-8">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
             <div>
               <p className="text-sm text-muted-foreground flex items-center gap-1 mb-2">
@@ -63,7 +66,7 @@ const CircuitDetail = () => {
               <p className="text-3xl font-bold text-foreground">{circuit.price} €</p>
               <div className="flex items-center gap-1 text-accent mt-1">
                 <Star className="w-4 h-4 fill-current" /> {circuit.rating}
-                <span className="text-muted-foreground text-sm">({circuit.reviewCount} avis)</span>
+                <span className="text-muted-foreground text-sm">({circuit.review_count} avis)</span>
               </div>
             </div>
           </div>
@@ -91,10 +94,7 @@ const CircuitDetail = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              to={`/navigate/${circuit.id}`}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity"
-            >
+            <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
               <Car className="w-5 h-5" /> Démarrer le circuit
             </Link>
             <button className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
@@ -103,29 +103,14 @@ const CircuitDetail = () => {
           </div>
         </motion.div>
 
-        {/* Map */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-card rounded-2xl shadow-card overflow-hidden mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card rounded-2xl shadow-card overflow-hidden mb-8">
           <h2 className="font-display text-xl font-semibold text-card-foreground p-6 pb-0">Aperçu du parcours</h2>
           <div className="p-4">
-            <RouteMap
-              route={circuit.route}
-              stops={circuit.stops}
-              className="h-[350px] rounded-xl"
-            />
+            <RouteMap route={circuit.route} stops={circuit.stops} className="h-[350px] rounded-xl" />
           </div>
         </motion.div>
 
-        {/* Stops */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <h2 className="font-display text-xl font-semibold text-foreground mb-4">Étapes du circuit</h2>
           <div className="space-y-3">
             {circuit.stops.map((stop, i) => {
@@ -148,7 +133,7 @@ const CircuitDetail = () => {
                     <p className="text-sm text-muted-foreground mb-1">{stop.description}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {stop.duration}</span>
-                      {stop.audioText && (
+                      {circuit.audio_zones.some((az) => Math.abs(az.lat - stop.lat) < 0.001 && Math.abs(az.lng - stop.lng) < 0.001) && (
                         <span className="flex items-center gap-1 text-secondary">
                           <Play className="w-3 h-3" /> Audio disponible
                         </span>
