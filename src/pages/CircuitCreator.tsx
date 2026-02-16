@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { getRouteSegment, formatDistance, formatDuration } from "@/lib/routing";
 
 export interface StopData {
   id: string;
@@ -42,7 +43,14 @@ const CircuitCreator = () => {
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
 
+  // waypoints are the user-placed control points
+  const [waypoints, setWaypoints] = useState<[number, number][]>([]);
+  // route is the full road-snapped polyline
   const [route, setRoute] = useState<[number, number][]>([]);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [totalDistance, setTotalDistance] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(0);
+
   const [stops, setStops] = useState<StopData[]>([]);
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
   const [mode, setMode] = useState<EditorMode>("route");
@@ -51,10 +59,58 @@ const CircuitCreator = () => {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
 
+  // Rebuild the full route from all waypoints
+  const rebuildRoute = useCallback(async (newWaypoints: [number, number][]) => {
+    if (newWaypoints.length < 2) {
+      setRoute(newWaypoints.length === 1 ? [newWaypoints[0]] : []);
+      setTotalDistance(0);
+      setTotalDuration(0);
+      return;
+    }
+
+    setRouteLoading(true);
+    try {
+      // Build segments between consecutive waypoints
+      const allCoords: [number, number][] = [];
+      let dist = 0;
+      let dur = 0;
+
+      for (let i = 0; i < newWaypoints.length - 1; i++) {
+        const segment = await getRouteSegment(newWaypoints[i], newWaypoints[i + 1]);
+        if (segment) {
+          // Avoid duplicating the junction point
+          const coords = i === 0 ? segment.coordinates : segment.coordinates.slice(1);
+          allCoords.push(...coords);
+          dist += segment.distance;
+          dur += segment.duration;
+        } else {
+          // Fallback: straight line
+          if (i === 0) allCoords.push(newWaypoints[i]);
+          allCoords.push(newWaypoints[i + 1]);
+        }
+      }
+
+      setRoute(allCoords);
+      setTotalDistance(dist);
+      setTotalDuration(dur);
+
+      // Auto-fill distance/duration fields
+      if (dist > 0) setDistance(formatDistance(dist));
+      if (dur > 0) setDuration(formatDuration(dur));
+    } catch {
+      // Fallback to straight lines
+      setRoute(newWaypoints);
+    } finally {
+      setRouteLoading(false);
+    }
+  }, []);
+
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
       if (mode === "route") {
-        setRoute((prev) => [...prev, [lat, lng]]);
+        const newWaypoints: [number, number][] = [...waypoints, [lat, lng]];
+        setWaypoints(newWaypoints);
+        rebuildRoute(newWaypoints);
       } else if (mode === "stop") {
         const newStop: StopData = {
           id: crypto.randomUUID(),
@@ -79,12 +135,21 @@ const CircuitCreator = () => {
         setSelectedAudioId(newZone.id);
       }
     },
-    [mode, stops.length]
+    [mode, stops.length, waypoints, rebuildRoute]
   );
 
-  const handleUndoRoute = () => {
-    setRoute((prev) => prev.slice(0, -1));
-  };
+  const handleUndoRoute = useCallback(() => {
+    const newWaypoints = waypoints.slice(0, -1);
+    setWaypoints(newWaypoints);
+    rebuildRoute(newWaypoints);
+  }, [waypoints, rebuildRoute]);
+
+  const handleClearRoute = useCallback(() => {
+    setWaypoints([]);
+    setRoute([]);
+    setTotalDistance(0);
+    setTotalDuration(0);
+  }, []);
 
   const handleDeleteStop = (id: string) => {
     setStops((prev) => prev.filter((s) => s.id !== id));
@@ -194,7 +259,6 @@ const CircuitCreator = () => {
       <Header />
 
       <div className="flex-1 flex pt-16 overflow-hidden">
-        {/* Sidebar */}
         <CreatorSidebar
           title={title}
           setTitle={setTitle}
@@ -221,20 +285,30 @@ const CircuitCreator = () => {
           onSave={() => handleSave(false)}
           onPublish={() => handleSave(true)}
           saving={saving}
-          routePointsCount={route.length}
+          routePointsCount={waypoints.length}
         />
 
-        {/* Map area */}
         <div className="flex-1 relative">
-          <CreatorToolbar mode={mode} setMode={setMode} onUndoRoute={handleUndoRoute} routeLength={route.length} />
+          <CreatorToolbar
+            mode={mode}
+            setMode={setMode}
+            onUndoRoute={handleUndoRoute}
+            onClearRoute={handleClearRoute}
+            routeLength={waypoints.length}
+            routeLoading={routeLoading}
+            totalDistance={totalDistance}
+            totalDuration={totalDuration}
+          />
           <CircuitEditorMap
             route={route}
+            waypoints={waypoints}
             stops={stops}
             audioZones={audioZones}
             mode={mode}
             onMapClick={handleMapClick}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
+            routeLoading={routeLoading}
           />
         </div>
       </div>
