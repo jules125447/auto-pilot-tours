@@ -5,12 +5,14 @@ import type { StopData, AudioZoneData, EditorMode } from "@/pages/CircuitCreator
 
 interface CircuitEditorMapProps {
   route: [number, number][];
+  waypoints: [number, number][];
   stops: StopData[];
   audioZones: AudioZoneData[];
   mode: EditorMode;
   onMapClick: (lat: number, lng: number) => void;
   selectedStopId: string | null;
   selectedAudioId: string | null;
+  routeLoading: boolean;
 }
 
 const stopIcons: Record<string, string> = {
@@ -29,21 +31,23 @@ const cursorByMode: Record<EditorMode, string> = {
 
 const CircuitEditorMap = ({
   route,
+  waypoints,
   stops,
   audioZones,
   mode,
   onMapClick,
   selectedStopId,
   selectedAudioId,
+  routeLoading,
 }: CircuitEditorMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const layersRef = useRef<{
     polyline: L.Polyline | null;
-    routeMarkers: L.CircleMarker[];
+    waypointMarkers: L.CircleMarker[];
     stopMarkers: L.Marker[];
     audioCircles: L.Circle[];
-  }>({ polyline: null, routeMarkers: [], stopMarkers: [], audioCircles: [] });
+  }>({ polyline: null, waypointMarkers: [], stopMarkers: [], audioCircles: [] });
 
   // Init map
   useEffect(() => {
@@ -88,7 +92,7 @@ const CircuitEditorMap = ({
     mapRef.current.style.cursor = cursorByMode[mode];
   }, [mode]);
 
-  // Draw route
+  // Draw route polyline + waypoint markers
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
@@ -97,29 +101,52 @@ const CircuitEditorMap = ({
 
     // Clear old
     if (layers.polyline) map.removeLayer(layers.polyline);
-    layers.routeMarkers.forEach((m) => map.removeLayer(m));
-    layers.routeMarkers = [];
+    layers.waypointMarkers.forEach((m) => map.removeLayer(m));
+    layers.waypointMarkers = [];
 
-    if (route.length > 0) {
+    // Draw road-snapped polyline
+    if (route.length > 1) {
       layers.polyline = L.polyline(route, {
         color: "hsl(152, 45%, 28%)",
-        weight: 4,
-        opacity: 0.8,
+        weight: 5,
+        opacity: 0.85,
+        smoothFactor: 1,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+    } else {
+      layers.polyline = null;
+    }
+
+    // Draw waypoint control points
+    waypoints.forEach((point, i) => {
+      const isFirst = i === 0;
+      const isLast = i === waypoints.length - 1;
+
+      const marker = L.circleMarker(point, {
+        radius: isFirst || isLast ? 8 : 6,
+        color: isFirst
+          ? "hsl(152, 45%, 28%)"
+          : isLast
+          ? "hsl(0, 84%, 60%)"
+          : "hsl(35, 85%, 55%)",
+        fillColor: isFirst
+          ? "hsl(152, 60%, 40%)"
+          : isLast
+          ? "hsl(0, 84%, 60%)"
+          : "hsl(35, 85%, 55%)",
+        fillOpacity: 1,
+        weight: 3,
       }).addTo(map);
 
-      route.forEach((point, i) => {
-        const isLast = i === route.length - 1;
-        const marker = L.circleMarker(point, {
-          radius: isLast ? 7 : 4,
-          color: isLast ? "hsl(35, 85%, 55%)" : "hsl(152, 45%, 28%)",
-          fillColor: isLast ? "hsl(35, 85%, 55%)" : "hsl(152, 45%, 28%)",
-          fillOpacity: 1,
-          weight: 2,
-        }).addTo(map);
-        layers.routeMarkers.push(marker);
-      });
-    }
-  }, [route]);
+      marker.bindTooltip(
+        isFirst ? "Départ" : isLast ? `Arrivée (${i + 1})` : `Point ${i + 1}`,
+        { direction: "top", offset: [0, -10] }
+      );
+
+      layers.waypointMarkers.push(marker);
+    });
+  }, [route, waypoints]);
 
   // Draw stops
   useEffect(() => {
@@ -169,7 +196,17 @@ const CircuitEditorMap = ({
     });
   }, [audioZones, selectedAudioId]);
 
-  return <div ref={mapRef} className="absolute inset-0" />;
+  return (
+    <div className="absolute inset-0">
+      <div ref={mapRef} className="absolute inset-0" />
+      {routeLoading && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-card/95 backdrop-blur-sm rounded-lg shadow-elevated px-4 py-2 flex items-center gap-2 border border-border">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-muted-foreground">Calcul de l'itinéraire…</span>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default CircuitEditorMap;
