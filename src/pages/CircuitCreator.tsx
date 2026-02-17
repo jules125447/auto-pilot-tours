@@ -29,7 +29,26 @@ export interface AudioZoneData {
   text: string;
 }
 
-export type EditorMode = "route" | "stop" | "audio" | "select";
+export interface MusicSegmentData {
+  id: string;
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  trackId: string;
+  trackName: string;
+}
+
+export const MUSIC_LIBRARY = [
+  { id: "ambient-forest", name: "Forêt paisible", url: "https://cdn.pixabay.com/audio/2022/10/18/audio_29e6cbea68.mp3", genre: "Ambiance" },
+  { id: "acoustic-road", name: "Route acoustique", url: "https://cdn.pixabay.com/audio/2024/11/04/audio_b63b7e498a.mp3", genre: "Acoustique" },
+  { id: "cinematic-epic", name: "Épique cinéma", url: "https://cdn.pixabay.com/audio/2023/10/18/audio_6497a212db.mp3", genre: "Cinématique" },
+  { id: "jazz-chill", name: "Jazz détendu", url: "https://cdn.pixabay.com/audio/2024/09/10/audio_6e4e825e98.mp3", genre: "Jazz" },
+  { id: "lofi-drive", name: "Lo-fi conduite", url: "https://cdn.pixabay.com/audio/2024/02/07/audio_98625bba1d.mp3", genre: "Lo-fi" },
+  { id: "classical-piano", name: "Piano classique", url: "https://cdn.pixabay.com/audio/2024/11/14/audio_223b1ebea8.mp3", genre: "Classique" },
+];
+
+export type EditorMode = "route" | "stop" | "audio" | "music" | "select";
 
 const CircuitCreator = () => {
   const { user } = useAuth();
@@ -53,11 +72,14 @@ const CircuitCreator = () => {
 
   const [stops, setStops] = useState<StopData[]>([]);
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
+  const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
+  const [musicPlacingStart, setMusicPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
   const [saving, setSaving] = useState(false);
 
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
+  const [selectedMusicId, setSelectedMusicId] = useState<string | null>(null);
 
   // Rebuild the full route from all waypoints
   const rebuildRoute = useCallback(async (newWaypoints: [number, number][]) => {
@@ -133,9 +155,27 @@ const CircuitCreator = () => {
         };
         setAudioZones((prev) => [...prev, newZone]);
         setSelectedAudioId(newZone.id);
+      } else if (mode === "music") {
+        if (!musicPlacingStart) {
+          setMusicPlacingStart({ lat, lng });
+          toast({ title: "Point A placé", description: "Cliquez pour placer le point B du segment musical." });
+        } else {
+          const newSegment: MusicSegmentData = {
+            id: crypto.randomUUID(),
+            startLat: musicPlacingStart.lat,
+            startLng: musicPlacingStart.lng,
+            endLat: lat,
+            endLng: lng,
+            trackId: MUSIC_LIBRARY[0].id,
+            trackName: MUSIC_LIBRARY[0].name,
+          };
+          setMusicSegments((prev) => [...prev, newSegment]);
+          setSelectedMusicId(newSegment.id);
+          setMusicPlacingStart(null);
+        }
       }
     },
-    [mode, stops.length, waypoints, rebuildRoute]
+    [mode, stops.length, waypoints, rebuildRoute, musicPlacingStart, toast]
   );
 
   const handleUndoRoute = useCallback(() => {
@@ -167,6 +207,15 @@ const CircuitCreator = () => {
 
   const handleUpdateAudio = (id: string, data: Partial<AudioZoneData>) => {
     setAudioZones((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+  };
+
+  const handleDeleteMusic = (id: string) => {
+    setMusicSegments((prev) => prev.filter((m) => m.id !== id));
+    if (selectedMusicId === id) setSelectedMusicId(null);
+  };
+
+  const handleUpdateMusic = (id: string, data: Partial<MusicSegmentData>) => {
+    setMusicSegments((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)));
   };
 
   const handleSave = async (publish: boolean) => {
@@ -274,14 +323,19 @@ const CircuitCreator = () => {
           setDistance={setDistance}
           stops={stops}
           audioZones={audioZones}
+          musicSegments={musicSegments}
           selectedStopId={selectedStopId}
           setSelectedStopId={setSelectedStopId}
           selectedAudioId={selectedAudioId}
           setSelectedAudioId={setSelectedAudioId}
+          selectedMusicId={selectedMusicId}
+          setSelectedMusicId={setSelectedMusicId}
           onUpdateStop={handleUpdateStop}
           onDeleteStop={handleDeleteStop}
           onUpdateAudio={handleUpdateAudio}
           onDeleteAudio={handleDeleteAudio}
+          onUpdateMusic={handleUpdateMusic}
+          onDeleteMusic={handleDeleteMusic}
           onSave={() => handleSave(false)}
           onPublish={() => handleSave(true)}
           saving={saving}
@@ -304,10 +358,13 @@ const CircuitCreator = () => {
             waypoints={waypoints}
             stops={stops}
             audioZones={audioZones}
+            musicSegments={musicSegments}
+            musicPlacingStart={musicPlacingStart}
             mode={mode}
             onMapClick={handleMapClick}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
+            selectedMusicId={selectedMusicId}
             routeLoading={routeLoading}
           />
         </div>
