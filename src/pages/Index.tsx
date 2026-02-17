@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, MapPin, Compass, Car, Loader2 } from "lucide-react";
+import { Search, MapPin, Compass, Car, Loader2, PlusCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import CircuitCard from "@/components/CircuitCard";
 import Header from "@/components/Header";
 import { useCircuits } from "@/hooks/useCircuits";
@@ -48,9 +49,21 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features */}
+      {/* CTA Créateur + Features */}
       <section className="py-12 border-b border-border">
         <div className="container">
+          <div className="flex flex-col items-center mb-10">
+            <Link
+              to="/creator"
+              className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-hero text-primary-foreground font-semibold text-lg shadow-elevated hover:shadow-lg transition-all hover:scale-[1.02]"
+            >
+              <PlusCircle className="w-6 h-6" />
+              Espace Créateur — Concevoir un circuit
+            </Link>
+            <p className="text-muted-foreground text-sm mt-3">
+              Tracez un itinéraire sur la carte, placez des points d'intérêt et des zones audio GPS
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { icon: Compass, title: "GPS intégré", desc: "Navigation virage par virage sur les plus belles routes" },
