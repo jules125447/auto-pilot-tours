@@ -1,17 +1,20 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { StopData, AudioZoneData, EditorMode } from "@/pages/CircuitCreator";
+import type { StopData, AudioZoneData, MusicSegmentData, EditorMode } from "@/pages/CircuitCreator";
 
 interface CircuitEditorMapProps {
   route: [number, number][];
   waypoints: [number, number][];
   stops: StopData[];
   audioZones: AudioZoneData[];
+  musicSegments: MusicSegmentData[];
+  musicPlacingStart: { lat: number; lng: number } | null;
   mode: EditorMode;
   onMapClick: (lat: number, lng: number) => void;
   selectedStopId: string | null;
   selectedAudioId: string | null;
+  selectedMusicId: string | null;
   routeLoading: boolean;
 }
 
@@ -26,64 +29,58 @@ const cursorByMode: Record<EditorMode, string> = {
   route: "crosshair",
   stop: "copy",
   audio: "cell",
+  music: "crosshair",
   select: "default",
 };
+
+const waypointLabel = (i: number) => String.fromCharCode(65 + i); // A, B, C...
 
 const CircuitEditorMap = ({
   route,
   waypoints,
   stops,
   audioZones,
+  musicSegments,
+  musicPlacingStart,
   mode,
   onMapClick,
   selectedStopId,
   selectedAudioId,
+  selectedMusicId,
   routeLoading,
 }: CircuitEditorMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const layersRef = useRef<{
     polyline: L.Polyline | null;
-    waypointMarkers: L.CircleMarker[];
+    waypointMarkers: L.Marker[];
     stopMarkers: L.Marker[];
     audioCircles: L.Circle[];
-  }>({ polyline: null, waypointMarkers: [], stopMarkers: [], audioCircles: [] });
+    musicMarkers: L.Marker[];
+    musicPlacingMarker: L.Marker | null;
+  }>({ polyline: null, waypointMarkers: [], stopMarkers: [], audioCircles: [], musicMarkers: [], musicPlacingMarker: null });
 
   // Init map
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
-
     const map = L.map(mapRef.current, {
       center: [46.8, 2.3],
       zoom: 6,
       zoomControl: true,
       attributionControl: false,
     });
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18,
-    }).addTo(map);
-
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18 }).addTo(map);
     mapInstance.current = map;
-
-    return () => {
-      map.remove();
-      mapInstance.current = null;
-    };
+    return () => { map.remove(); mapInstance.current = null; };
   }, []);
 
   // Click handler
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
-
-    const handler = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
+    const handler = (e: L.LeafletMouseEvent) => onMapClick(e.latlng.lat, e.latlng.lng);
     map.on("click", handler);
-    return () => {
-      map.off("click", handler);
-    };
+    return () => { map.off("click", handler); };
   }, [onMapClick]);
 
   // Cursor
@@ -92,19 +89,16 @@ const CircuitEditorMap = ({
     mapRef.current.style.cursor = cursorByMode[mode];
   }, [mode]);
 
-  // Draw route polyline + waypoint markers
+  // Draw route polyline + waypoint markers with A,B,C labels
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
-
     const layers = layersRef.current;
 
-    // Clear old
     if (layers.polyline) map.removeLayer(layers.polyline);
     layers.waypointMarkers.forEach((m) => map.removeLayer(m));
     layers.waypointMarkers = [];
 
-    // Draw road-snapped polyline
     if (route.length > 1) {
       layers.polyline = L.polyline(route, {
         color: "hsl(152, 45%, 28%)",
@@ -118,32 +112,24 @@ const CircuitEditorMap = ({
       layers.polyline = null;
     }
 
-    // Draw waypoint control points
     waypoints.forEach((point, i) => {
+      const label = waypointLabel(i);
       const isFirst = i === 0;
       const isLast = i === waypoints.length - 1;
+      const color = isFirst ? "hsl(152, 45%, 28%)" : isLast ? "hsl(0, 84%, 60%)" : "hsl(35, 85%, 55%)";
 
-      const marker = L.circleMarker(point, {
-        radius: isFirst || isLast ? 8 : 6,
-        color: isFirst
-          ? "hsl(152, 45%, 28%)"
-          : isLast
-          ? "hsl(0, 84%, 60%)"
-          : "hsl(35, 85%, 55%)",
-        fillColor: isFirst
-          ? "hsl(152, 60%, 40%)"
-          : isLast
-          ? "hsl(0, 84%, 60%)"
-          : "hsl(35, 85%, 55%)",
-        fillOpacity: 1,
-        weight: 3,
-      }).addTo(map);
+      const icon = L.divIcon({
+        html: `<div style="background:${color};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;">${label}</div>`,
+        className: "custom-marker",
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
 
+      const marker = L.marker(point, { icon }).addTo(map);
       marker.bindTooltip(
-        isFirst ? "Départ" : isLast ? `Arrivée (${i + 1})` : `Point ${i + 1}`,
-        { direction: "top", offset: [0, -10] }
+        isFirst ? `Départ (${label})` : isLast ? `Arrivée (${label})` : `Point ${label}`,
+        { direction: "top", offset: [0, -16] }
       );
-
       layers.waypointMarkers.push(marker);
     });
   }, [route, waypoints]);
@@ -152,7 +138,6 @@ const CircuitEditorMap = ({
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
-
     const layers = layersRef.current;
     layers.stopMarkers.forEach((m) => map.removeLayer(m));
     layers.stopMarkers = [];
@@ -165,7 +150,6 @@ const CircuitEditorMap = ({
         iconSize: [36, 36],
         iconAnchor: [18, 18],
       });
-
       const marker = L.marker([stop.lat, stop.lng], { icon })
         .addTo(map)
         .bindPopup(`<strong>${stop.title}</strong><br/><em>${stop.type}</em>`);
@@ -177,7 +161,6 @@ const CircuitEditorMap = ({
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
-
     const layers = layersRef.current;
     layers.audioCircles.forEach((c) => map.removeLayer(c));
     layers.audioCircles = [];
@@ -195,6 +178,51 @@ const CircuitEditorMap = ({
       layers.audioCircles.push(circle);
     });
   }, [audioZones, selectedAudioId]);
+
+  // Draw music segment markers (A/B pairs)
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    const layers = layersRef.current;
+    layers.musicMarkers.forEach((m) => map.removeLayer(m));
+    layers.musicMarkers = [];
+
+    musicSegments.forEach((seg, idx) => {
+      const isSelected = seg.id === selectedMusicId;
+      const borderColor = isSelected ? "hsl(35,85%,55%)" : "hsl(280,60%,55%)";
+
+      const makeIcon = (label: string) => L.divIcon({
+        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "hsl(280,60%,55%)"};color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;">♫${label}</div>`,
+        className: "custom-marker",
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+
+      const mA = L.marker([seg.startLat, seg.startLng], { icon: makeIcon("A") }).addTo(map);
+      mA.bindTooltip(`🎵 ${seg.trackName} — début`, { direction: "top", offset: [0, -14] });
+      const mB = L.marker([seg.endLat, seg.endLng], { icon: makeIcon("B") }).addTo(map);
+      mB.bindTooltip(`🎵 ${seg.trackName} — fin`, { direction: "top", offset: [0, -14] });
+      layers.musicMarkers.push(mA, mB);
+    });
+  }, [musicSegments, selectedMusicId]);
+
+  // Draw music placing start marker
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    const layers = layersRef.current;
+    if (layers.musicPlacingMarker) { map.removeLayer(layers.musicPlacingMarker); layers.musicPlacingMarker = null; }
+
+    if (musicPlacingStart) {
+      const icon = L.divIcon({
+        html: `<div style="background:hsl(280,60%,55%);color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px dashed white;animation:pulse 1.5s infinite;">♫A</div>`,
+        className: "custom-marker",
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
+      layers.musicPlacingMarker = L.marker([musicPlacingStart.lat, musicPlacingStart.lng], { icon }).addTo(map);
+    }
+  }, [musicPlacingStart]);
 
   return (
     <div className="absolute inset-0">
