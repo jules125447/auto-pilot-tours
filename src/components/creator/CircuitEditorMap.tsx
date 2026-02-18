@@ -12,6 +12,7 @@ interface CircuitEditorMapProps {
   musicPlacingStart: { lat: number; lng: number } | null;
   mode: EditorMode;
   onMapClick: (lat: number, lng: number) => void;
+  onWaypointDrag: (index: number, lat: number, lng: number) => void;
   selectedStopId: string | null;
   selectedAudioId: string | null;
   selectedMusicId: string | null;
@@ -44,6 +45,7 @@ const CircuitEditorMap = ({
   musicPlacingStart,
   mode,
   onMapClick,
+  onWaypointDrag,
   selectedStopId,
   selectedAudioId,
   selectedMusicId,
@@ -119,20 +121,24 @@ const CircuitEditorMap = ({
       const color = isFirst ? "hsl(152, 45%, 28%)" : isLast ? "hsl(0, 84%, 60%)" : "hsl(35, 85%, 55%)";
 
       const icon = L.divIcon({
-        html: `<div style="background:${color};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;">${label}</div>`,
+        html: `<div style="background:${color};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;cursor:grab;">${label}</div>`,
         className: "custom-marker",
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
 
-      const marker = L.marker(point, { icon }).addTo(map);
+      const marker = L.marker(point, { icon, draggable: true }).addTo(map);
       marker.bindTooltip(
         isFirst ? `Départ (${label})` : isLast ? `Arrivée (${label})` : `Point ${label}`,
         { direction: "top", offset: [0, -16] }
       );
+      marker.on("dragend", () => {
+        const pos = marker.getLatLng();
+        onWaypointDrag(i, pos.lat, pos.lng);
+      });
       layers.waypointMarkers.push(marker);
     });
-  }, [route, waypoints]);
+  }, [route, waypoints, onWaypointDrag]);
 
   // Draw stops
   useEffect(() => {

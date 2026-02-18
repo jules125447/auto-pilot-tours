@@ -268,7 +268,9 @@ const CreatorSidebar = ({
                   En mode "Musique", cliquez 2 points sur la carte pour définir un segment musical (A→B).
                 </p>
               )}
-              {musicSegments.map((seg) => (
+              {musicSegments.map((seg) => {
+                const selectedTrack = MUSIC_LIBRARY.find(t => t.id === seg.trackId);
+                return (
                 <div
                   key={seg.id}
                   onClick={() => setSelectedMusicId(seg.id)}
@@ -310,10 +312,12 @@ const CreatorSidebar = ({
                         <p className="text-sm font-medium text-foreground truncate">{seg.trackName}</p>
                         <p className="text-xs text-muted-foreground">Segment musical</p>
                       </div>
+                      {selectedTrack && <MusicPlayButton url={selectedTrack.url} />}
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </TabsContent>
           </Tabs>
         </div>
