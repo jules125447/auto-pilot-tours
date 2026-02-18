@@ -178,6 +178,12 @@ const CircuitCreator = () => {
     [mode, stops.length, waypoints, rebuildRoute, musicPlacingStart, toast]
   );
 
+  const handleWaypointDrag = useCallback((index: number, lat: number, lng: number) => {
+    const newWaypoints: [number, number][] = waypoints.map((wp, i) => i === index ? [lat, lng] : wp);
+    setWaypoints(newWaypoints);
+    rebuildRoute(newWaypoints);
+  }, [waypoints, rebuildRoute]);
+
   const handleUndoRoute = useCallback(() => {
     const newWaypoints = waypoints.slice(0, -1);
     setWaypoints(newWaypoints);
@@ -362,6 +368,7 @@ const CircuitCreator = () => {
             musicPlacingStart={musicPlacingStart}
             mode={mode}
             onMapClick={handleMapClick}
+            onWaypointDrag={handleWaypointDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
