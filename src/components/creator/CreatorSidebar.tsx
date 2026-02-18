@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { StopData, AudioZoneData, MusicSegmentData } from "@/pages/CircuitCreator";
+import type { StopData, AudioZoneData, MusicSegmentData, EditorMode } from "@/pages/CircuitCreator";
 import { MUSIC_LIBRARY } from "@/pages/CircuitCreator";
 import { Slider } from "@/components/ui/slider";
 
@@ -42,6 +42,7 @@ interface CreatorSidebarProps {
   onPublish: () => void;
   saving: boolean;
   routePointsCount: number;
+  mode: EditorMode;
 }
 
 const stopTypes = [
@@ -96,7 +97,7 @@ const MusicPlayButton = ({ url }: { url: string }) => {
   };
 
   return (
-    <Button variant="outline" size="sm" onClick={toggle} className="gap-1 shrink-0" type="button">
+    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toggle(); }} className="gap-1 shrink-0" type="button">
       {playing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
     </Button>
   );
@@ -121,6 +122,7 @@ const CreatorSidebar = ({
   onSave, onPublish,
   saving,
   routePointsCount,
+  mode,
 }: CreatorSidebarProps) => {
   return (
     <div className="w-80 lg:w-96 border-r border-border bg-card flex flex-col">
@@ -158,22 +160,10 @@ const CreatorSidebar = ({
             <span className="px-2 py-1 rounded-md bg-muted">{musicSegments.length} musiques</span>
           </div>
 
-          {/* Tabs for stops, audio & music */}
-          <Tabs defaultValue="stops">
-            <TabsList className="w-full">
-              <TabsTrigger value="stops" className="flex-1 gap-1">
-                <MapPin className="w-3.5 h-3.5" /> Arrêts
-              </TabsTrigger>
-              <TabsTrigger value="audio" className="flex-1 gap-1">
-                <Volume2 className="w-3.5 h-3.5" /> Audio
-              </TabsTrigger>
-              <TabsTrigger value="music" className="flex-1 gap-1">
-                <Music className="w-3.5 h-3.5" /> Musique
-              </TabsTrigger>
-            </TabsList>
-
-            {/* STOPS TAB */}
-            <TabsContent value="stops" className="mt-3 space-y-2">
+          {/* Content based on active mode */}
+          {(mode === "stop" || mode === "select") && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><MapPin className="w-4 h-4" /> Points d'intérêt</h3>
               {stops.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Cliquez sur la carte en mode "Point d'intérêt" pour ajouter des arrêts.
@@ -215,10 +205,12 @@ const CreatorSidebar = ({
                   )}
                 </div>
               ))}
-            </TabsContent>
+            </div>
+          )}
 
-            {/* AUDIO TAB */}
-            <TabsContent value="audio" className="mt-3 space-y-2">
+          {(mode === "audio" || mode === "select") && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Volume2 className="w-4 h-4" /> Zones audio</h3>
               {audioZones.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Cliquez sur la carte en mode "Zone audio" pour placer des commentaires.
@@ -259,10 +251,12 @@ const CreatorSidebar = ({
                   )}
                 </div>
               ))}
-            </TabsContent>
+            </div>
+          )}
 
-            {/* MUSIC TAB */}
-            <TabsContent value="music" className="mt-3 space-y-2">
+          {(mode === "music" || mode === "select") && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Music className="w-4 h-4" /> Segments musicaux</h3>
               {musicSegments.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   En mode "Musique", cliquez 2 points sur la carte pour définir un segment musical (A→B).
@@ -318,8 +312,15 @@ const CreatorSidebar = ({
                 </div>
                 );
               })}
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
+
+          {mode === "route" && (
+            <div className="text-sm text-muted-foreground text-center py-4">
+              <MapPin className="w-5 h-5 mx-auto mb-2 opacity-50" />
+              Cliquez sur la carte pour tracer votre itinéraire.
+            </div>
+          )}
         </div>
       </ScrollArea>
 
