@@ -346,6 +346,7 @@ const CircuitCreator = () => {
           onPublish={() => handleSave(true)}
           saving={saving}
           routePointsCount={waypoints.length}
+          mode={mode}
         />
 
         <div className="flex-1 relative">
