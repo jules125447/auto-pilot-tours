@@ -82,24 +82,53 @@ const MusicPlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const toggle = () => {
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
     if (playing && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current = null;
       setPlaying(false);
     } else {
+      // Stop any previous audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       const audio = new Audio(url);
-      audio.onended = () => setPlaying(false);
+      audio.volume = 1;
       audioRef.current = audio;
-      audio.play();
-      setPlaying(true);
+      audio.onended = () => {
+        setPlaying(false);
+        audioRef.current = null;
+      };
+      audio.onerror = () => {
+        console.error("Audio playback error for:", url);
+        setPlaying(false);
+        audioRef.current = null;
+      };
+      const playPromise = audio.play();
+      if (playPromise) {
+        playPromise.then(() => {
+          setPlaying(true);
+        }).catch((err) => {
+          console.error("Play failed:", err);
+          setPlaying(false);
+        });
+      }
     }
   };
 
   return (
-    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toggle(); }} className="gap-1 shrink-0" type="button">
+    <button
+      type="button"
+      onClick={toggle}
+      className="inline-flex items-center justify-center gap-1 shrink-0 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+    >
       {playing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-    </Button>
+    </button>
   );
 };
 
