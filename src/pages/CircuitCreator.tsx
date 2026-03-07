@@ -5,11 +5,13 @@ import Header from "@/components/Header";
 import CircuitEditorMap from "@/components/creator/CircuitEditorMap";
 import CreatorToolbar from "@/components/creator/CreatorToolbar";
 import CreatorSidebar from "@/components/creator/CreatorSidebar";
+import CircuitTestMode from "@/components/creator/CircuitTestMode";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { getRouteSegment, formatDistance, formatDuration } from "@/lib/routing";
+import L from "leaflet";
 
 export interface StopData {
   id: string;
@@ -40,12 +42,12 @@ export interface MusicSegmentData {
 }
 
 export const MUSIC_LIBRARY = [
-  { id: "ambient-forest", name: "Forêt paisible", url: "https://cdn.pixabay.com/audio/2022/10/18/audio_29e6cbea68.mp3", genre: "Ambiance" },
-  { id: "acoustic-road", name: "Route acoustique", url: "https://cdn.pixabay.com/audio/2024/11/04/audio_b63b7e498a.mp3", genre: "Acoustique" },
-  { id: "cinematic-epic", name: "Épique cinéma", url: "https://cdn.pixabay.com/audio/2023/10/18/audio_6497a212db.mp3", genre: "Cinématique" },
-  { id: "jazz-chill", name: "Jazz détendu", url: "https://cdn.pixabay.com/audio/2024/09/10/audio_6e4e825e98.mp3", genre: "Jazz" },
-  { id: "lofi-drive", name: "Lo-fi conduite", url: "https://cdn.pixabay.com/audio/2024/02/07/audio_98625bba1d.mp3", genre: "Lo-fi" },
-  { id: "classical-piano", name: "Piano classique", url: "https://cdn.pixabay.com/audio/2024/11/14/audio_223b1ebea8.mp3", genre: "Classique" },
+  { id: "ambient-forest", name: "Forêt paisible", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", genre: "Ambiance" },
+  { id: "acoustic-road", name: "Route acoustique", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", genre: "Acoustique" },
+  { id: "cinematic-epic", name: "Épique cinéma", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", genre: "Cinématique" },
+  { id: "jazz-chill", name: "Jazz détendu", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", genre: "Jazz" },
+  { id: "lofi-drive", name: "Lo-fi conduite", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", genre: "Lo-fi" },
+  { id: "classical-piano", name: "Piano classique", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", genre: "Classique" },
 ];
 
 export type EditorMode = "route" | "stop" | "audio" | "music" | "select";
@@ -75,7 +77,9 @@ const CircuitCreator = () => {
   const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
   const [musicPlacingStart, setMusicPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
+  const [testMode, setTestMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
@@ -359,6 +363,8 @@ const CircuitCreator = () => {
             routeLoading={routeLoading}
             totalDistance={totalDistance}
             totalDuration={totalDuration}
+            onTestMode={() => setTestMode(true)}
+            canTest={route.length >= 2}
           />
           <CircuitEditorMap
             route={route}
@@ -374,7 +380,18 @@ const CircuitCreator = () => {
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
             routeLoading={routeLoading}
+            onMapReady={(map) => { mapInstanceRef.current = map; }}
           />
+          {testMode && (
+            <CircuitTestMode
+              route={route}
+              stops={stops}
+              audioZones={audioZones}
+              musicSegments={musicSegments}
+              mapInstance={mapInstanceRef.current}
+              onClose={() => setTestMode(false)}
+            />
+          )}
         </div>
       </div>
     </div>

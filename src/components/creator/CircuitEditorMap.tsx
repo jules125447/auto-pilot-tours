@@ -17,6 +17,7 @@ interface CircuitEditorMapProps {
   selectedAudioId: string | null;
   selectedMusicId: string | null;
   routeLoading: boolean;
+  onMapReady?: (map: L.Map) => void;
 }
 
 const stopIcons: Record<string, string> = {
@@ -50,6 +51,7 @@ const CircuitEditorMap = ({
   selectedAudioId,
   selectedMusicId,
   routeLoading,
+  onMapReady,
 }: CircuitEditorMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
@@ -73,6 +75,7 @@ const CircuitEditorMap = ({
     });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18 }).addTo(map);
     mapInstance.current = map;
+    onMapReady?.(map);
     return () => { map.remove(); mapInstance.current = null; };
   }, []);
 

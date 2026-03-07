@@ -2,18 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
-// Import fallback images
 import heroJura from "@/assets/hero-jura.jpg";
-import circuitRiviera from "@/assets/circuit-riviera.jpg";
-import circuitProvence from "@/assets/circuit-provence.jpg";
-import circuitAlps from "@/assets/circuit-alps.jpg";
 
-const fallbackImages: Record<string, string> = {
-  "11111111-1111-1111-1111-111111111111": heroJura,
-  "22222222-2222-2222-2222-222222222222": circuitRiviera,
-  "33333333-3333-3333-3333-333333333333": circuitProvence,
-  "44444444-4444-4444-4444-444444444444": circuitAlps,
-};
+const defaultImage = heroJura;
 
 export interface CircuitWithStops {
   id: string;
@@ -68,7 +59,7 @@ function mapCircuit(
     price: Number(circuit.price),
     rating: circuit.rating ? Number(circuit.rating) : null,
     review_count: circuit.review_count,
-    image: circuit.image_url || fallbackImages[circuit.id] || heroJura,
+    image: circuit.image_url || defaultImage,
     route,
     published: circuit.published,
     creator_id: circuit.creator_id,

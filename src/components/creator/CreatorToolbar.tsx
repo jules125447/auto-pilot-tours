@@ -1,4 +1,4 @@
-import { Route, MapPin, Volume2, MousePointer, Undo2, Trash2, Loader2, Music } from "lucide-react";
+import { Route, MapPin, Volume2, MousePointer, Undo2, Trash2, Loader2, Music, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistance, formatDuration } from "@/lib/routing";
 import type { EditorMode } from "@/pages/CircuitCreator";
@@ -12,6 +12,8 @@ interface CreatorToolbarProps {
   routeLoading: boolean;
   totalDistance: number;
   totalDuration: number;
+  onTestMode: () => void;
+  canTest: boolean;
 }
 
 const tools: { mode: EditorMode; icon: typeof Route; label: string }[] = [
@@ -31,6 +33,8 @@ const CreatorToolbar = ({
   routeLoading,
   totalDistance,
   totalDuration,
+  onTestMode,
+  canTest,
 }: CreatorToolbarProps) => {
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1 bg-card/95 backdrop-blur-sm rounded-xl shadow-elevated p-1.5 border border-border">
@@ -46,6 +50,19 @@ const CreatorToolbar = ({
           <span className="hidden sm:inline text-xs">{tool.label}</span>
         </Button>
       ))}
+
+      <div className="w-px h-6 bg-border mx-1" />
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onTestMode}
+        disabled={!canTest}
+        className="gap-1.5 text-accent-foreground border-accent/30 hover:bg-accent/10"
+      >
+        <PlayCircle className="w-4 h-4" />
+        <span className="hidden sm:inline text-xs">Tester</span>
+      </Button>
 
       {mode === "route" && routeLength > 0 && (
         <>
