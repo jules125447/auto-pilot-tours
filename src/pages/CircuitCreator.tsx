@@ -77,7 +77,9 @@ const CircuitCreator = () => {
   const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
   const [musicPlacingStart, setMusicPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
+  const [testMode, setTestMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
@@ -361,6 +363,8 @@ const CircuitCreator = () => {
             routeLoading={routeLoading}
             totalDistance={totalDistance}
             totalDuration={totalDuration}
+            onTestMode={() => setTestMode(true)}
+            canTest={route.length >= 2}
           />
           <CircuitEditorMap
             route={route}
@@ -376,7 +380,18 @@ const CircuitCreator = () => {
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
             routeLoading={routeLoading}
+            onMapReady={(map) => { mapInstanceRef.current = map; }}
           />
+          {testMode && (
+            <CircuitTestMode
+              route={route}
+              stops={stops}
+              audioZones={audioZones}
+              musicSegments={musicSegments}
+              mapInstance={mapInstanceRef.current}
+              onClose={() => setTestMode(false)}
+            />
+          )}
         </div>
       </div>
     </div>
