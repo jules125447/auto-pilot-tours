@@ -40,12 +40,12 @@ export interface MusicSegmentData {
 }
 
 export const MUSIC_LIBRARY = [
-  { id: "ambient-forest", name: "Forêt paisible", url: "https://cdn.pixabay.com/audio/2022/10/18/audio_29e6cbea68.mp3", genre: "Ambiance" },
-  { id: "acoustic-road", name: "Route acoustique", url: "https://cdn.pixabay.com/audio/2024/11/04/audio_b63b7e498a.mp3", genre: "Acoustique" },
-  { id: "cinematic-epic", name: "Épique cinéma", url: "https://cdn.pixabay.com/audio/2023/10/18/audio_6497a212db.mp3", genre: "Cinématique" },
-  { id: "jazz-chill", name: "Jazz détendu", url: "https://cdn.pixabay.com/audio/2024/09/10/audio_6e4e825e98.mp3", genre: "Jazz" },
-  { id: "lofi-drive", name: "Lo-fi conduite", url: "https://cdn.pixabay.com/audio/2024/02/07/audio_98625bba1d.mp3", genre: "Lo-fi" },
-  { id: "classical-piano", name: "Piano classique", url: "https://cdn.pixabay.com/audio/2024/11/14/audio_223b1ebea8.mp3", genre: "Classique" },
+  { id: "ambient-forest", name: "Forêt paisible", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", genre: "Ambiance" },
+  { id: "acoustic-road", name: "Route acoustique", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", genre: "Acoustique" },
+  { id: "cinematic-epic", name: "Épique cinéma", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", genre: "Cinématique" },
+  { id: "jazz-chill", name: "Jazz détendu", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", genre: "Jazz" },
+  { id: "lofi-drive", name: "Lo-fi conduite", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", genre: "Lo-fi" },
+  { id: "classical-piano", name: "Piano classique", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", genre: "Classique" },
 ];
 
 export type EditorMode = "route" | "stop" | "audio" | "music" | "select";
