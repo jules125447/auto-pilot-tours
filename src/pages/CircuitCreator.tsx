@@ -5,11 +5,13 @@ import Header from "@/components/Header";
 import CircuitEditorMap from "@/components/creator/CircuitEditorMap";
 import CreatorToolbar from "@/components/creator/CreatorToolbar";
 import CreatorSidebar from "@/components/creator/CreatorSidebar";
+import CircuitTestMode from "@/components/creator/CircuitTestMode";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { getRouteSegment, formatDistance, formatDuration } from "@/lib/routing";
+import L from "leaflet";
 
 export interface StopData {
   id: string;
