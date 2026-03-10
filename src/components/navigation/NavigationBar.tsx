@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Navigation, MapPin, Clock, ChevronRight, Locate } from "lucide-react";
+import { MapPin, Clock, ChevronRight, ChevronLeft, Locate } from "lucide-react";
 
 interface NavigationBarProps {
   currentStop: {
@@ -38,38 +38,32 @@ const NavigationBar = ({
 }: NavigationBarProps) => {
   return (
     <div className="relative z-[1000]">
-      {/* Next stop direction banner */}
+      {/* Next stop card */}
       {currentStop && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="mx-3 mb-2 rounded-2xl overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, hsl(152 45% 28%), hsl(152 45% 22%))",
-          }}
+          className="mx-3 mb-2 rounded-2xl overflow-hidden bg-card border border-border shadow-lg"
         >
           <div className="flex items-center gap-3 px-4 py-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "hsl(152 50% 35%)" }}
-            >
-              <Navigation className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-5 h-5 text-secondary-foreground" />
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-primary-foreground/60 text-[10px] font-mono uppercase tracking-[0.15em]">
-                Prochain point d'intérêt
+              <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.15em]">
+                Prochain arrêt · {currentStopIndex + 1}/{totalStops}
               </p>
-              <p className="text-primary-foreground text-base font-semibold truncate">
+              <p className="text-foreground text-base font-semibold truncate">
                 {currentStop.title}
               </p>
             </div>
 
             <div className="text-right flex-shrink-0">
-              <p className="text-primary-foreground text-lg font-bold font-mono">
+              <p className="text-foreground text-lg font-bold font-mono">
                 {hasGps ? formatDist(distToNextStop) : "—"}
               </p>
-              <p className="text-primary-foreground/50 text-[10px] font-mono">
+              <p className="text-muted-foreground text-[10px] font-mono">
                 {hasGps && etaNextStop > 0 ? `~${etaNextStop} min` : ""}
               </p>
             </div>
@@ -80,12 +74,12 @@ const NavigationBar = ({
             {Array.from({ length: totalStops }).map((_, i) => (
               <div
                 key={i}
-                className={`h-1 rounded-full transition-all duration-500 ${
+                className={`h-1.5 rounded-full transition-all duration-500 ${
                   i < currentStopIndex
-                    ? "flex-1 bg-primary-foreground/40"
+                    ? "flex-1 bg-primary"
                     : i === currentStopIndex
-                    ? "flex-[2] bg-primary-foreground"
-                    : "flex-1 bg-primary-foreground/15"
+                    ? "flex-[2] bg-secondary"
+                    : "flex-1 bg-border"
                 }`}
               />
             ))}
@@ -94,53 +88,53 @@ const NavigationBar = ({
       )}
 
       {/* Bottom stats bar */}
-      <div
-        className="rounded-t-2xl px-4 py-3 flex items-center justify-between"
-        style={{ background: "hsl(160 20% 10%)" }}
-      >
+      <div className="rounded-t-2xl px-4 py-3 flex items-center justify-between bg-card border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        {/* Prev button */}
+        <button
+          onClick={onPrev}
+          disabled={currentStopIndex <= 0}
+          className="w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-20 transition-all active:scale-95 bg-muted"
+        >
+          <ChevronLeft className="w-5 h-5 text-foreground" />
+        </button>
+
         {/* Remaining distance */}
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-primary" />
-          <div>
-            <p className="text-primary-foreground text-sm font-bold font-mono">
+          <div className="text-center">
+            <p className="text-foreground text-sm font-bold font-mono">
               {hasGps ? formatDist(distanceRemaining) : "—"}
             </p>
-            <p className="text-primary-foreground/40 text-[9px] font-mono uppercase">Restant</p>
+            <p className="text-muted-foreground text-[9px] font-mono uppercase">Restant</p>
           </div>
         </div>
 
         {/* ETA */}
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-secondary" />
-          <div>
-            <p className="text-primary-foreground text-sm font-bold font-mono">
+          <div className="text-center">
+            <p className="text-foreground text-sm font-bold font-mono">
               {hasGps && etaMinutes > 0 ? `${etaMinutes} min` : "—"}
             </p>
-            <p className="text-primary-foreground/40 text-[9px] font-mono uppercase">Temps est.</p>
+            <p className="text-muted-foreground text-[9px] font-mono uppercase">Temps est.</p>
           </div>
         </div>
 
         {/* GPS status */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Locate className={`w-4 h-4 ${hasGps ? "text-primary" : "text-destructive"}`} />
-          <div>
-            <p className={`text-sm font-bold font-mono ${hasGps ? "text-primary" : "text-destructive"}`}>
-              {hasGps ? "GPS" : "No GPS"}
-            </p>
-            <p className="text-primary-foreground/40 text-[9px] font-mono uppercase">Signal</p>
-          </div>
+          <p className={`text-xs font-bold font-mono ${hasGps ? "text-primary" : "text-destructive"}`}>
+            {hasGps ? "GPS" : "—"}
+          </p>
         </div>
 
         {/* Next button */}
         <button
           onClick={onNext}
           disabled={currentStopIndex >= totalStops - 1}
-          className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-20 transition-all active:scale-95"
-          style={{
-            background: "linear-gradient(135deg, hsl(152 50% 35%), hsl(205 55% 45%))",
-          }}
+          className="w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-20 transition-all active:scale-95 bg-secondary"
         >
-          <ChevronRight className="w-6 h-6 text-primary-foreground" />
+          <ChevronRight className="w-5 h-5 text-secondary-foreground" />
         </button>
       </div>
     </div>
