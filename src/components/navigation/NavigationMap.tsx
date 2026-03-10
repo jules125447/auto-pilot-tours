@@ -46,65 +46,64 @@ const NavigationMap = ({
       attributionControl: false,
     });
 
-    // Dark tile layer for GPS feel
+    // Light tile layer
     L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       { maxZoom: 19 }
     ).addTo(map);
 
-    // Draw route
+    // Draw route - primary blue
     if (route.length > 0) {
+      // Shadow
+      L.polyline(route, {
+        color: "hsl(205, 60%, 48%)",
+        weight: 14,
+        opacity: 0.15,
+        smoothFactor: 1,
+      }).addTo(map);
+
+      // Main line
       const polyline = L.polyline(route, {
-        color: "hsl(152, 50%, 42%)",
-        weight: 5,
+        color: "hsl(205, 60%, 48%)",
+        weight: 6,
         opacity: 0.9,
         smoothFactor: 1,
         lineCap: "round",
         lineJoin: "round",
       }).addTo(map);
 
-      // Also draw a glow underneath
-      L.polyline(route, {
-        color: "hsl(152, 50%, 42%)",
-        weight: 12,
-        opacity: 0.2,
-        smoothFactor: 1,
-      }).addTo(map);
-
-      map.fitBounds(polyline.getBounds(), { padding: [60, 60] });
+      map.fitBounds(polyline.getBounds(), { padding: [80, 80] });
     }
 
     // POI markers
     stops.forEach((stop, i) => {
-      const isNext = i === 0;
       const icon = L.divIcon({
         html: `
           <div style="
-            position:relative;
-            width:36px;height:36px;
+            width:40px;height:40px;
             display:flex;align-items:center;justify-content:center;
           ">
             <div style="
-              width:32px;height:32px;border-radius:50%;
-              background:hsl(160,20%,15%);
-              border:2px solid hsl(152,50%,42%);
+              width:36px;height:36px;border-radius:50%;
+              background:white;
+              border:3px solid hsl(205,60%,48%);
               display:flex;align-items:center;justify-content:center;
-              font-size:14px;
-              box-shadow:0 0 10px hsl(152,50%,42%,0.4);
+              font-size:16px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.15);
             ">${poiEmoji[stop.type] || "📍"}</div>
           </div>
         `,
         className: "poi-marker",
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
       });
 
       const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map);
       marker.bindTooltip(stop.title, {
         permanent: false,
         direction: "top",
-        className: "poi-tooltip",
-        offset: [0, -20],
+        className: "poi-tooltip-light",
+        offset: [0, -22],
       });
       stopMarkersRef.current.push(marker);
     });
@@ -126,28 +125,28 @@ const NavigationMap = ({
     if (!userMarkerRef.current) {
       const icon = L.divIcon({
         html: `
-          <div class="user-gps-marker" style="
-            width:48px;height:48px;position:relative;
+          <div style="
+            width:52px;height:52px;position:relative;
             display:flex;align-items:center;justify-content:center;
           ">
             <div style="
-              position:absolute;width:48px;height:48px;border-radius:50%;
+              position:absolute;width:52px;height:52px;border-radius:50%;
               background:hsl(205,80%,55%,0.15);
-              animation:gps-pulse 2s ease-out infinite;
+              animation:gps-pulse-light 2s ease-out infinite;
             "></div>
             <div style="
-              width:20px;height:20px;position:relative;
+              width:22px;height:22px;position:relative;
               transform:rotate(${heading}deg);
             ">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L4 20L12 16L20 20L12 2Z" fill="hsl(205,80%,55%)" stroke="white" stroke-width="1.5"/>
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L4 20L12 16L20 20L12 2Z" fill="hsl(205,60%,48%)" stroke="white" stroke-width="2"/>
               </svg>
             </div>
           </div>
         `,
         className: "user-marker-icon",
-        iconSize: [48, 48],
-        iconAnchor: [24, 24],
+        iconSize: [52, 52],
+        iconAnchor: [26, 26],
       });
 
       userMarkerRef.current = L.marker(userPos, { icon, zIndexOffset: 1000 }).addTo(map);
@@ -155,7 +154,6 @@ const NavigationMap = ({
     } else {
       userMarkerRef.current.setLatLng(userPos);
 
-      // Update arrow rotation
       const el = userMarkerRef.current.getElement();
       if (el) {
         const arrow = el.querySelector("div[style*='rotate']") as HTMLElement;
@@ -178,10 +176,10 @@ const NavigationMap = ({
 
       if (i === currentStopIndex) {
         inner.style.borderColor = "hsl(35,85%,55%)";
-        inner.style.boxShadow = "0 0 16px hsl(35,85%,55%,0.6)";
+        inner.style.boxShadow = "0 2px 12px hsl(35,85%,55%,0.4)";
       } else {
-        inner.style.borderColor = "hsl(152,50%,42%)";
-        inner.style.boxShadow = "0 0 10px hsl(152,50%,42%,0.4)";
+        inner.style.borderColor = "hsl(205,60%,48%)";
+        inner.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
       }
     });
   }, [currentStopIndex]);
@@ -189,22 +187,22 @@ const NavigationMap = ({
   return (
     <>
       <style>{`
-        @keyframes gps-pulse {
+        @keyframes gps-pulse-light {
           0% { transform: scale(0.8); opacity: 1; }
           100% { transform: scale(2.5); opacity: 0; }
         }
-        .poi-tooltip {
-          background: hsl(160,20%,12%) !important;
-          color: white !important;
-          border: 1px solid hsl(152,50%,42%,0.4) !important;
-          border-radius: 8px !important;
-          padding: 4px 10px !important;
+        .poi-tooltip-light {
+          background: white !important;
+          color: hsl(160,30%,10%) !important;
+          border: 1px solid hsl(0,0%,88%) !important;
+          border-radius: 10px !important;
+          padding: 5px 12px !important;
           font-size: 12px !important;
-          font-weight: 500 !important;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+          font-weight: 600 !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
         }
-        .poi-tooltip::before {
-          border-top-color: hsl(160,20%,12%) !important;
+        .poi-tooltip-light::before {
+          border-top-color: white !important;
         }
         .user-marker-icon {
           background: none !important;
