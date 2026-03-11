@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square } from "lucide-react";
+import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { StopData, AudioZoneData, MusicSegmentData, EditorMode } from "@/pages/CircuitCreator";
 import { MUSIC_LIBRARY } from "@/pages/CircuitCreator";
