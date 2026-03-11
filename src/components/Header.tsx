@@ -8,34 +8,34 @@ const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
+    <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/40">
       <div className="container flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-gradient-hero flex items-center justify-center">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-hero flex items-center justify-center shadow-glow">
             <Car className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-display text-xl font-bold text-foreground">RoadTrip</span>
+          <span className="font-display text-xl font-bold text-foreground tracking-tight">RoadTrip</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition-colors">Explorer</Link>
-          {user && <Link to="/my-circuits" className="hover:text-foreground transition-colors">Mes circuits</Link>}
-          {user && <Link to="/creator" className="hover:text-foreground transition-colors">Créateur</Link>}
+        <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+          <Link to="/" className="px-4 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">Explorer</Link>
+          {user && <Link to="/my-circuits" className="px-4 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">Mes circuits</Link>}
+          {user && <Link to="/creator" className="px-4 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">Créateur</Link>}
         </nav>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2">
           {user ? (
             <>
-              <Link to="/my-circuits" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-foreground text-sm font-medium">
-                <User className="w-4 h-4" /> Mon profil
+              <Link to="/my-circuits" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition-colors">
+                <User className="w-4 h-4" /> Profil
               </Link>
-              <button onClick={signOut} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={signOut} className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">
                 <LogOut className="w-4 h-4" />
               </button>
             </>
           ) : (
-            <Link to="/auth" className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Link to="/auth" className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
               Connexion
             </Link>
           )}
@@ -49,14 +49,14 @@ const Header = () => {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-card border-t border-border p-4 space-y-3">
-          <Link to="/" onClick={() => setMenuOpen(false)} className="block py-2 text-foreground font-medium">Explorer</Link>
-          {user && <Link to="/my-circuits" onClick={() => setMenuOpen(false)} className="block py-2 text-foreground font-medium">Mes circuits</Link>}
-          {user && <Link to="/creator" onClick={() => setMenuOpen(false)} className="block py-2 text-foreground font-medium">Créateur</Link>}
+        <div className="md:hidden bg-card border-t border-border p-4 space-y-2">
+          <Link to="/" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-foreground font-medium hover:bg-muted transition-colors">Explorer</Link>
+          {user && <Link to="/my-circuits" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-foreground font-medium hover:bg-muted transition-colors">Mes circuits</Link>}
+          {user && <Link to="/creator" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-foreground font-medium hover:bg-muted transition-colors">Créateur</Link>}
           {user ? (
-            <button onClick={() => { signOut(); setMenuOpen(false); }} className="block py-2 text-destructive font-medium">Déconnexion</button>
+            <button onClick={() => { signOut(); setMenuOpen(false); }} className="block w-full text-left py-2.5 px-3 rounded-xl text-destructive font-medium hover:bg-destructive/10 transition-colors">Déconnexion</button>
           ) : (
-            <Link to="/auth" onClick={() => setMenuOpen(false)} className="block py-2 text-primary font-medium">Connexion</Link>
+            <Link to="/auth" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-primary font-semibold hover:bg-primary/10 transition-colors">Connexion</Link>
           )}
         </div>
       )}
