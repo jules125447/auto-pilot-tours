@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square } from "lucide-react";
+import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { StopData, AudioZoneData, MusicSegmentData, EditorMode } from "@/pages/CircuitCreator";
 import { MUSIC_LIBRARY } from "@/pages/CircuitCreator";
@@ -219,9 +219,14 @@ const CreatorSidebar = ({
                         </Select>
                         <Input value={stop.duration} onChange={(e) => onUpdateStop(stop.id, { duration: e.target.value })} placeholder="Durée" className="text-sm w-24" />
                       </div>
-                      <Button variant="destructive" size="sm" onClick={() => onDeleteStop(stop.id)} className="w-full gap-1">
-                        <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="default" size="sm" onClick={() => setSelectedStopId(null)} className="flex-1 gap-1">
+                          <Check className="w-3.5 h-3.5" /> OK
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDeleteStop(stop.id)} className="flex-1 gap-1">
+                          <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -262,6 +267,9 @@ const CreatorSidebar = ({
                       </div>
                       <div className="flex gap-2">
                         <AudioPlayButton text={zone.text} />
+                        <Button variant="default" size="sm" onClick={() => setSelectedAudioId(null)} className="flex-1 gap-1">
+                          <Check className="w-3.5 h-3.5" /> OK
+                        </Button>
                         <Button variant="destructive" size="sm" onClick={() => onDeleteAudio(zone.id)} className="flex-1 gap-1">
                           <Trash2 className="w-3.5 h-3.5" /> Supprimer
                         </Button>
@@ -324,9 +332,14 @@ const CreatorSidebar = ({
                           </div>
                         ))}
                       </div>
-                      <Button variant="destructive" size="sm" onClick={() => onDeleteMusic(seg.id)} className="w-full gap-1">
-                        <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="default" size="sm" onClick={() => setSelectedMusicId(null)} className="flex-1 gap-1">
+                          <Check className="w-3.5 h-3.5" /> OK
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDeleteMusic(seg.id)} className="flex-1 gap-1">
+                          <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
