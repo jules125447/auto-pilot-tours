@@ -332,9 +332,14 @@ const CreatorSidebar = ({
                           </div>
                         ))}
                       </div>
-                      <Button variant="destructive" size="sm" onClick={() => onDeleteMusic(seg.id)} className="w-full gap-1">
-                        <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="default" size="sm" onClick={() => setSelectedMusicId(null)} className="flex-1 gap-1">
+                          <Check className="w-3.5 h-3.5" /> OK
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDeleteMusic(seg.id)} className="flex-1 gap-1">
+                          <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
