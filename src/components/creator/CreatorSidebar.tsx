@@ -219,9 +219,14 @@ const CreatorSidebar = ({
                         </Select>
                         <Input value={stop.duration} onChange={(e) => onUpdateStop(stop.id, { duration: e.target.value })} placeholder="Durée" className="text-sm w-24" />
                       </div>
-                      <Button variant="destructive" size="sm" onClick={() => onDeleteStop(stop.id)} className="w-full gap-1">
-                        <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="default" size="sm" onClick={() => setSelectedStopId(null)} className="flex-1 gap-1">
+                          <Check className="w-3.5 h-3.5" /> OK
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDeleteStop(stop.id)} className="flex-1 gap-1">
+                          <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
