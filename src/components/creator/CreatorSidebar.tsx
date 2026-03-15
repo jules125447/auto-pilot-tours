@@ -3,8 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check } from "lucide-react";
+import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { StopData, AudioZoneData, MusicSegmentData, EditorMode } from "@/pages/CircuitCreator";
 import { MUSIC_LIBRARY } from "@/pages/CircuitCreator";
@@ -52,6 +51,20 @@ const stopTypes = [
   { value: "parking", label: "🅿️ Parking" },
 ];
 
+// Estimate audio duration based on text length (avg ~150 words/min, ~5 chars/word)
+const estimateAudioDuration = (text: string): number => {
+  if (!text.trim()) return 0;
+  const words = text.trim().split(/\s+/).length;
+  return Math.ceil((words / 150) * 60); // seconds
+};
+
+// Estimate distance covered during audio at ~40km/h
+const estimateAudioDistance = (text: string): number => {
+  const durationSec = estimateAudioDuration(text);
+  const speedMs = (40 * 1000) / 3600; // 40km/h in m/s
+  return Math.round(durationSec * speedMs);
+};
+
 const AudioPlayButton = ({ text }: { text: string }) => {
   const [playing, setPlaying] = useState(false);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -92,7 +105,6 @@ const MusicPlayButton = ({ url }: { url: string }) => {
       audioRef.current = null;
       setPlaying(false);
     } else {
-      // Stop any previous audio
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -105,18 +117,12 @@ const MusicPlayButton = ({ url }: { url: string }) => {
         audioRef.current = null;
       };
       audio.onerror = () => {
-        console.error("Audio playback error for:", url);
         setPlaying(false);
         audioRef.current = null;
       };
       const playPromise = audio.play();
       if (playPromise) {
-        playPromise.then(() => {
-          setPlaying(true);
-        }).catch((err) => {
-          console.error("Play failed:", err);
-          setPlaying(false);
-        });
+        playPromise.then(() => setPlaying(true)).catch(() => setPlaying(false));
       }
     }
   };
@@ -153,6 +159,14 @@ const CreatorSidebar = ({
   routePointsCount,
   mode,
 }: CreatorSidebarProps) => {
+  const [musicSearch, setMusicSearch] = useState("");
+
+  const filteredMusic = MUSIC_LIBRARY.filter(
+    (t) =>
+      t.name.toLowerCase().includes(musicSearch.toLowerCase()) ||
+      t.genre.toLowerCase().includes(musicSearch.toLowerCase())
+  );
+
   return (
     <div className="w-80 lg:w-96 border-r border-border bg-card flex flex-col">
       <ScrollArea className="flex-1">
@@ -245,12 +259,18 @@ const CreatorSidebar = ({
           {(mode === "audio" || mode === "select") && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Volume2 className="w-4 h-4" /> Zones audio</h3>
+              <p className="text-xs text-muted-foreground">
+                Placez un point sur la carte. La zone de diffusion est estimée automatiquement selon la longueur du texte.
+              </p>
               {audioZones.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Cliquez sur la carte en mode "Zone audio" pour placer des commentaires.
+                  Cliquez sur la carte en mode "Zone audio" pour placer un commentaire.
                 </p>
               )}
-              {audioZones.map((zone) => (
+              {audioZones.map((zone) => {
+                const estDistance = estimateAudioDistance(zone.text);
+                const estDuration = estimateAudioDuration(zone.text);
+                return (
                 <div
                   key={zone.id}
                   onClick={() => setSelectedAudioId(zone.id)}
@@ -261,10 +281,12 @@ const CreatorSidebar = ({
                   {selectedAudioId === zone.id ? (
                     <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                       <Textarea value={zone.text} onChange={(e) => onUpdateAudio(zone.id, { text: e.target.value })} placeholder="Texte du commentaire audio..." rows={3} className="text-sm" />
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Rayon : {zone.radius}m</label>
-                        <Slider value={[zone.radius]} onValueChange={([v]) => onUpdateAudio(zone.id, { radius: v })} min={30} max={500} step={10} />
-                      </div>
+                      {zone.text.trim() && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 space-y-0.5">
+                          <p>⏱ Durée estimée : ~{estDuration}s</p>
+                          <p>📏 Zone de diffusion : ~{estDistance}m sur le parcours</p>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <AudioPlayButton text={zone.text} />
                         <Button variant="default" size="sm" onClick={() => setSelectedAudioId(null)} className="flex-1 gap-1">
@@ -282,12 +304,13 @@ const CreatorSidebar = ({
                         <p className="text-sm font-medium text-foreground truncate">
                           {zone.text ? zone.text.substring(0, 40) + "..." : "Zone audio sans texte"}
                         </p>
-                        <p className="text-xs text-muted-foreground">Rayon : {zone.radius}m</p>
+                        <p className="text-xs text-muted-foreground">~{estDistance}m · ~{estDuration}s</p>
                       </div>
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -312,8 +335,21 @@ const CreatorSidebar = ({
                   {selectedMusicId === seg.id ? (
                     <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                       <p className="text-xs font-semibold text-foreground">Choisir une musique :</p>
+                      {/* Search bar */}
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Rechercher une musique..."
+                          value={musicSearch}
+                          onChange={(e) => setMusicSearch(e.target.value)}
+                          className="text-sm pl-8 h-8"
+                        />
+                      </div>
                       <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {MUSIC_LIBRARY.map((track) => (
+                        {filteredMusic.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">Aucun résultat</p>
+                        )}
+                        {filteredMusic.map((track) => (
                           <div
                             key={track.id}
                             className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
@@ -333,7 +369,7 @@ const CreatorSidebar = ({
                         ))}
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="default" size="sm" onClick={() => setSelectedMusicId(null)} className="flex-1 gap-1">
+                        <Button variant="default" size="sm" onClick={() => { setSelectedMusicId(null); setMusicSearch(""); }} className="flex-1 gap-1">
                           <Check className="w-3.5 h-3.5" /> OK
                         </Button>
                         <Button variant="destructive" size="sm" onClick={() => onDeleteMusic(seg.id)} className="flex-1 gap-1">

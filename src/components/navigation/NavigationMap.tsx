@@ -25,6 +25,17 @@ const poiEmoji: Record<string, string> = {
   site: "🏛️",
 };
 
+// Find the closest route point index to a given position
+function findClosestRouteIndex(route: [number, number][], pos: [number, number]): number {
+  let minDist = Infinity;
+  let idx = 0;
+  for (let i = 0; i < route.length; i++) {
+    const d = (route[i][0] - pos[0]) ** 2 + (route[i][1] - pos[1]) ** 2;
+    if (d < minDist) { minDist = d; idx = i; }
+  }
+  return idx;
+}
+
 const NavigationMap = ({
   route,
   stops,
@@ -36,6 +47,8 @@ const NavigationMap = ({
   const mapInstance = useRef<L.Map | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const stopMarkersRef = useRef<L.Marker[]>([]);
+  const traveledLineRef = useRef<L.Polyline | null>(null);
+  const remainingLineRef = useRef<L.Polyline | null>(null);
 
   // Init map
   useEffect(() => {
@@ -46,13 +59,12 @@ const NavigationMap = ({
       attributionControl: false,
     });
 
-    // Light tile layer
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       { maxZoom: 19 }
     ).addTo(map);
 
-    // Draw route - primary blue
+    // Draw route
     if (route.length > 0) {
       // Shadow
       L.polyline(route, {
@@ -62,8 +74,8 @@ const NavigationMap = ({
         smoothFactor: 1,
       }).addTo(map);
 
-      // Main line
-      const polyline = L.polyline(route, {
+      // Remaining (full route initially)
+      remainingLineRef.current = L.polyline(route, {
         color: "hsl(205, 60%, 48%)",
         weight: 6,
         opacity: 0.9,
@@ -72,11 +84,22 @@ const NavigationMap = ({
         lineJoin: "round",
       }).addTo(map);
 
+      // Traveled (empty initially)
+      traveledLineRef.current = L.polyline([], {
+        color: "hsl(35, 85%, 55%)",
+        weight: 6,
+        opacity: 0.9,
+        smoothFactor: 1,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+
+      const polyline = L.polyline(route);
       map.fitBounds(polyline.getBounds(), { padding: [80, 80] });
     }
 
     // POI markers
-    stops.forEach((stop, i) => {
+    stops.forEach((stop) => {
       const icon = L.divIcon({
         html: `
           <div style="
@@ -114,13 +137,25 @@ const NavigationMap = ({
       map.remove();
       mapInstance.current = null;
       stopMarkersRef.current = [];
+      traveledLineRef.current = null;
+      remainingLineRef.current = null;
     };
   }, [route, stops]);
 
-  // Update user position marker
+  // Update user position marker + traveled/remaining route
   useEffect(() => {
     if (!mapInstance.current || !userPos) return;
     const map = mapInstance.current;
+
+    // Update traveled/remaining polylines
+    if (route.length > 1) {
+      const closestIdx = findClosestRouteIndex(route, userPos);
+      const traveled = route.slice(0, closestIdx + 1).concat([userPos]);
+      const remaining = [userPos].concat(route.slice(closestIdx + 1));
+
+      if (traveledLineRef.current) traveledLineRef.current.setLatLngs(traveled);
+      if (remainingLineRef.current) remainingLineRef.current.setLatLngs(remaining);
+    }
 
     if (!userMarkerRef.current) {
       const icon = L.divIcon({
@@ -164,7 +199,7 @@ const NavigationMap = ({
 
       map.panTo(userPos, { animate: true, duration: 0.5 });
     }
-  }, [userPos, heading]);
+  }, [userPos, heading, route]);
 
   // Highlight current stop
   useEffect(() => {
