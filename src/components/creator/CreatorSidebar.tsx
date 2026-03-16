@@ -160,12 +160,35 @@ const CreatorSidebar = ({
   mode,
 }: CreatorSidebarProps) => {
   const [musicSearch, setMusicSearch] = useState("");
+  const [itunesResults, setItunesResults] = useState<any[]>([]);
+  const [itunesLoading, setItunesLoading] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filteredMusic = MUSIC_LIBRARY.filter(
-    (t) =>
-      t.name.toLowerCase().includes(musicSearch.toLowerCase()) ||
-      t.genre.toLowerCase().includes(musicSearch.toLowerCase())
-  );
+  const searchItunes = useCallback((term: string) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!term.trim()) {
+      setItunesResults([]);
+      return;
+    }
+    setItunesLoading(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=20&entity=song`
+        );
+        const data = await res.json();
+        setItunesResults(data.results || []);
+      } catch {
+        setItunesResults([]);
+      } finally {
+        setItunesLoading(false);
+      }
+    }, 400);
+  }, []);
+
+  useEffect(() => {
+    searchItunes(musicSearch);
+  }, [musicSearch, searchItunes]);
 
   return (
     <div className="w-80 lg:w-96 border-r border-border bg-card flex flex-col">
