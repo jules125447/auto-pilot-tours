@@ -168,6 +168,62 @@ export type Database = {
         }
         Relationships: []
       }
+      music_segments: {
+        Row: {
+          artist_name: string | null
+          artwork_url: string | null
+          circuit_id: string
+          created_at: string
+          end_lat: number
+          end_lng: number
+          id: string
+          preview_url: string | null
+          sort_order: number | null
+          start_lat: number
+          start_lng: number
+          track_id: string
+          track_name: string
+        }
+        Insert: {
+          artist_name?: string | null
+          artwork_url?: string | null
+          circuit_id: string
+          created_at?: string
+          end_lat: number
+          end_lng: number
+          id?: string
+          preview_url?: string | null
+          sort_order?: number | null
+          start_lat: number
+          start_lng: number
+          track_id: string
+          track_name: string
+        }
+        Update: {
+          artist_name?: string | null
+          artwork_url?: string | null
+          circuit_id?: string
+          created_at?: string
+          end_lat?: number
+          end_lng?: number
+          id?: string
+          preview_url?: string | null
+          sort_order?: number | null
+          start_lat?: number
+          start_lng?: number
+          track_id?: string
+          track_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_segments_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

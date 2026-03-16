@@ -11,6 +11,8 @@ import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 
+const FADE_DURATION = 2000; // 2s fade in/out
+
 const NavigationView = () => {
   const { id } = useParams();
   const { data: circuit, isLoading } = useCircuit(id);
@@ -19,9 +21,14 @@ const NavigationView = () => {
   const [heading, setHeading] = useState(0);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioOverlayText, setAudioOverlayText] = useState<string | null>(null);
   const [visitedStops, setVisitedStops] = useState<Set<number>>(new Set());
+  const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const watchIdRef = useRef<number | null>(null);
+  const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+  const activeMusicIdRef = useRef<string | null>(null);
+  const fadeIntervalRef = useRef<number | null>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
@@ -55,13 +62,111 @@ const NavigationView = () => {
     };
   }, []);
 
+  // Cleanup music on unmount
+  useEffect(() => {
+    return () => {
+      if (musicAudioRef.current) {
+        musicAudioRef.current.pause();
+        musicAudioRef.current = null;
+      }
+      if (fadeIntervalRef.current) cancelAnimationFrame(fadeIntervalRef.current);
+    };
+  }, []);
+
   // Voice announcements for turns
   useEffect(() => {
     if (!voiceEnabled || !turnInfo) return;
     announceDirection(turnInfo.turn.direction, turnInfo.distanceToTurn);
   }, [turnInfo, voiceEnabled, announceDirection]);
 
-  // Auto-detect nearest stop & trigger audio
+  // Fade helper
+  const fadeAudio = useCallback((audio: HTMLAudioElement, targetVol: number, onDone?: () => void) => {
+    const startVol = audio.volume;
+    const startTime = performance.now();
+    const step = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / FADE_DURATION, 1);
+      audio.volume = startVol + (targetVol - startVol) * progress;
+      if (progress < 1) {
+        fadeIntervalRef.current = requestAnimationFrame(step);
+      } else {
+        onDone?.();
+      }
+    };
+    fadeIntervalRef.current = requestAnimationFrame(step);
+  }, []);
+
+  // Auto-detect audio zones by proximity to their actual position
+  useEffect(() => {
+    if (!userPos || !circuit) return;
+    const [lat, lng] = userPos;
+
+    // Check audio zones
+    circuit.audio_zones.forEach((zone) => {
+      if (triggeredAudioZones.has(zone.id)) return;
+      const dist = haversine(lat, lng, zone.lat, zone.lng);
+      if (dist < (zone.radius_meters || 50)) {
+        setTriggeredAudioZones((prev) => new Set(prev).add(zone.id));
+
+        if (zone.audio_text) {
+          setAudioOverlayText(zone.audio_text);
+          setAudioPlaying(true);
+          if (voiceEnabled) {
+            announceAudioZone(zone.audio_text);
+          }
+          // Estimate display time from text length
+          const words = zone.audio_text.trim().split(/\s+/).length;
+          const displayMs = Math.max(4000, (words / 150) * 60 * 1000);
+          setTimeout(() => setAudioPlaying(false), displayMs);
+        }
+      }
+    });
+  }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone]);
+
+  // Auto-detect music segments by proximity to start/end points
+  useEffect(() => {
+    if (!userPos || !circuit) return;
+    const [lat, lng] = userPos;
+
+    circuit.music_segments.forEach((seg) => {
+      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
+      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+
+      // Start music when near start point
+      if (distToStart < 60 && activeMusicIdRef.current !== seg.id && seg.preview_url) {
+        // Stop current music if any
+        if (musicAudioRef.current) {
+          fadeAudio(musicAudioRef.current, 0, () => {
+            musicAudioRef.current?.pause();
+            musicAudioRef.current = null;
+          });
+        }
+
+        const audio = new Audio(seg.preview_url);
+        audio.volume = 0;
+        audio.loop = true;
+        audio.play().then(() => {
+          fadeAudio(audio, 0.7);
+        }).catch(console.warn);
+        musicAudioRef.current = audio;
+        activeMusicIdRef.current = seg.id;
+      }
+
+      // Stop music when near end point
+      if (distToEnd < 60 && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
+        const audioToStop = musicAudioRef.current;
+        fadeAudio(audioToStop, 0, () => {
+          audioToStop.pause();
+          if (musicAudioRef.current === audioToStop) {
+            musicAudioRef.current = null;
+            activeMusicIdRef.current = null;
+          }
+        });
+      }
+    });
+  }, [userPos, circuit, fadeAudio]);
+
+  // Auto-detect nearest stop & trigger arrival
   useEffect(() => {
     if (!userPos || !circuit) return;
     const [lat, lng] = userPos;
@@ -71,23 +176,11 @@ const NavigationView = () => {
     const dist = haversine(lat, lng, stop.lat, stop.lng);
     if (dist < 50 && !visitedStops.has(currentStopIndex)) {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
-
       if (voiceEnabled) {
         announceArrival(stop.title);
       }
-
-      const audioZone = circuit.audio_zones.find(
-        (az) => Math.abs(az.lat - stop.lat) < 0.001 && Math.abs(az.lng - stop.lng) < 0.001
-      );
-      if (audioZone) {
-        setAudioPlaying(true);
-        if (voiceEnabled && audioZone.audio_text) {
-          announceAudioZone(audioZone.audio_text);
-        }
-        setTimeout(() => setAudioPlaying(false), 6000);
-      }
     }
-  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, announceArrival, announceAudioZone]);
+  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, announceArrival]);
 
   // Nav info calculations
   const getNavInfo = useCallback(() => {
@@ -147,13 +240,6 @@ const NavigationView = () => {
   }
 
   const currentStop = circuit.stops[currentStopIndex];
-  const currentAudio = currentStop
-    ? circuit.audio_zones.find(
-        (az) =>
-          Math.abs(az.lat - currentStop.lat) < 0.001 &&
-          Math.abs(az.lng - currentStop.lng) < 0.001
-      )
-    : null;
 
   // Determine current direction to show
   const currentDirection: TurnDirection = turnInfo?.turn.direction ?? "straight";
@@ -201,9 +287,9 @@ const NavigationView = () => {
 
         {/* Audio overlay */}
         <AnimatePresence>
-          {audioPlaying && currentAudio?.audio_text && (
+          {audioPlaying && audioOverlayText && (
             <AudioOverlay
-              text={currentAudio.audio_text}
+              text={audioOverlayText}
               onDismiss={() => setAudioPlaying(false)}
             />
           )}

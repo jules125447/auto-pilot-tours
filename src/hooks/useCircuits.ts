@@ -40,12 +40,24 @@ export interface CircuitWithStops {
     radius_meters: number | null;
     sort_order: number | null;
   }[];
+  music_segments: {
+    id: string;
+    start_lat: number;
+    start_lng: number;
+    end_lat: number;
+    end_lng: number;
+    track_name: string;
+    artist_name: string | null;
+    preview_url: string | null;
+    artwork_url: string | null;
+  }[];
 }
 
 function mapCircuit(
   circuit: Tables<"circuits">,
   stops: Tables<"circuit_stops">[],
-  audioZones: Tables<"audio_zones">[]
+  audioZones: Tables<"audio_zones">[],
+  musicSegments: Tables<"music_segments">[] = []
 ): CircuitWithStops {
   const route = Array.isArray(circuit.route) ? (circuit.route as [number, number][]) : [];
   return {
@@ -79,6 +91,19 @@ function mapCircuit(
     audio_zones: audioZones
       .filter((a) => a.circuit_id === circuit.id)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+    music_segments: musicSegments
+      .filter((m) => m.circuit_id === circuit.id)
+      .map((m) => ({
+        id: m.id,
+        start_lat: m.start_lat,
+        start_lng: m.start_lng,
+        end_lat: m.end_lat,
+        end_lng: m.end_lng,
+        track_name: m.track_name,
+        artist_name: m.artist_name,
+        preview_url: m.preview_url,
+        artwork_url: m.artwork_url,
+      })),
   };
 }
 
@@ -86,17 +111,19 @@ export function useCircuits() {
   return useQuery({
     queryKey: ["circuits"],
     queryFn: async () => {
-      const [circuitsRes, stopsRes, audioRes] = await Promise.all([
+      const [circuitsRes, stopsRes, audioRes, musicRes] = await Promise.all([
         supabase.from("circuits").select("*").eq("published", true),
         supabase.from("circuit_stops").select("*"),
         supabase.from("audio_zones").select("*"),
+        supabase.from("music_segments").select("*"),
       ]);
 
       if (circuitsRes.error) throw circuitsRes.error;
       const stops = stopsRes.data || [];
       const audio = audioRes.data || [];
+      const music = musicRes.data || [];
 
-      return circuitsRes.data.map((c) => mapCircuit(c, stops, audio));
+      return circuitsRes.data.map((c) => mapCircuit(c, stops, audio, music));
     },
   });
 }
@@ -106,14 +133,15 @@ export function useCircuit(id: string | undefined) {
     queryKey: ["circuit", id],
     enabled: !!id,
     queryFn: async () => {
-      const [circuitRes, stopsRes, audioRes] = await Promise.all([
+      const [circuitRes, stopsRes, audioRes, musicRes] = await Promise.all([
         supabase.from("circuits").select("*").eq("id", id!).single(),
         supabase.from("circuit_stops").select("*").eq("circuit_id", id!),
         supabase.from("audio_zones").select("*").eq("circuit_id", id!),
+        supabase.from("music_segments").select("*").eq("circuit_id", id!),
       ]);
 
       if (circuitRes.error) throw circuitRes.error;
-      return mapCircuit(circuitRes.data, stopsRes.data || [], audioRes.data || []);
+      return mapCircuit(circuitRes.data, stopsRes.data || [], audioRes.data || [], musicRes.data || []);
     },
   });
 }
