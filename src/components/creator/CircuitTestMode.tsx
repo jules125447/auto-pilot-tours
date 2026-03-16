@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Square, X, FastForward, Volume2, Music } from "lucide-react";
 import type { StopData, AudioZoneData, MusicSegmentData } from "@/pages/CircuitCreator";
-import { MUSIC_LIBRARY } from "@/pages/CircuitCreator";
 import { haversine } from "@/lib/turnDetection";
 import L from "leaflet";
 
