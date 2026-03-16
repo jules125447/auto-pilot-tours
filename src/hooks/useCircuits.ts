@@ -40,6 +40,17 @@ export interface CircuitWithStops {
     radius_meters: number | null;
     sort_order: number | null;
   }[];
+  music_segments: {
+    id: string;
+    start_lat: number;
+    start_lng: number;
+    end_lat: number;
+    end_lng: number;
+    track_name: string;
+    artist_name: string | null;
+    preview_url: string | null;
+    artwork_url: string | null;
+  }[];
 }
 
 function mapCircuit(

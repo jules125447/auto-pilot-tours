@@ -277,6 +277,25 @@ const CircuitCreator = () => {
         if (audioErr) throw audioErr;
       }
 
+      if (musicSegments.length > 0) {
+        const { error: musicErr } = await supabase.from("music_segments").insert(
+          musicSegments.map((m, i) => ({
+            circuit_id: circuit.id,
+            start_lat: m.startLat,
+            start_lng: m.startLng,
+            end_lat: m.endLat,
+            end_lng: m.endLng,
+            track_id: m.trackId,
+            track_name: m.trackName,
+            artist_name: m.artistName || null,
+            preview_url: m.previewUrl || null,
+            artwork_url: m.artworkUrl || null,
+            sort_order: i,
+          }))
+        );
+        if (musicErr) throw musicErr;
+      }
+
       toast({
         title: publish ? "Circuit publié !" : "Brouillon sauvegardé",
         description: publish
