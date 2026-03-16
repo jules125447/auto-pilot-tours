@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { StopData, AudioZoneData, MusicSegmentData, EditorMode } from "@/pages/CircuitCreator";
-import { MUSIC_LIBRARY } from "@/pages/CircuitCreator";
 import { Slider } from "@/components/ui/slider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CreatorSidebarProps {
   title: string;
