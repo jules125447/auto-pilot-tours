@@ -346,7 +346,6 @@ const CreatorSidebar = ({
                 </p>
               )}
               {musicSegments.map((seg) => {
-                const selectedTrack = MUSIC_LIBRARY.find(t => t.id === seg.trackId);
                 return (
                 <div
                   key={seg.id}
@@ -357,35 +356,51 @@ const CreatorSidebar = ({
                 >
                   {selectedMusicId === seg.id ? (
                     <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                      <p className="text-xs font-semibold text-foreground">Choisir une musique :</p>
-                      {/* Search bar */}
+                      <p className="text-xs font-semibold text-foreground">Rechercher sur iTunes :</p>
                       <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                         <Input
-                          placeholder="Rechercher une musique..."
+                          placeholder="Artiste, titre, album..."
                           value={musicSearch}
                           onChange={(e) => setMusicSearch(e.target.value)}
                           className="text-sm pl-8 h-8"
                         />
                       </div>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {filteredMusic.length === 0 && (
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                        {itunesLoading && (
+                          <div className="space-y-2 py-1">
+                            {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
+                          </div>
+                        )}
+                        {!itunesLoading && musicSearch.trim() && itunesResults.length === 0 && (
                           <p className="text-xs text-muted-foreground text-center py-2">Aucun résultat</p>
                         )}
-                        {filteredMusic.map((track) => (
+                        {!itunesLoading && !musicSearch.trim() && (
+                          <p className="text-xs text-muted-foreground text-center py-2">Tapez pour rechercher parmi des millions de titres</p>
+                        )}
+                        {!itunesLoading && itunesResults.map((track: any) => (
                           <div
-                            key={track.id}
+                            key={track.trackId}
                             className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
-                              seg.trackId === track.id ? "bg-accent/15 border border-accent" : "bg-muted/50 hover:bg-muted"
+                              seg.trackId === String(track.trackId) ? "bg-accent/15 border border-accent" : "bg-muted/50 hover:bg-muted"
                             }`}
-                            onClick={() => onUpdateMusic(seg.id, { trackId: track.id, trackName: track.name })}
+                            onClick={() => onUpdateMusic(seg.id, {
+                              trackId: String(track.trackId),
+                              trackName: track.trackName || track.collectionName,
+                              previewUrl: track.previewUrl,
+                              artworkUrl: track.artworkUrl60,
+                              artistName: track.artistName,
+                            })}
                           >
-                            <MusicPlayButton url={track.url} />
+                            {track.artworkUrl60 && (
+                              <img src={track.artworkUrl60} alt="" className="w-10 h-10 rounded shrink-0" />
+                            )}
+                            {track.previewUrl && <MusicPlayButton url={track.previewUrl} />}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">{track.name}</p>
-                              <p className="text-xs text-muted-foreground">{track.genre}</p>
+                              <p className="text-sm font-medium text-foreground truncate">{track.trackName}</p>
+                              <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
                             </div>
-                            {seg.trackId === track.id && (
+                            {seg.trackId === String(track.trackId) && (
                               <span className="text-xs font-semibold text-accent">✓</span>
                             )}
                           </div>
@@ -402,12 +417,16 @@ const CreatorSidebar = ({
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">🎵</span>
+                      {seg.artworkUrl ? (
+                        <img src={seg.artworkUrl} alt="" className="w-8 h-8 rounded shrink-0" />
+                      ) : (
+                        <span className="text-lg">🎵</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{seg.trackName}</p>
-                        <p className="text-xs text-muted-foreground">Segment musical</p>
+                        <p className="text-xs text-muted-foreground truncate">{seg.artistName || "Segment musical"}</p>
                       </div>
-                      {selectedTrack && <MusicPlayButton url={selectedTrack.url} />}
+                      {seg.previewUrl && <MusicPlayButton url={seg.previewUrl} />}
                     </div>
                   )}
                 </div>
