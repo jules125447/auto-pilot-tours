@@ -144,11 +144,10 @@ const CircuitTestMode = ({
   // Music with fade in/out
   useEffect(() => {
     musicSegments.forEach((seg) => {
-      const track = MUSIC_LIBRARY.find((t) => t.id === seg.trackId);
-      if (!track) return;
+      if (!seg.previewUrl) return;
       if (activeMusicSegments.has(seg.id)) {
         if (!musicAudioRef.current[seg.id]) {
-          const audio = new Audio(track.url);
+          const audio = new Audio(seg.previewUrl);
           audio.loop = true;
           audio.volume = 0;
           audio.play().catch(() => {});

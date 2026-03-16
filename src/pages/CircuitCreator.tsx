@@ -199,8 +199,8 @@ const CircuitCreator = () => {
             startLng: musicPlacingStart.lng,
             endLat: lat,
             endLng: lng,
-            trackId: MUSIC_LIBRARY[0].id,
-            trackName: MUSIC_LIBRARY[0].name,
+            trackId: "",
+            trackName: "Aucune musique sélectionnée",
           };
           setMusicSegments((prev) => [...prev, newSegment]);
           setSelectedMusicId(newSegment.id);
