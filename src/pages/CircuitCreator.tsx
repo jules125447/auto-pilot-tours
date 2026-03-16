@@ -44,40 +44,7 @@ export interface MusicSegmentData {
   artistName?: string;
 }
 
-export const MUSIC_LIBRARY = [
-  // Ambiance
-  { id: "ambient-forest", name: "Forêt paisible", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", genre: "Ambiance" },
-  { id: "ambient-rain", name: "Pluie douce", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", genre: "Ambiance" },
-  { id: "ambient-ocean", name: "Océan calme", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", genre: "Ambiance" },
-  { id: "ambient-night", name: "Nuit étoilée", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", genre: "Ambiance" },
-  // Acoustique
-  { id: "acoustic-road", name: "Route acoustique", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", genre: "Acoustique" },
-  { id: "acoustic-sunset", name: "Coucher de soleil", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", genre: "Acoustique" },
-  { id: "acoustic-morning", name: "Matin tranquille", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", genre: "Acoustique" },
-  // Cinématique
-  { id: "cinematic-epic", name: "Épique cinéma", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", genre: "Cinématique" },
-  { id: "cinematic-adventure", name: "Aventure héroïque", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", genre: "Cinématique" },
-  { id: "cinematic-drama", name: "Drame intense", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", genre: "Cinématique" },
-  // Jazz
-  { id: "jazz-chill", name: "Jazz détendu", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", genre: "Jazz" },
-  { id: "jazz-swing", name: "Swing vintage", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", genre: "Jazz" },
-  { id: "jazz-bossa", name: "Bossa nova", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", genre: "Jazz" },
-  // Lo-fi
-  { id: "lofi-drive", name: "Lo-fi conduite", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", genre: "Lo-fi" },
-  { id: "lofi-chill", name: "Lo-fi détente", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", genre: "Lo-fi" },
-  // Classique
-  { id: "classical-piano", name: "Piano classique", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", genre: "Classique" },
-  { id: "classical-strings", name: "Cordes élégantes", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3", genre: "Classique" },
-  // Électro
-  { id: "electro-chill", name: "Électro chill", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", genre: "Électronique" },
-  { id: "electro-drive", name: "Synthwave route", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", genre: "Électronique" },
-  // World
-  { id: "world-mediterranean", name: "Méditerranée", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", genre: "World" },
-  { id: "world-celtic", name: "Celtique", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", genre: "World" },
-  // Rock
-  { id: "rock-indie", name: "Indie rock", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", genre: "Rock" },
-  { id: "rock-soft", name: "Rock doux", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", genre: "Rock" },
-];
+// MUSIC_LIBRARY removed — now using iTunes Search API
 
 export type EditorMode = "route" | "stop" | "audio" | "music" | "select";
 
