@@ -39,6 +39,9 @@ export interface MusicSegmentData {
   endLng: number;
   trackId: string;
   trackName: string;
+  previewUrl?: string;
+  artworkUrl?: string;
+  artistName?: string;
 }
 
 export const MUSIC_LIBRARY = [
