@@ -334,6 +334,22 @@ const CircuitCreator = () => {
         if (musicErr) throw musicErr;
       }
 
+      if (soundSegments.length > 0) {
+        const { error: soundErr } = await supabase.from("sound_segments").insert(
+          soundSegments.map((s, i) => ({
+            circuit_id: circuit.id,
+            start_lat: s.startLat,
+            start_lng: s.startLng,
+            end_lat: s.endLat,
+            end_lng: s.endLng,
+            sound_type: s.soundType,
+            volume: s.volume,
+            sort_order: i,
+          }))
+        );
+        if (soundErr) throw soundErr;
+      }
+
       toast({
         title: publish ? "Circuit publié !" : "Brouillon sauvegardé",
         description: publish
