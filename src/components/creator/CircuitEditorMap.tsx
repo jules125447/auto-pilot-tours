@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { StopData, AudioZoneData, MusicSegmentData, EditorMode } from "@/pages/CircuitCreator";
+import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, EditorMode } from "@/pages/CircuitCreator";
 
 interface CircuitEditorMapProps {
   route: [number, number][];
