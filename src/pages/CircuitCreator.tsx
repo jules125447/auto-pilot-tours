@@ -184,9 +184,27 @@ const CircuitCreator = () => {
           setSelectedMusicId(newSegment.id);
           setMusicPlacingStart(null);
         }
+      } else if (mode === "sound") {
+        if (!soundPlacingStart) {
+          setSoundPlacingStart({ lat, lng });
+          toast({ title: "Point A placé", description: "Cliquez pour placer le point B du segment sonore." });
+        } else {
+          const newSegment: SoundSegmentData = {
+            id: crypto.randomUUID(),
+            startLat: soundPlacingStart.lat,
+            startLng: soundPlacingStart.lng,
+            endLat: lat,
+            endLng: lng,
+            soundType: "river",
+            volume: 0.7,
+          };
+          setSoundSegments((prev) => [...prev, newSegment]);
+          setSelectedSoundId(newSegment.id);
+          setSoundPlacingStart(null);
+        }
       }
     },
-    [mode, stops.length, waypoints, rebuildRoute, musicPlacingStart, toast]
+    [mode, stops.length, waypoints, rebuildRoute, musicPlacingStart, soundPlacingStart, toast]
   );
 
   const handleWaypointDrag = useCallback((index: number, lat: number, lng: number) => {
