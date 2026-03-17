@@ -79,7 +79,9 @@ const CircuitCreator = () => {
   const [stops, setStops] = useState<StopData[]>([]);
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
   const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
+  const [soundSegments, setSoundSegments] = useState<SoundSegmentData[]>([]);
   const [musicPlacingStart, setMusicPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
+  const [soundPlacingStart, setSoundPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
   const [testMode, setTestMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -88,6 +90,7 @@ const CircuitCreator = () => {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const [selectedMusicId, setSelectedMusicId] = useState<string | null>(null);
+  const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
 
   // Rebuild the full route from all waypoints
   const rebuildRoute = useCallback(async (newWaypoints: [number, number][]) => {

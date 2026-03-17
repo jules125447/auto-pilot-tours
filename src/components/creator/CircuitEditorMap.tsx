@@ -32,6 +32,7 @@ const cursorByMode: Record<EditorMode, string> = {
   stop: "copy",
   audio: "cell",
   music: "crosshair",
+  sound: "crosshair",
   select: "default",
 };
 
