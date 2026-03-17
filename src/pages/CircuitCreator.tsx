@@ -446,13 +446,16 @@ const CircuitCreator = () => {
             stops={stops}
             audioZones={audioZones}
             musicSegments={musicSegments}
+            soundSegments={soundSegments}
             musicPlacingStart={musicPlacingStart}
+            soundPlacingStart={soundPlacingStart}
             mode={mode}
             onMapClick={handleMapClick}
             onWaypointDrag={handleWaypointDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
+            selectedSoundId={selectedSoundId}
             routeLoading={routeLoading}
             onMapReady={(map) => { mapInstanceRef.current = map; }}
           />
