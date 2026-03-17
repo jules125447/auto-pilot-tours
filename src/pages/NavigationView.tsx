@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Loader2, Volume2, VolumeX, Play } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
 import NavigationMap from "@/components/navigation/NavigationMap";
 import NavigationBar from "@/components/navigation/NavigationBar";
@@ -9,6 +9,7 @@ import AudioOverlay from "@/components/navigation/AudioOverlay";
 import { AnimatePresence } from "framer-motion";
 import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
+import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 
 const FADE_DURATION = 2000; // 2s fade in/out

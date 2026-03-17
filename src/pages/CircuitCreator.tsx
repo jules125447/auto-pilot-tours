@@ -44,9 +44,17 @@ export interface MusicSegmentData {
   artistName?: string;
 }
 
-// MUSIC_LIBRARY removed — now using iTunes Search API
+export interface SoundSegmentData {
+  id: string;
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  soundType: string;
+  volume: number;
+}
 
-export type EditorMode = "route" | "stop" | "audio" | "music" | "select";
+export type EditorMode = "route" | "stop" | "audio" | "music" | "sound" | "select";
 
 const CircuitCreator = () => {
   const { user } = useAuth();
