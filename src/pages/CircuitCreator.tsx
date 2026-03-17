@@ -403,18 +403,23 @@ const CircuitCreator = () => {
           stops={stops}
           audioZones={audioZones}
           musicSegments={musicSegments}
+          soundSegments={soundSegments}
           selectedStopId={selectedStopId}
           setSelectedStopId={setSelectedStopId}
           selectedAudioId={selectedAudioId}
           setSelectedAudioId={setSelectedAudioId}
           selectedMusicId={selectedMusicId}
           setSelectedMusicId={setSelectedMusicId}
+          selectedSoundId={selectedSoundId}
+          setSelectedSoundId={setSelectedSoundId}
           onUpdateStop={handleUpdateStop}
           onDeleteStop={handleDeleteStop}
           onUpdateAudio={handleUpdateAudio}
           onDeleteAudio={handleDeleteAudio}
           onUpdateMusic={handleUpdateMusic}
           onDeleteMusic={handleDeleteMusic}
+          onUpdateSound={handleUpdateSound}
+          onDeleteSound={handleDeleteSound}
           onSave={() => handleSave(false)}
           onPublish={() => handleSave(true)}
           saving={saving}
