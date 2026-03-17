@@ -44,9 +44,17 @@ export interface MusicSegmentData {
   artistName?: string;
 }
 
-// MUSIC_LIBRARY removed — now using iTunes Search API
+export interface SoundSegmentData {
+  id: string;
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  soundType: string;
+  volume: number;
+}
 
-export type EditorMode = "route" | "stop" | "audio" | "music" | "select";
+export type EditorMode = "route" | "stop" | "audio" | "music" | "sound" | "select";
 
 const CircuitCreator = () => {
   const { user } = useAuth();
@@ -71,7 +79,9 @@ const CircuitCreator = () => {
   const [stops, setStops] = useState<StopData[]>([]);
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
   const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
+  const [soundSegments, setSoundSegments] = useState<SoundSegmentData[]>([]);
   const [musicPlacingStart, setMusicPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
+  const [soundPlacingStart, setSoundPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
   const [testMode, setTestMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,6 +90,7 @@ const CircuitCreator = () => {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const [selectedMusicId, setSelectedMusicId] = useState<string | null>(null);
+  const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
 
   // Rebuild the full route from all waypoints
   const rebuildRoute = useCallback(async (newWaypoints: [number, number][]) => {
@@ -173,9 +184,27 @@ const CircuitCreator = () => {
           setSelectedMusicId(newSegment.id);
           setMusicPlacingStart(null);
         }
+      } else if (mode === "sound") {
+        if (!soundPlacingStart) {
+          setSoundPlacingStart({ lat, lng });
+          toast({ title: "Point A placé", description: "Cliquez pour placer le point B du segment sonore." });
+        } else {
+          const newSegment: SoundSegmentData = {
+            id: crypto.randomUUID(),
+            startLat: soundPlacingStart.lat,
+            startLng: soundPlacingStart.lng,
+            endLat: lat,
+            endLng: lng,
+            soundType: "river",
+            volume: 0.7,
+          };
+          setSoundSegments((prev) => [...prev, newSegment]);
+          setSelectedSoundId(newSegment.id);
+          setSoundPlacingStart(null);
+        }
       }
     },
-    [mode, stops.length, waypoints, rebuildRoute, musicPlacingStart, toast]
+    [mode, stops.length, waypoints, rebuildRoute, musicPlacingStart, soundPlacingStart, toast]
   );
 
   const handleWaypointDrag = useCallback((index: number, lat: number, lng: number) => {
@@ -222,6 +251,15 @@ const CircuitCreator = () => {
 
   const handleUpdateMusic = (id: string, data: Partial<MusicSegmentData>) => {
     setMusicSegments((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)));
+  };
+
+  const handleDeleteSound = (id: string) => {
+    setSoundSegments((prev) => prev.filter((s) => s.id !== id));
+    if (selectedSoundId === id) setSelectedSoundId(null);
+  };
+
+  const handleUpdateSound = (id: string, data: Partial<SoundSegmentData>) => {
+    setSoundSegments((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
   };
 
   const handleSave = async (publish: boolean) => {
@@ -296,6 +334,22 @@ const CircuitCreator = () => {
         if (musicErr) throw musicErr;
       }
 
+      if (soundSegments.length > 0) {
+        const { error: soundErr } = await supabase.from("sound_segments").insert(
+          soundSegments.map((s, i) => ({
+            circuit_id: circuit.id,
+            start_lat: s.startLat,
+            start_lng: s.startLng,
+            end_lat: s.endLat,
+            end_lng: s.endLng,
+            sound_type: s.soundType,
+            volume: s.volume,
+            sort_order: i,
+          }))
+        );
+        if (soundErr) throw soundErr;
+      }
+
       toast({
         title: publish ? "Circuit publié !" : "Brouillon sauvegardé",
         description: publish
@@ -349,18 +403,23 @@ const CircuitCreator = () => {
           stops={stops}
           audioZones={audioZones}
           musicSegments={musicSegments}
+          soundSegments={soundSegments}
           selectedStopId={selectedStopId}
           setSelectedStopId={setSelectedStopId}
           selectedAudioId={selectedAudioId}
           setSelectedAudioId={setSelectedAudioId}
           selectedMusicId={selectedMusicId}
           setSelectedMusicId={setSelectedMusicId}
+          selectedSoundId={selectedSoundId}
+          setSelectedSoundId={setSelectedSoundId}
           onUpdateStop={handleUpdateStop}
           onDeleteStop={handleDeleteStop}
           onUpdateAudio={handleUpdateAudio}
           onDeleteAudio={handleDeleteAudio}
           onUpdateMusic={handleUpdateMusic}
           onDeleteMusic={handleDeleteMusic}
+          onUpdateSound={handleUpdateSound}
+          onDeleteSound={handleDeleteSound}
           onSave={() => handleSave(false)}
           onPublish={() => handleSave(true)}
           saving={saving}
@@ -387,13 +446,16 @@ const CircuitCreator = () => {
             stops={stops}
             audioZones={audioZones}
             musicSegments={musicSegments}
+            soundSegments={soundSegments}
             musicPlacingStart={musicPlacingStart}
+            soundPlacingStart={soundPlacingStart}
             mode={mode}
             onMapClick={handleMapClick}
             onWaypointDrag={handleWaypointDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
+            selectedSoundId={selectedSoundId}
             routeLoading={routeLoading}
             onMapReady={(map) => { mapInstanceRef.current = map; }}
           />

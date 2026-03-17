@@ -1,4 +1,4 @@
-import { Route, MapPin, Volume2, MousePointer, Undo2, Trash2, Loader2, Music, PlayCircle } from "lucide-react";
+import { Route, MapPin, Volume2, MousePointer, Undo2, Trash2, Loader2, Music, PlayCircle, Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistance, formatDuration } from "@/lib/routing";
 import type { EditorMode } from "@/pages/CircuitCreator";
@@ -22,6 +22,7 @@ const tools: { mode: EditorMode; icon: typeof Route; label: string }[] = [
   { mode: "stop", icon: MapPin, label: "Point d'intérêt" },
   { mode: "audio", icon: Volume2, label: "Zone audio" },
   { mode: "music", icon: Music, label: "Musique" },
+  { mode: "sound", icon: Waves, label: "Ambiance" },
 ];
 
 const CreatorToolbar = ({
