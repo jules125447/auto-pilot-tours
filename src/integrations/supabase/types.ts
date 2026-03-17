@@ -283,6 +283,53 @@ export type Database = {
           },
         ]
       }
+      sound_segments: {
+        Row: {
+          circuit_id: string
+          created_at: string
+          end_lat: number
+          end_lng: number
+          id: string
+          sort_order: number | null
+          sound_type: string
+          start_lat: number
+          start_lng: number
+          volume: number
+        }
+        Insert: {
+          circuit_id: string
+          created_at?: string
+          end_lat: number
+          end_lng: number
+          id?: string
+          sort_order?: number | null
+          sound_type?: string
+          start_lat: number
+          start_lng: number
+          volume?: number
+        }
+        Update: {
+          circuit_id?: string
+          created_at?: string
+          end_lat?: number
+          end_lng?: number
+          id?: string
+          sort_order?: number | null
+          sound_type?: string
+          start_lat?: number
+          start_lng?: number
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sound_segments_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
