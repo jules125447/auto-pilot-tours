@@ -253,6 +253,15 @@ const CircuitCreator = () => {
     setMusicSegments((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)));
   };
 
+  const handleDeleteSound = (id: string) => {
+    setSoundSegments((prev) => prev.filter((s) => s.id !== id));
+    if (selectedSoundId === id) setSelectedSoundId(null);
+  };
+
+  const handleUpdateSound = (id: string, data: Partial<SoundSegmentData>) => {
+    setSoundSegments((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
+  };
+
   const handleSave = async (publish: boolean) => {
     if (!user) return;
     setSaving(true);
