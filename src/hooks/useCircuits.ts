@@ -51,6 +51,15 @@ export interface CircuitWithStops {
     preview_url: string | null;
     artwork_url: string | null;
   }[];
+  sound_segments: {
+    id: string;
+    start_lat: number;
+    start_lng: number;
+    end_lat: number;
+    end_lng: number;
+    sound_type: string;
+    volume: number;
+  }[];
 }
 
 function mapCircuit(
