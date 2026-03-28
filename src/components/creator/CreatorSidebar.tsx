@@ -451,6 +451,34 @@ const CreatorSidebar = ({
                         </Select>
                         <Input value={stop.duration} onChange={(e) => onUpdateStop(stop.id, { duration: e.target.value })} placeholder="Durée" className="text-sm w-24" />
                       </div>
+                      {/* Photo upload */}
+                      <div>
+                        {stop.photoUrl ? (
+                          <div className="relative rounded-lg overflow-hidden">
+                            <img src={stop.photoUrl} alt="" className="w-full h-24 object-cover rounded-lg" />
+                            <button
+                              type="button"
+                              onClick={() => onUpdateStop(stop.id, { photoUrl: undefined })}
+                              className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                            >×</button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors text-sm text-muted-foreground">
+                            <Upload className="w-4 h-4" />
+                            <span>Ajouter une photo</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const filename = `stop_${stop.id}_${Date.now()}.${file.name.split('.').pop()}`;
+                              const { data, error } = await supabase.storage.from("circuit-images").upload(filename, file, { upsert: true });
+                              if (!error && data) {
+                                const { data: urlData } = supabase.storage.from("circuit-images").getPublicUrl(data.path);
+                                onUpdateStop(stop.id, { photoUrl: urlData.publicUrl });
+                              }
+                            }} />
+                          </label>
+                        )}
+                      </div>
                       <div className="flex gap-2">
                         <Button variant="default" size="sm" onClick={() => setSelectedStopId(null)} className="flex-1 gap-1"><Check className="w-3.5 h-3.5" /> OK</Button>
                         <Button variant="destructive" size="sm" onClick={() => onDeleteStop(stop.id)} className="flex-1 gap-1"><Trash2 className="w-3.5 h-3.5" /> Supprimer</Button>

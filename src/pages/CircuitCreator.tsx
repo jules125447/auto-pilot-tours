@@ -427,6 +427,7 @@ const CircuitCreator = () => {
             lng: s.lng,
             stop_type: s.type,
             duration: s.duration,
+            photo_url: s.photoUrl || null,
             sort_order: i,
           }))
         );
