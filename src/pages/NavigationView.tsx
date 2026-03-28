@@ -13,12 +13,40 @@ import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/li
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 
 const FADE_DURATION = 2000;
+const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
+
+// Snap a raw GPS position onto the closest point of a route polyline
+function snapToRoute(
+  lat: number,
+  lng: number,
+  route: [number, number][]
+): [number, number] {
+  let bestDist = Infinity;
+  let bestPoint: [number, number] = [lat, lng];
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const ax = route[i][0], ay = route[i][1];
+    const bx = route[i + 1][0], by = route[i + 1][1];
+    const dx = bx - ax, dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq === 0 ? 0 : ((lat - ax) * dx + (lng - ay) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const d = (lat - px) ** 2 + (lng - py) ** 2; // squared distance is fine for comparison
+    if (d < bestDist) {
+      bestDist = d;
+      bestPoint = [px, py];
+    }
+  }
+  return bestPoint;
+}
 
 const NavigationView = () => {
   const { id } = useParams();
   const { data: circuit, isLoading } = useCircuit(id);
 
-  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const [rawUserPos, setRawUserPos] = useState<[number, number] | null>(null);
   const [heading, setHeading] = useState(0);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [audioPlaying, setAudioPlaying] = useState(false);
@@ -27,13 +55,27 @@ const NavigationView = () => {
   const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [calibrated, setCalibrated] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeMusicIdRef = useRef<string | null>(null);
   const activeSoundsRef = useRef<Map<string, any>>(new Map());
   const fadeIntervalRef = useRef<number | null>(null);
+  const firstFixTimeRef = useRef<number | null>(null);
+  const calibrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
+
+  // Compute snapped position (always on the route)
+  const userPos = useMemo<[number, number] | null>(() => {
+    if (!rawUserPos) return null;
+    const routeCoords = circuit?.route as [number, number][] | undefined;
+    if (!routeCoords || routeCoords.length < 2) return rawUserPos;
+    // Only snap if within 200m of the route (otherwise show raw)
+    const snapped = snapToRoute(rawUserPos[0], rawUserPos[1], routeCoords);
+    const distToRoute = haversine(rawUserPos[0], rawUserPos[1], snapped[0], snapped[1]);
+    return distToRoute < 200 ? snapped : rawUserPos;
+  }, [rawUserPos, circuit?.route]);
 
   const turns = useMemo(() => {
     if (!circuit?.route) return [];
@@ -47,7 +89,6 @@ const NavigationView = () => {
 
   // Unlock audio context on user interaction
   const handleUnlockAudio = useCallback(() => {
-    // Create and resume a temporary AudioContext to unlock audio
     const ctx = new AudioContext();
     const buffer = ctx.createBuffer(1, 1, 22050);
     const source = ctx.createBufferSource();
@@ -55,7 +96,6 @@ const NavigationView = () => {
     source.connect(ctx.destination);
     source.start(0);
     
-    // Also play a silent HTML audio to unlock that path
     const silentAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
     silentAudio.volume = 0.01;
     silentAudio.play().catch(() => {});
@@ -70,7 +110,15 @@ const NavigationView = () => {
     if (!navigator.geolocation) return;
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        setUserPos([pos.coords.latitude, pos.coords.longitude]);
+        // Track first fix for calibration
+        if (firstFixTimeRef.current === null) {
+          firstFixTimeRef.current = Date.now();
+          // Start calibration timer
+          calibrationTimerRef.current = setTimeout(() => {
+            setCalibrated(true);
+          }, CALIBRATION_DELAY_MS);
+        }
+        setRawUserPos([pos.coords.latitude, pos.coords.longitude]);
         if (pos.coords.heading && pos.coords.heading > 0) {
           setHeading(pos.coords.heading);
         }
@@ -80,6 +128,7 @@ const NavigationView = () => {
     );
     return () => {
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (calibrationTimerRef.current) clearTimeout(calibrationTimerRef.current);
     };
   }, [audioUnlocked]);
 
@@ -91,7 +140,6 @@ const NavigationView = () => {
         musicAudioRef.current = null;
       }
       if (fadeIntervalRef.current) cancelAnimationFrame(fadeIntervalRef.current);
-      // Stop all ambient sounds
       activeSoundsRef.current.forEach((instance) => stopAmbientSound(instance));
       activeSoundsRef.current.clear();
     };
@@ -144,9 +192,9 @@ const NavigationView = () => {
     return bestCum;
   }, []);
 
-  // Audio zones — hybrid detection (route projection + haversine fallback)
+  // Audio zones — only trigger after calibration, use route projection
   useEffect(() => {
-    if (!userPos || !circuit || !audioUnlocked) return;
+    if (!userPos || !circuit || !audioUnlocked || !calibrated) return;
     const [lat, lng] = userPos;
 
     const routeCoords = circuit.route as [number, number][];
@@ -157,17 +205,17 @@ const NavigationView = () => {
 
       let shouldTrigger = false;
 
-      // Primary: haversine distance (works even off-route)
-      const directDist = haversine(lat, lng, zone.lat, zone.lng);
-      if (directDist < 80) {
-        shouldTrigger = true;
-      }
-
-      // Secondary: route projection (more precise when on-route)
-      if (!shouldTrigger && hasRoute) {
+      if (hasRoute) {
+        // Use route projection as primary (most accurate when snapped)
         const carCum = projectOnRoute(lat, lng, routeCoords);
         const zoneCum = projectOnRoute(zone.lat, zone.lng, routeCoords);
-        if (Math.abs(carCum - zoneCum) < 80) {
+        if (Math.abs(carCum - zoneCum) < 60) {
+          shouldTrigger = true;
+        }
+      } else {
+        // Fallback: haversine
+        const directDist = haversine(lat, lng, zone.lat, zone.lng);
+        if (directDist < 60) {
           shouldTrigger = true;
         }
       }
@@ -192,11 +240,11 @@ const NavigationView = () => {
         }
       }
     });
-  }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone, audioUnlocked, projectOnRoute]);
+  }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone, audioUnlocked, projectOnRoute, calibrated]);
 
-  // Music segments — hybrid detection (projection + haversine fallback)
+  // Music segments — only trigger after calibration, use route projection
   useEffect(() => {
-    if (!userPos || !circuit || !audioUnlocked) return;
+    if (!userPos || !circuit || !audioUnlocked || !calibrated) return;
     const [lat, lng] = userPos;
     const routeCoords = circuit.route as [number, number][];
     const hasRoute = routeCoords && routeCoords.length >= 2;
@@ -204,27 +252,22 @@ const NavigationView = () => {
     circuit.music_segments.forEach((seg) => {
       let isInside = false;
 
-      // Haversine: check if within reasonable distance of segment endpoints
-      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
-      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
-      const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
-      // If close to either endpoint or between them (sum of distances ~ segment length)
-      if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 120)) {
-        isInside = true;
-      }
-
-      // Refine with route projection if available
       if (hasRoute) {
         const carCum = projectOnRoute(lat, lng, routeCoords);
         const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
         const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
-        const minCum = Math.min(startCum, endCum) - 50;
-        const maxCum = Math.max(startCum, endCum) + 50;
+        const minCum = Math.min(startCum, endCum) - 30;
+        const maxCum = Math.max(startCum, endCum) + 30;
         if (carCum >= minCum && carCum <= maxCum) {
           isInside = true;
-        } else if (distToStart > 150 && distToEnd > 150) {
-          // If far from both endpoints AND not on route segment, definitely outside
-          isInside = false;
+        }
+      } else {
+        // Fallback without route
+        const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
+        const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+        const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
+        if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 100)) {
+          isInside = true;
         }
       }
 
@@ -260,11 +303,11 @@ const NavigationView = () => {
         });
       }
     });
-  }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute]);
+  }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute, calibrated]);
 
-  // Sound segments — hybrid detection (projection + haversine fallback)
+  // Sound segments — only trigger after calibration, use route projection
   useEffect(() => {
-    if (!userPos || !circuit || !audioUnlocked) return;
+    if (!userPos || !circuit || !audioUnlocked || !calibrated) return;
     const [lat, lng] = userPos;
     const routeCoords = circuit.route as [number, number][];
     const hasRoute = routeCoords && routeCoords.length >= 2;
@@ -273,23 +316,21 @@ const NavigationView = () => {
     soundSegs.forEach((seg) => {
       let isInside = false;
 
-      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
-      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
-      const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
-      if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 120)) {
-        isInside = true;
-      }
-
       if (hasRoute) {
         const carCum = projectOnRoute(lat, lng, routeCoords);
         const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
         const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
-        const minCum = Math.min(startCum, endCum) - 50;
-        const maxCum = Math.max(startCum, endCum) + 50;
+        const minCum = Math.min(startCum, endCum) - 30;
+        const maxCum = Math.max(startCum, endCum) + 30;
         if (carCum >= minCum && carCum <= maxCum) {
           isInside = true;
-        } else if (distToStart > 150 && distToEnd > 150) {
-          isInside = false;
+        }
+      } else {
+        const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
+        const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+        const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
+        if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 100)) {
+          isInside = true;
         }
       }
 
@@ -304,7 +345,7 @@ const NavigationView = () => {
         activeSoundsRef.current.delete(seg.id);
       }
     });
-  }, [userPos, circuit, audioUnlocked, projectOnRoute]);
+  }, [userPos, circuit, audioUnlocked, projectOnRoute, calibrated]);
 
   // Stop arrival detection
   useEffect(() => {
@@ -416,6 +457,22 @@ const NavigationView = () => {
         <button onClick={() => setVoiceEnabled(!voiceEnabled)} className="absolute top-5 right-4 z-[1002] w-11 h-11 rounded-full bg-card/90 backdrop-blur-md border border-border flex items-center justify-center transition-all hover:bg-card active:scale-95 shadow-md">
           {voiceEnabled ? <Volume2 className="w-5 h-5 text-primary" /> : <VolumeX className="w-5 h-5 text-muted-foreground" />}
         </button>
+        {/* Calibration indicator */}
+        <AnimatePresence>
+          {!calibrated && userPos && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-20 left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-card/95 backdrop-blur-md border border-border shadow-md"
+            >
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-xs font-medium text-muted-foreground">Calibration GPS…</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AnimatePresence>
           {audioPlaying && audioOverlayText && <AudioOverlay text={audioOverlayText} onDismiss={() => setAudioPlaying(false)} />}
         </AnimatePresence>
