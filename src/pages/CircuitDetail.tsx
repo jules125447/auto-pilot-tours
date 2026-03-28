@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2 } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
 import RouteMap from "@/components/RouteMap";
+import CircuitReviews from "@/components/CircuitReviews";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
   viewpoint: Eye,
@@ -144,6 +145,10 @@ const CircuitDetail = () => {
               );
             })}
           </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <CircuitReviews circuitId={circuit.id} />
         </motion.div>
       </div>
     </div>

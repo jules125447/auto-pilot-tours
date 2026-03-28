@@ -286,6 +286,41 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          circuit_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          circuit_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          circuit_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sound_segments: {
         Row: {
           circuit_id: string

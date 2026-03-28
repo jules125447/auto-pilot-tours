@@ -17,6 +17,7 @@ interface NavigationBarProps {
   onNext: () => void;
   onPrev: () => void;
   hasGps: boolean;
+  isLastStopDone?: boolean;
 }
 
 function formatDist(meters: number): string {
@@ -35,11 +36,12 @@ const NavigationBar = ({
   onNext,
   onPrev,
   hasGps,
+  isLastStopDone = false,
 }: NavigationBarProps) => {
   return (
     <div className="relative z-[1000]">
-      {/* Next stop card */}
-      {currentStop && (
+      {/* Next stop card — hide after last stop is visited */}
+      {currentStop && !isLastStopDone && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

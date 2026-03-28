@@ -488,6 +488,7 @@ const NavigationView = () => {
         onNext={handleNextStop}
         onPrev={handlePrevStop}
         hasGps={!!userPos}
+        isLastStopDone={currentStopIndex >= circuit.stops.length - 1 && visitedStops.has(currentStopIndex)}
       />
     </div>
   );
