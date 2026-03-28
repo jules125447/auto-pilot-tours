@@ -236,7 +236,7 @@ const CircuitTestMode = ({
     soundSegments.forEach((seg) => {
       if (activeSoundIds.has(seg.id)) {
         if (!soundInstancesRef.current[seg.id]) {
-          soundInstancesRef.current[seg.id] = startAmbientSound(seg.soundType, seg.volume);
+          soundInstancesRef.current[seg.id] = startAmbientSound(seg.soundType as AmbientSoundType, seg.volume);
         }
       } else {
         if (soundInstancesRef.current[seg.id]) {
