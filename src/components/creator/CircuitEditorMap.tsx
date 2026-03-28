@@ -86,6 +86,7 @@ function getPointAtDistance(route: [number, number][], startIdx: number, distanc
 const CircuitEditorMap = ({
   route, waypoints, stops, audioZones, musicSegments, soundSegments,
   musicPlacingStart, soundPlacingStart, mode, onMapClick, onWaypointDrag,
+  onStopDrag, onAudioDrag,
   selectedStopId, selectedAudioId, selectedMusicId, selectedSoundId,
   routeLoading, onMapReady,
 }: CircuitEditorMapProps) => {
