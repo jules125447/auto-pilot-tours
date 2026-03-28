@@ -73,6 +73,7 @@ const CircuitCreator = () => {
   const [difficulty, setDifficulty] = useState("Facile");
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
+  const [circuitType, setCircuitType] = useState("amateur");
 
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
@@ -118,6 +119,7 @@ const CircuitCreator = () => {
         setDifficulty(c.difficulty || "Facile");
         setDuration(c.duration || "");
         setDistance(c.distance || "");
+        setCircuitType((c as any).circuit_type || "amateur");
         const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
         setRoute(loadedRoute);
         // Use route endpoints as waypoints for simplicity
@@ -375,6 +377,7 @@ const CircuitCreator = () => {
             distance,
             route: route as unknown as any,
             published: publish,
+            circuit_type: circuitType,
           })
           .eq("id", editId)
           .eq("creator_id", user.id);
@@ -403,6 +406,7 @@ const CircuitCreator = () => {
             route: route as unknown as any,
             creator_id: user.id,
             published: publish,
+            circuit_type: circuitType,
             price: 0,
           })
           .select("id")
@@ -542,6 +546,8 @@ const CircuitCreator = () => {
           setDuration={setDuration}
           distance={distance}
           setDistance={setDistance}
+          circuitType={circuitType}
+          setCircuitType={setCircuitType}
           stops={stops}
           audioZones={audioZones}
           musicSegments={musicSegments}

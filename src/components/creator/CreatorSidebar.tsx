@@ -25,6 +25,8 @@ interface CreatorSidebarProps {
   setDuration: (v: string) => void;
   distance: string;
   setDistance: (v: string) => void;
+  circuitType: string;
+  setCircuitType: (v: string) => void;
   stops: StopData[];
   audioZones: AudioZoneData[];
   musicSegments: MusicSegmentData[];
@@ -325,6 +327,7 @@ const RecordButton = ({ onRecorded }: { onRecorded: (blob: Blob) => void }) => {
 const CreatorSidebar = ({
   title, setTitle, description, setDescription, region, setRegion,
   difficulty, setDifficulty, duration, setDuration, distance, setDistance,
+  circuitType, setCircuitType,
   stops, audioZones, musicSegments, soundSegments,
   selectedStopId, setSelectedStopId, selectedAudioId, setSelectedAudioId,
   selectedMusicId, setSelectedMusicId, selectedSoundId, setSelectedSoundId,
@@ -410,6 +413,13 @@ const CreatorSidebar = ({
                 <Input placeholder="Durée (ex: 3h)" value={duration} onChange={(e) => setDuration(e.target.value)} />
                 <Input placeholder="Distance (ex: 120 km)" value={distance} onChange={(e) => setDistance(e.target.value)} />
               </div>
+              <Select value={circuitType} onValueChange={setCircuitType}>
+                <SelectTrigger><SelectValue placeholder="Type de circuit" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pro">🏆 Professionnel / Local</SelectItem>
+                  <SelectItem value="amateur">👤 Communauté (amateur)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
