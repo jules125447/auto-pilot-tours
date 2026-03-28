@@ -124,6 +124,16 @@ const NavigationBar = ({
           </div>
         </div>
 
+        {/* Speed */}
+        <div className="flex items-center gap-1.5">
+          <div className="text-center">
+            <p className="text-foreground text-lg font-bold font-mono">
+              {speed !== null && speed !== undefined ? speed : "—"}
+            </p>
+            <p className="text-muted-foreground text-[9px] font-mono uppercase">km/h</p>
+          </div>
+        </div>
+
         {/* GPS status */}
         <div className="flex items-center gap-1.5">
           <Locate className={`w-4 h-4 ${hasGps ? "text-primary" : "text-destructive"}`} />
