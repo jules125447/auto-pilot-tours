@@ -330,7 +330,7 @@ const CreatorSidebar = ({
   selectedMusicId, setSelectedMusicId, selectedSoundId, setSelectedSoundId,
   onUpdateStop, onDeleteStop, onUpdateAudio, onDeleteAudio,
   onUpdateMusic, onDeleteMusic, onUpdateSound, onDeleteSound,
-  onSave, onPublish, saving, routePointsCount, mode,
+  onSave, onPublish, saving, routePointsCount, mode, isEditing,
 }: CreatorSidebarProps) => {
   const [musicSearch, setMusicSearch] = useState("");
   const [itunesResults, setItunesResults] = useState<any[]>([]);
