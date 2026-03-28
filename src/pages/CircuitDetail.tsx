@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2, Tag, ShoppingCart, Key } from "lucide-react";
@@ -34,6 +34,34 @@ const CircuitDetail = () => {
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingKey, setCheckingKey] = useState(false);
+  const [hasPurchased, setHasPurchased] = useState(false);
+  const [checkingPurchase, setCheckingPurchase] = useState(true);
+
+  // Check if user already purchased this circuit
+  useEffect(() => {
+    if (!user || !id) {
+      setCheckingPurchase(false);
+      return;
+    }
+    const check = async () => {
+      const { data } = await supabase
+        .from("purchases")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("circuit_id", id)
+        .limit(1);
+      if (data && data.length > 0) {
+        setHasPurchased(true);
+        setUnlocked(true);
+      }
+      setCheckingPurchase(false);
+    };
+    check();
+  }, [user, id]);
+
+  // Also check if user is the creator
+  const isCreator = user && circuit && circuit.creator_id === user.id;
+  const hasAccess = unlocked || hasPurchased || isCreator || (circuit && circuit.price === 0);
 
   const handleBuy = async () => {
     if (!user) {
@@ -149,7 +177,7 @@ const CircuitDetail = () => {
           </div>
 
           {/* Promo code + Buy OR Unlocked */}
-          {unlocked ? (
+          {hasAccess ? (
             <div className="flex flex-col sm:flex-row gap-3">
               <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
                 <Car className="w-5 h-5" /> Démarrer le circuit
