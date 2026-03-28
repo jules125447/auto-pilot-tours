@@ -29,6 +29,8 @@ export interface AudioZoneData {
   lng: number;
   radius: number;
   text: string;
+  audioSource?: "tts" | "recorded" | "file";
+  audioUrl?: string;
 }
 
 export interface MusicSegmentData {
