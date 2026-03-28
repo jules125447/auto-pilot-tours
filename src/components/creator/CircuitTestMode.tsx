@@ -96,7 +96,7 @@ const CircuitTestMode = ({
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const musicAudioRef = useRef<Record<string, HTMLAudioElement>>({});
-  const soundInstancesRef = useRef<Record<string, AmbientSoundInstance>>({});
+  const soundInstancesRef = useRef<Record<string, ReturnType<typeof startAmbientSound>>>({});
   const ttsActiveRef = useRef(false);
 
   // Precompute cumulative distances
