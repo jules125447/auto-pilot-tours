@@ -88,21 +88,39 @@ const registerActivePreview = (key: string, stop: () => void) => {
 
 const AudioPlayButton = ({ text }: { text: string }) => {
   const [playing, setPlaying] = useState(false);
-  const playingRef = useRef(false);
-  useEffect(() => { return () => { speechSynthesis.cancel(); }; }, []);
-  const toggle = () => {
+  const buttonKey = `tts:${text}`;
+
+  const stop = useCallback(() => {
     speechSynthesis.cancel();
-    if (playingRef.current) { playingRef.current = false; setPlaying(false); }
-    else if (text.trim()) {
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "fr-FR";
-      utter.onend = () => { playingRef.current = false; setPlaying(false); };
-      utter.onerror = () => { playingRef.current = false; setPlaying(false); };
-      playingRef.current = true;
-      speechSynthesis.speak(utter);
-      setPlaying(true);
+    if (activePreviewKey === buttonKey) {
+      activePreviewKey = null;
+      activePreviewStop = null;
     }
+    setPlaying(false);
+  }, [buttonKey]);
+
+  useEffect(() => stop, [stop]);
+
+  const toggle = () => {
+    if (activePreviewKey === buttonKey && playing) {
+      stop();
+      return;
+    }
+
+    stopActivePreview();
+    if (!text.trim()) return;
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "fr-FR";
+    utter.onend = stop;
+    utter.onerror = stop;
+
+    registerActivePreview(buttonKey, stop);
+    setPlaying(true);
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
   };
+
   return (
     <Button variant="outline" size="sm" onClick={toggle} className="gap-1" type="button">
       {playing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
