@@ -194,21 +194,39 @@ const NavigationView = () => {
     });
   }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone, audioUnlocked, projectOnRoute]);
 
-  // Music segments — route-projection-based detection
+  // Music segments — hybrid detection (projection + haversine fallback)
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
     const routeCoords = circuit.route as [number, number][];
-    if (!routeCoords || routeCoords.length < 2) return;
-
-    const carCum = projectOnRoute(lat, lng, routeCoords);
+    const hasRoute = routeCoords && routeCoords.length >= 2;
 
     circuit.music_segments.forEach((seg) => {
-      const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
-      const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
-      const minCum = Math.min(startCum, endCum);
-      const maxCum = Math.max(startCum, endCum);
-      const isInside = carCum >= minCum && carCum <= maxCum;
+      let isInside = false;
+
+      // Haversine: check if within reasonable distance of segment endpoints
+      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
+      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+      const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
+      // If close to either endpoint or between them (sum of distances ~ segment length)
+      if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 120)) {
+        isInside = true;
+      }
+
+      // Refine with route projection if available
+      if (hasRoute) {
+        const carCum = projectOnRoute(lat, lng, routeCoords);
+        const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
+        const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
+        const minCum = Math.min(startCum, endCum) - 50;
+        const maxCum = Math.max(startCum, endCum) + 50;
+        if (carCum >= minCum && carCum <= maxCum) {
+          isInside = true;
+        } else if (distToStart > 150 && distToEnd > 150) {
+          // If far from both endpoints AND not on route segment, definitely outside
+          isInside = false;
+        }
+      }
 
       if (isInside && activeMusicIdRef.current !== seg.id && seg.preview_url) {
         if (musicAudioRef.current) {
@@ -216,7 +234,6 @@ const NavigationView = () => {
           fadeAudio(old, 0, () => { old.pause(); });
         }
         const audio = new Audio(seg.preview_url);
-        audio.crossOrigin = "anonymous";
         audio.volume = 0;
         audio.loop = true;
         const startTimeSec = (seg as any).start_time;
@@ -225,14 +242,11 @@ const NavigationView = () => {
         }
         musicAudioRef.current = audio;
         activeMusicIdRef.current = seg.id;
-        const playPromise = audio.play();
-        if (playPromise) {
-          playPromise.then(() => { fadeAudio(audio, 0.7); }).catch((err) => {
-            console.warn("Music play failed:", err);
-            activeMusicIdRef.current = null;
-            musicAudioRef.current = null;
-          });
-        }
+        audio.play().then(() => { fadeAudio(audio, 0.7); }).catch((err) => {
+          console.warn("Music play failed:", err);
+          activeMusicIdRef.current = null;
+          musicAudioRef.current = null;
+        });
       }
 
       if (!isInside && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
