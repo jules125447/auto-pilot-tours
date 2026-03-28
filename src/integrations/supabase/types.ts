@@ -85,6 +85,53 @@ export type Database = {
           },
         ]
       }
+      circuit_slots: {
+        Row: {
+          circuit_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          message: string | null
+          open_to_others: boolean
+          party_size: number
+          slot_date: string
+          slot_time: string
+          user_id: string
+        }
+        Insert: {
+          circuit_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          message?: string | null
+          open_to_others?: boolean
+          party_size?: number
+          slot_date: string
+          slot_time: string
+          user_id: string
+        }
+        Update: {
+          circuit_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          message?: string | null
+          open_to_others?: boolean
+          party_size?: number
+          slot_date?: string
+          slot_time?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circuit_slots_circuit_id_fkey"
+            columns: ["circuit_id"]
+            isOneToOne: false
+            referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       circuit_stops: {
         Row: {
           circuit_id: string

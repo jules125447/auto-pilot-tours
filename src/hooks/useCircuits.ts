@@ -31,6 +31,7 @@ export interface CircuitWithStops {
     type: string;
     duration: string | null;
     sort_order: number | null;
+    photo_url: string | null;
   }[];
   audio_zones: {
     id: string;
@@ -99,6 +100,7 @@ function mapCircuit(
         type: s.stop_type || "site",
         duration: s.duration,
         sort_order: s.sort_order,
+        photo_url: s.photo_url,
       })),
     audio_zones: audioZones
       .filter((a) => a.circuit_id === circuit.id)

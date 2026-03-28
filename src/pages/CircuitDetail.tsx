@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
 import CircuitReviews from "@/components/CircuitReviews";
+import CommunitySlots from "@/components/CommunitySlots";
 import { useToast } from "@/hooks/use-toast";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
@@ -295,6 +296,9 @@ const CircuitDetail = () => {
                         {stopTypeLabels[stop.type]}
                       </span>
                     </div>
+                    {stop.photo_url && (
+                      <img src={stop.photo_url} alt={stop.title} className="w-full h-32 object-cover rounded-lg mb-2" />
+                    )}
                     <p className="text-sm text-muted-foreground mb-1">{stop.description}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {stop.duration}</span>
@@ -311,7 +315,9 @@ const CircuitDetail = () => {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <CommunitySlots circuitId={circuit.id} />
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <CircuitReviews circuitId={circuit.id} />
         </motion.div>
       </div>

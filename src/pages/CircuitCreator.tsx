@@ -21,6 +21,7 @@ export interface StopData {
   lng: number;
   type: string;
   duration: string;
+  photoUrl?: string;
 }
 
 export interface AudioZoneData {
@@ -138,6 +139,7 @@ const CircuitCreator = () => {
           setStops(stopsRes.data.map(s => ({
             id: s.id, title: s.title, description: s.description || "",
             lat: s.lat, lng: s.lng, type: s.stop_type || "site", duration: s.duration || "15 min",
+            photoUrl: s.photo_url || undefined,
           })));
         }
         if (audioRes.data) {
@@ -426,6 +428,7 @@ const CircuitCreator = () => {
             lng: s.lng,
             stop_type: s.type,
             duration: s.duration,
+            photo_url: s.photoUrl || null,
             sort_order: i,
           }))
         );

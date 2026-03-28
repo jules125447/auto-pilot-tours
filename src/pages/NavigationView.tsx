@@ -87,6 +87,7 @@ const NavigationView = () => {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [calibrated, setCalibrated] = useState(false);
+  const [participants, setParticipants] = useState<{ id: string; display_name: string | null; lat: number; lng: number }[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeMusicIdRef = useRef<string | null>(null);
@@ -94,6 +95,7 @@ const NavigationView = () => {
   const fadeIntervalRef = useRef<number | null>(null);
   const firstFixTimeRef = useRef<number | null>(null);
   const calibrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const presenceChannelRef = useRef<any>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
@@ -173,8 +175,54 @@ const NavigationView = () => {
       if (fadeIntervalRef.current) cancelAnimationFrame(fadeIntervalRef.current);
       activeSoundsRef.current.forEach((instance) => stopAmbientSound(instance));
       activeSoundsRef.current.clear();
+      if (presenceChannelRef.current) {
+        supabase.removeChannel(presenceChannelRef.current);
+      }
     };
   }, []);
+
+  // Realtime presence for community participants
+  useEffect(() => {
+    if (!circuit || !user || !audioUnlocked) return;
+    const channelName = `circuit-live-${circuit.id}`;
+    const channel = supabase.channel(channelName, { config: { presence: { key: user.id } } });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const others: typeof participants = [];
+        Object.entries(state).forEach(([key, presences]) => {
+          if (key === user.id) return;
+          const p = (presences as any[])[0];
+          if (p?.lat && p?.lng) {
+            others.push({ id: key, display_name: p.display_name, lat: p.lat, lng: p.lng });
+          }
+        });
+        setParticipants(others);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            display_name: user.email?.split("@")[0] || "Anonyme",
+            lat: rawUserPos?.[0] || 0,
+            lng: rawUserPos?.[1] || 0,
+          });
+        }
+      });
+
+    presenceChannelRef.current = channel;
+    return () => { supabase.removeChannel(channel); };
+  }, [circuit?.id, user?.id, audioUnlocked]);
+
+  // Broadcast position updates
+  useEffect(() => {
+    if (!presenceChannelRef.current || !rawUserPos || !user) return;
+    presenceChannelRef.current.track({
+      display_name: user.email?.split("@")[0] || "Anonyme",
+      lat: rawUserPos[0],
+      lng: rawUserPos[1],
+    });
+  }, [rawUserPos]);
 
   // Voice announcements
   useEffect(() => {
@@ -509,6 +557,7 @@ const NavigationView = () => {
           userPos={userPos}
           heading={heading}
           currentStopIndex={currentStopIndex}
+          participants={participants}
         />
         <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
         <Link to={`/circuit/${circuit.id}`} className="absolute top-5 left-4 z-[1002] w-11 h-11 rounded-full bg-card/90 backdrop-blur-md border border-border flex items-center justify-center transition-all hover:bg-card active:scale-95 shadow-md">
