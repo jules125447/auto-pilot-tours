@@ -71,6 +71,21 @@ const estimateAudioDistance = (text: string): number => {
   return Math.round(durationSec * speedMs);
 };
 
+let activePreviewStop: (() => void) | null = null;
+let activePreviewKey: string | null = null;
+
+const stopActivePreview = () => {
+  activePreviewStop?.();
+  activePreviewStop = null;
+  activePreviewKey = null;
+};
+
+const registerActivePreview = (key: string, stop: () => void) => {
+  if (activePreviewKey && activePreviewKey !== key) stopActivePreview();
+  activePreviewKey = key;
+  activePreviewStop = stop;
+};
+
 const AudioPlayButton = ({ text }: { text: string }) => {
   const [playing, setPlaying] = useState(false);
   const playingRef = useRef(false);
