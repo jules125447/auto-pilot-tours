@@ -262,22 +262,36 @@ const NavigationView = () => {
     });
   }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute]);
 
-  // Sound segments — route-projection-based detection
+  // Sound segments — hybrid detection (projection + haversine fallback)
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
     const routeCoords = circuit.route as [number, number][];
-    if (!routeCoords || routeCoords.length < 2) return;
-
-    const carCum = projectOnRoute(lat, lng, routeCoords);
+    const hasRoute = routeCoords && routeCoords.length >= 2;
     const soundSegs = circuit.sound_segments || [];
 
     soundSegs.forEach((seg) => {
-      const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
-      const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
-      const minCum = Math.min(startCum, endCum);
-      const maxCum = Math.max(startCum, endCum);
-      const isInside = carCum >= minCum && carCum <= maxCum;
+      let isInside = false;
+
+      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
+      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+      const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
+      if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 120)) {
+        isInside = true;
+      }
+
+      if (hasRoute) {
+        const carCum = projectOnRoute(lat, lng, routeCoords);
+        const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
+        const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
+        const minCum = Math.min(startCum, endCum) - 50;
+        const maxCum = Math.max(startCum, endCum) + 50;
+        if (carCum >= minCum && carCum <= maxCum) {
+          isInside = true;
+        } else if (distToStart > 150 && distToEnd > 150) {
+          isInside = false;
+        }
+      }
 
       if (isInside && !activeSoundsRef.current.has(seg.id)) {
         const instance = startAmbientSound(seg.sound_type as AmbientSoundType, seg.volume);

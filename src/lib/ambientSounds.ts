@@ -6,7 +6,7 @@
 export type AmbientSoundType = "river" | "rain" | "wind" | "birds" | "wolf" | "crickets" | "fire" | "thunder";
 
 export const AMBIENT_SOUNDS: { type: AmbientSoundType; label: string; emoji: string }[] = [
-  { type: "river", label: "Rivière", emoji: "🏞️" },
+  { type: "river", label: "Rivière", emoji: "💧" },
   { type: "rain", label: "Pluie", emoji: "🌧️" },
   { type: "wind", label: "Vent", emoji: "💨" },
   { type: "birds", label: "Oiseaux", emoji: "🐦" },
