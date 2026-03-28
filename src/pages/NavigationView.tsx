@@ -144,27 +144,40 @@ const NavigationView = () => {
     return bestCum;
   }, []);
 
-  // Audio zones — route-projection-based detection
+  // Audio zones — hybrid detection (route projection + haversine fallback)
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
 
     const routeCoords = circuit.route as [number, number][];
-    if (!routeCoords || routeCoords.length < 2) return;
-
-    const carCum = projectOnRoute(lat, lng, routeCoords);
+    const hasRoute = routeCoords && routeCoords.length >= 2;
 
     circuit.audio_zones.forEach((zone) => {
       if (triggeredAudioZones.has(zone.id)) return;
 
-      const zoneCum = projectOnRoute(zone.lat, zone.lng, routeCoords);
-      const triggerDist = 30;
-      if (carCum >= zoneCum - triggerDist && carCum <= zoneCum + triggerDist) {
+      let shouldTrigger = false;
+
+      // Primary: haversine distance (works even off-route)
+      const directDist = haversine(lat, lng, zone.lat, zone.lng);
+      if (directDist < 80) {
+        shouldTrigger = true;
+      }
+
+      // Secondary: route projection (more precise when on-route)
+      if (!shouldTrigger && hasRoute) {
+        const carCum = projectOnRoute(lat, lng, routeCoords);
+        const zoneCum = projectOnRoute(zone.lat, zone.lng, routeCoords);
+        if (Math.abs(carCum - zoneCum) < 80) {
+          shouldTrigger = true;
+        }
+      }
+
+      if (shouldTrigger) {
         setTriggeredAudioZones((prev) => new Set(prev).add(zone.id));
         
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
-          audio.play().catch(() => {});
+          audio.play().catch((e) => console.warn("Audio play failed:", e));
           setAudioOverlayText("🎙️ Audio en cours...");
           setAudioPlaying(true);
           audio.onended = () => setAudioPlaying(false);
