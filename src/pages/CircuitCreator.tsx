@@ -343,29 +343,62 @@ const CircuitCreator = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const { data: circuit, error: circuitErr } = await supabase
-        .from("circuits")
-        .insert({
-          title,
-          description,
-          region,
-          difficulty,
-          duration,
-          distance,
-          route: route as unknown as any,
-          creator_id: user.id,
-          published: publish,
-          price: 0,
-        })
-        .select("id")
-        .single();
+      let circuitId: string;
 
-      if (circuitErr) throw circuitErr;
+      if (isEditing && editId) {
+        // Update existing circuit
+        const { error: circuitErr } = await supabase
+          .from("circuits")
+          .update({
+            title,
+            description,
+            region,
+            difficulty,
+            duration,
+            distance,
+            route: route as unknown as any,
+            published: publish,
+          })
+          .eq("id", editId)
+          .eq("creator_id", user.id);
+
+        if (circuitErr) throw circuitErr;
+        circuitId = editId;
+
+        // Delete old related data and re-insert
+        await Promise.all([
+          supabase.from("circuit_stops").delete().eq("circuit_id", circuitId),
+          supabase.from("audio_zones").delete().eq("circuit_id", circuitId),
+          supabase.from("music_segments").delete().eq("circuit_id", circuitId),
+          supabase.from("sound_segments").delete().eq("circuit_id", circuitId),
+        ]);
+      } else {
+        // Create new circuit
+        const { data: circuit, error: circuitErr } = await supabase
+          .from("circuits")
+          .insert({
+            title,
+            description,
+            region,
+            difficulty,
+            duration,
+            distance,
+            route: route as unknown as any,
+            creator_id: user.id,
+            published: publish,
+            price: 0,
+          })
+          .select("id")
+          .single();
+
+        if (circuitErr) throw circuitErr;
+        circuitId = circuit.id;
+      }
 
       if (stops.length > 0) {
         const { error: stopsErr } = await supabase.from("circuit_stops").insert(
           stops.map((s, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             title: s.title,
             description: s.description,
             lat: s.lat,
@@ -381,7 +414,7 @@ const CircuitCreator = () => {
       if (audioZones.length > 0) {
         const { error: audioErr } = await supabase.from("audio_zones").insert(
           audioZones.map((a, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             lat: a.lat,
             lng: a.lng,
             radius_meters: a.radius,
@@ -396,7 +429,7 @@ const CircuitCreator = () => {
       if (musicSegments.length > 0) {
         const { error: musicErr } = await supabase.from("music_segments").insert(
           musicSegments.map((m, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             start_lat: m.startLat,
             start_lng: m.startLng,
             end_lat: m.endLat,
@@ -416,7 +449,7 @@ const CircuitCreator = () => {
       if (soundSegments.length > 0) {
         const { error: soundErr } = await supabase.from("sound_segments").insert(
           soundSegments.map((s, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             start_lat: s.startLat,
             start_lng: s.startLng,
             end_lat: s.endLat,
@@ -430,12 +463,14 @@ const CircuitCreator = () => {
       }
 
       toast({
-        title: publish ? "Circuit publié !" : "Brouillon sauvegardé",
-        description: publish
-          ? "Votre circuit est maintenant visible par tous."
-          : "Vous pourrez le modifier plus tard.",
+        title: isEditing
+          ? (publish ? "Circuit modifié et publié !" : "Circuit modifié !")
+          : (publish ? "Circuit publié !" : "Brouillon sauvegardé"),
+        description: isEditing
+          ? "Les modifications ont été enregistrées."
+          : (publish ? "Votre circuit est maintenant visible par tous." : "Vous pourrez le modifier plus tard."),
       });
-      navigate(`/circuit/${circuit.id}`);
+      navigate(`/circuit/${circuitId}`);
     } catch (err: any) {
       toast({
         title: "Erreur",
@@ -456,6 +491,17 @@ const CircuitCreator = () => {
           <Link to="/auth" className="px-6 py-3 rounded-xl bg-gradient-hero text-primary-foreground font-semibold">
             Se connecter
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingEdit) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-muted-foreground">Chargement du circuit...</p>
         </div>
       </div>
     );
