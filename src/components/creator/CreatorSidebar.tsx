@@ -156,24 +156,28 @@ const MusicPlayButton = ({ url }: { url: string }) => {
 const SoundPreviewButton = ({ soundType }: { soundType: string }) => {
   const [playing, setPlaying] = useState(false);
   const instanceRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => { return () => { if (instanceRef.current) { stopAmbientSound(instanceRef.current); instanceRef.current = null; } if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
   const toggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (playing && instanceRef.current) {
+    if (instanceRef.current) {
       await stopAmbientSound(instanceRef.current);
       instanceRef.current = null;
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
       setPlaying(false);
-    } else {
-      instanceRef.current = startAmbientSound(soundType as AmbientSoundType, 0.5);
-      setPlaying(true);
-      setTimeout(async () => {
-        if (instanceRef.current) {
-          await stopAmbientSound(instanceRef.current);
-          instanceRef.current = null;
-          setPlaying(false);
-        }
-      }, 5000);
+      return;
     }
+    instanceRef.current = startAmbientSound(soundType as AmbientSoundType, 0.5);
+    setPlaying(true);
+    timerRef.current = setTimeout(async () => {
+      if (instanceRef.current) {
+        await stopAmbientSound(instanceRef.current);
+        instanceRef.current = null;
+        setPlaying(false);
+      }
+      timerRef.current = null;
+    }, 5000);
   };
   return (
     <button type="button" onClick={toggle} className="inline-flex items-center justify-center gap-1 shrink-0 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors">
