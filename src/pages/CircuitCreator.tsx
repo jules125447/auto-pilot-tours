@@ -550,6 +550,7 @@ const CircuitCreator = () => {
           saving={saving}
           routePointsCount={waypoints.length}
           mode={mode}
+          isEditing={isEditing}
         />
 
         <div className="flex-1 relative">

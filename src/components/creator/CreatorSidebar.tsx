@@ -50,6 +50,7 @@ interface CreatorSidebarProps {
   saving: boolean;
   routePointsCount: number;
   mode: EditorMode;
+  isEditing?: boolean;
 }
 
 const stopTypes = [
