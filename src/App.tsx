@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import MyCircuits from "./pages/MyCircuits";
 import CircuitCreator from "./pages/CircuitCreator";
 import ProDashboard from "./pages/ProDashboard";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
