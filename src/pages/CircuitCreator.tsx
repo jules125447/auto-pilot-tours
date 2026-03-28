@@ -44,6 +44,7 @@ export interface MusicSegmentData {
   previewUrl?: string;
   artworkUrl?: string;
   artistName?: string;
+  startTime?: number; // seconds offset to start playback (e.g. chorus)
 }
 
 export interface SoundSegmentData {
