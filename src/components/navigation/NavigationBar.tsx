@@ -36,6 +36,7 @@ const NavigationBar = ({
   onNext,
   onPrev,
   hasGps,
+  isLastStopDone = false,
 }: NavigationBarProps) => {
   return (
     <div className="relative z-[1000]">
