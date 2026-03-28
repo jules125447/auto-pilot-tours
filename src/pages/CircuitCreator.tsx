@@ -21,6 +21,7 @@ export interface StopData {
   lng: number;
   type: string;
   duration: string;
+  photoUrl?: string;
 }
 
 export interface AudioZoneData {
