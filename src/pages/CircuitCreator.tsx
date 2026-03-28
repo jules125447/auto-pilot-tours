@@ -581,6 +581,8 @@ const CircuitCreator = () => {
           routePointsCount={waypoints.length}
           mode={mode}
           isEditing={isEditing}
+          coverImageUrl={coverImageUrl}
+          onCoverImageChange={setCoverImageUrl}
         />
 
         <div className="flex-1 relative">
