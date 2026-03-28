@@ -144,27 +144,40 @@ const NavigationView = () => {
     return bestCum;
   }, []);
 
-  // Audio zones — route-projection-based detection
+  // Audio zones — hybrid detection (route projection + haversine fallback)
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
 
     const routeCoords = circuit.route as [number, number][];
-    if (!routeCoords || routeCoords.length < 2) return;
-
-    const carCum = projectOnRoute(lat, lng, routeCoords);
+    const hasRoute = routeCoords && routeCoords.length >= 2;
 
     circuit.audio_zones.forEach((zone) => {
       if (triggeredAudioZones.has(zone.id)) return;
 
-      const zoneCum = projectOnRoute(zone.lat, zone.lng, routeCoords);
-      const triggerDist = 30;
-      if (carCum >= zoneCum - triggerDist && carCum <= zoneCum + triggerDist) {
+      let shouldTrigger = false;
+
+      // Primary: haversine distance (works even off-route)
+      const directDist = haversine(lat, lng, zone.lat, zone.lng);
+      if (directDist < 80) {
+        shouldTrigger = true;
+      }
+
+      // Secondary: route projection (more precise when on-route)
+      if (!shouldTrigger && hasRoute) {
+        const carCum = projectOnRoute(lat, lng, routeCoords);
+        const zoneCum = projectOnRoute(zone.lat, zone.lng, routeCoords);
+        if (Math.abs(carCum - zoneCum) < 80) {
+          shouldTrigger = true;
+        }
+      }
+
+      if (shouldTrigger) {
         setTriggeredAudioZones((prev) => new Set(prev).add(zone.id));
         
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
-          audio.play().catch(() => {});
+          audio.play().catch((e) => console.warn("Audio play failed:", e));
           setAudioOverlayText("🎙️ Audio en cours...");
           setAudioPlaying(true);
           audio.onended = () => setAudioPlaying(false);
@@ -181,21 +194,39 @@ const NavigationView = () => {
     });
   }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone, audioUnlocked, projectOnRoute]);
 
-  // Music segments — route-projection-based detection
+  // Music segments — hybrid detection (projection + haversine fallback)
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
     const routeCoords = circuit.route as [number, number][];
-    if (!routeCoords || routeCoords.length < 2) return;
-
-    const carCum = projectOnRoute(lat, lng, routeCoords);
+    const hasRoute = routeCoords && routeCoords.length >= 2;
 
     circuit.music_segments.forEach((seg) => {
-      const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
-      const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
-      const minCum = Math.min(startCum, endCum);
-      const maxCum = Math.max(startCum, endCum);
-      const isInside = carCum >= minCum && carCum <= maxCum;
+      let isInside = false;
+
+      // Haversine: check if within reasonable distance of segment endpoints
+      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
+      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+      const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
+      // If close to either endpoint or between them (sum of distances ~ segment length)
+      if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 120)) {
+        isInside = true;
+      }
+
+      // Refine with route projection if available
+      if (hasRoute) {
+        const carCum = projectOnRoute(lat, lng, routeCoords);
+        const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
+        const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
+        const minCum = Math.min(startCum, endCum) - 50;
+        const maxCum = Math.max(startCum, endCum) + 50;
+        if (carCum >= minCum && carCum <= maxCum) {
+          isInside = true;
+        } else if (distToStart > 150 && distToEnd > 150) {
+          // If far from both endpoints AND not on route segment, definitely outside
+          isInside = false;
+        }
+      }
 
       if (isInside && activeMusicIdRef.current !== seg.id && seg.preview_url) {
         if (musicAudioRef.current) {
@@ -203,7 +234,6 @@ const NavigationView = () => {
           fadeAudio(old, 0, () => { old.pause(); });
         }
         const audio = new Audio(seg.preview_url);
-        audio.crossOrigin = "anonymous";
         audio.volume = 0;
         audio.loop = true;
         const startTimeSec = (seg as any).start_time;
@@ -212,14 +242,11 @@ const NavigationView = () => {
         }
         musicAudioRef.current = audio;
         activeMusicIdRef.current = seg.id;
-        const playPromise = audio.play();
-        if (playPromise) {
-          playPromise.then(() => { fadeAudio(audio, 0.7); }).catch((err) => {
-            console.warn("Music play failed:", err);
-            activeMusicIdRef.current = null;
-            musicAudioRef.current = null;
-          });
-        }
+        audio.play().then(() => { fadeAudio(audio, 0.7); }).catch((err) => {
+          console.warn("Music play failed:", err);
+          activeMusicIdRef.current = null;
+          musicAudioRef.current = null;
+        });
       }
 
       if (!isInside && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
@@ -235,22 +262,36 @@ const NavigationView = () => {
     });
   }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute]);
 
-  // Sound segments — route-projection-based detection
+  // Sound segments — hybrid detection (projection + haversine fallback)
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
     const routeCoords = circuit.route as [number, number][];
-    if (!routeCoords || routeCoords.length < 2) return;
-
-    const carCum = projectOnRoute(lat, lng, routeCoords);
+    const hasRoute = routeCoords && routeCoords.length >= 2;
     const soundSegs = circuit.sound_segments || [];
 
     soundSegs.forEach((seg) => {
-      const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
-      const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
-      const minCum = Math.min(startCum, endCum);
-      const maxCum = Math.max(startCum, endCum);
-      const isInside = carCum >= minCum && carCum <= maxCum;
+      let isInside = false;
+
+      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
+      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+      const segLength = haversine(seg.start_lat, seg.start_lng, seg.end_lat, seg.end_lng);
+      if (distToStart < 80 || distToEnd < 80 || (distToStart + distToEnd < segLength + 120)) {
+        isInside = true;
+      }
+
+      if (hasRoute) {
+        const carCum = projectOnRoute(lat, lng, routeCoords);
+        const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
+        const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
+        const minCum = Math.min(startCum, endCum) - 50;
+        const maxCum = Math.max(startCum, endCum) + 50;
+        if (carCum >= minCum && carCum <= maxCum) {
+          isInside = true;
+        } else if (distToStart > 150 && distToEnd > 150) {
+          isInside = false;
+        }
+      }
 
       if (isInside && !activeSoundsRef.current.has(seg.id)) {
         const instance = startAmbientSound(seg.sound_type as AmbientSoundType, seg.volume);
