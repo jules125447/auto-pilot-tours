@@ -332,8 +332,9 @@ const CircuitCreator = () => {
             artist_name: m.artistName || null,
             preview_url: m.previewUrl || null,
             artwork_url: m.artworkUrl || null,
+            start_time: m.startTime || 0,
             sort_order: i,
-          }))
+          })) as any
         );
         if (musicErr) throw musicErr;
       }
