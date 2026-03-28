@@ -99,18 +99,20 @@ const AudioPlayButton = ({ text }: { text: string }) => {
 const FilePlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
   const toggle = () => {
-    if (playing && audioRef.current) {
+    if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
       setPlaying(false);
-    } else {
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { setPlaying(false); audioRef.current = null; };
-      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      return;
     }
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => { setPlaying(false); audioRef.current = null; };
+    audio.onerror = () => { setPlaying(false); audioRef.current = null; };
+    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   };
   return (
     <Button variant="outline" size="sm" onClick={toggle} className="gap-1" type="button">
