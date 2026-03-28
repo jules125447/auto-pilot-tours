@@ -73,14 +73,17 @@ const estimateAudioDistance = (text: string): number => {
 
 const AudioPlayButton = ({ text }: { text: string }) => {
   const [playing, setPlaying] = useState(false);
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const playingRef = useRef(false);
+  useEffect(() => { return () => { speechSynthesis.cancel(); }; }, []);
   const toggle = () => {
-    if (playing) { speechSynthesis.cancel(); setPlaying(false); }
+    speechSynthesis.cancel();
+    if (playingRef.current) { playingRef.current = false; setPlaying(false); }
     else if (text.trim()) {
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = "fr-FR";
-      utter.onend = () => setPlaying(false);
-      utterRef.current = utter;
+      utter.onend = () => { playingRef.current = false; setPlaying(false); };
+      utter.onerror = () => { playingRef.current = false; setPlaying(false); };
+      playingRef.current = true;
       speechSynthesis.speak(utter);
       setPlaying(true);
     }
@@ -96,18 +99,20 @@ const AudioPlayButton = ({ text }: { text: string }) => {
 const FilePlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
   const toggle = () => {
-    if (playing && audioRef.current) {
+    if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
       setPlaying(false);
-    } else {
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { setPlaying(false); audioRef.current = null; };
-      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      return;
     }
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => { setPlaying(false); audioRef.current = null; };
+    audio.onerror = () => { setPlaying(false); audioRef.current = null; };
+    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   };
   return (
     <Button variant="outline" size="sm" onClick={toggle} className="gap-1" type="button">
@@ -120,27 +125,26 @@ const FilePlayButton = ({ url }: { url: string }) => {
 const MusicPlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (playing && audioRef.current) {
+    if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
       setPlaying(false);
-    } else {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      // Parse #t=N from URL
-      const [baseUrl, hash] = url.split("#t=");
-      const startTime = hash ? parseFloat(hash) : 0;
-      const audio = new Audio(baseUrl);
-      audio.volume = 1;
-      if (startTime > 0) audio.currentTime = startTime;
-      audioRef.current = audio;
-      audio.onended = () => { setPlaying(false); audioRef.current = null; };
-      audio.onerror = () => { setPlaying(false); audioRef.current = null; };
-      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      return;
     }
+    const [baseUrl, hash] = url.split("#t=");
+    const startTime = hash ? parseFloat(hash) : 0;
+    const audio = new Audio(baseUrl);
+    audio.volume = 1;
+    if (startTime > 0) audio.currentTime = startTime;
+    audioRef.current = audio;
+    audio.onended = () => { setPlaying(false); audioRef.current = null; };
+    audio.onerror = () => { setPlaying(false); audioRef.current = null; };
+    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   };
   return (
     <button type="button" onClick={toggle} className="inline-flex items-center justify-center gap-1 shrink-0 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors">
@@ -152,24 +156,28 @@ const MusicPlayButton = ({ url }: { url: string }) => {
 const SoundPreviewButton = ({ soundType }: { soundType: string }) => {
   const [playing, setPlaying] = useState(false);
   const instanceRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => { return () => { if (instanceRef.current) { stopAmbientSound(instanceRef.current); instanceRef.current = null; } if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
   const toggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (playing && instanceRef.current) {
+    if (instanceRef.current) {
       await stopAmbientSound(instanceRef.current);
       instanceRef.current = null;
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
       setPlaying(false);
-    } else {
-      instanceRef.current = startAmbientSound(soundType as AmbientSoundType, 0.5);
-      setPlaying(true);
-      setTimeout(async () => {
-        if (instanceRef.current) {
-          await stopAmbientSound(instanceRef.current);
-          instanceRef.current = null;
-          setPlaying(false);
-        }
-      }, 5000);
+      return;
     }
+    instanceRef.current = startAmbientSound(soundType as AmbientSoundType, 0.5);
+    setPlaying(true);
+    timerRef.current = setTimeout(async () => {
+      if (instanceRef.current) {
+        await stopAmbientSound(instanceRef.current);
+        instanceRef.current = null;
+        setPlaying(false);
+      }
+      timerRef.current = null;
+    }, 5000);
   };
   return (
     <button type="button" onClick={toggle} className="inline-flex items-center justify-center gap-1 shrink-0 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors">
