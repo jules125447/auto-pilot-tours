@@ -18,6 +18,7 @@ interface NavigationBarProps {
   onPrev: () => void;
   hasGps: boolean;
   isLastStopDone?: boolean;
+  speed?: number | null;
 }
 
 function formatDist(meters: number): string {
