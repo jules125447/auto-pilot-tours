@@ -168,13 +168,17 @@ const CircuitEditorMap = ({
     stops.forEach((stop) => {
       const isSelected = stop.id === selectedStopId;
       const icon = L.divIcon({
-        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "white"};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:18px;border:2px solid ${isSelected ? "hsl(35,85%,45%)" : "hsl(152,45%,28%)"};">${stopIcons[stop.type] || "📍"}</div>`,
+        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "white"};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);font-size:18px;border:2px solid ${isSelected ? "hsl(35,85%,45%)" : "hsl(152,45%,28%)"};cursor:grab;">${stopIcons[stop.type] || "📍"}</div>`,
         className: "custom-marker", iconSize: [36, 36], iconAnchor: [18, 18],
       });
-      const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map).bindPopup(`<strong>${stop.title}</strong><br/><em>${stop.type}</em>`);
+      const marker = L.marker([stop.lat, stop.lng], { icon, draggable: true }).addTo(map).bindPopup(`<strong>${stop.title}</strong><br/><em>${stop.type}</em>`);
+      marker.on("dragend", () => {
+        const pos = marker.getLatLng();
+        onStopDrag?.(stop.id, pos.lat, pos.lng);
+      });
       layers.stopMarkers.push(marker);
     });
-  }, [stops, selectedStopId]);
+  }, [stops, selectedStopId, onStopDrag]);
 
   // Audio zones
   useEffect(() => {
