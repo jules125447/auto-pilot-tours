@@ -30,6 +30,10 @@ const CircuitDetail = () => {
   const { toast } = useToast();
   const [promoCode, setPromoCode] = useState("");
   const [buying, setBuying] = useState(false);
+  const [accessKey, setAccessKey] = useState("");
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const [checkingKey, setCheckingKey] = useState(false);
 
   const handleBuy = async () => {
     if (!user) {
@@ -48,6 +52,29 @@ const CircuitDetail = () => {
     } finally {
       setBuying(false);
     }
+  };
+
+  const handleAccessKey = async () => {
+    if (!accessKey.trim()) return;
+    setCheckingKey(true);
+    const { data } = await supabase
+      .from("access_keys")
+      .select("*")
+      .eq("key", accessKey.trim().toLowerCase())
+      .limit(1);
+
+    if (data && data.length > 0) {
+      const k = data[0] as any;
+      if (k.unlimited || (k.uses_remaining && k.uses_remaining > 0)) {
+        setUnlocked(true);
+        toast({ title: "Clé valide ✅", description: "Accès gratuit débloqué !" });
+      } else {
+        toast({ title: "Clé expirée", description: "Cette clé n'est plus valide.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "Clé invalide", description: "Cette clé n'existe pas.", variant: "destructive" });
+    }
+    setCheckingKey(false);
   };
 
   if (isLoading) {
