@@ -87,6 +87,7 @@ const NavigationView = () => {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [calibrated, setCalibrated] = useState(false);
+  const [participants, setParticipants] = useState<{ id: string; display_name: string | null; lat: number; lng: number }[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeMusicIdRef = useRef<string | null>(null);
@@ -94,6 +95,7 @@ const NavigationView = () => {
   const fadeIntervalRef = useRef<number | null>(null);
   const firstFixTimeRef = useRef<number | null>(null);
   const calibrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const presenceChannelRef = useRef<any>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
