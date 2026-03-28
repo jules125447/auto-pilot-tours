@@ -177,7 +177,7 @@ const CircuitDetail = () => {
           </div>
 
           {/* Promo code + Buy OR Unlocked */}
-          {unlocked ? (
+          {hasAccess ? (
             <div className="flex flex-col sm:flex-row gap-3">
               <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
                 <Car className="w-5 h-5" /> Démarrer le circuit
