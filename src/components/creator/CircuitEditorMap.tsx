@@ -389,16 +389,24 @@ const CircuitEditorMap = ({
       <div ref={mapRef} className="absolute inset-0" />
 
       {/* Search bar */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] w-80">
+      <div
+        className="absolute top-3 right-3 z-[1000] w-72"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {isSearching && (
+            <div className="absolute right-8 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          )}
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             onFocus={() => searchResults.length > 0 && setShowResults(true)}
-            placeholder="Rechercher une ville, rue…"
-            className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card/95 backdrop-blur-sm text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-elevated"
+            onBlur={() => setTimeout(() => setShowResults(false), 200)}
+            placeholder="Rechercher un lieu…"
+            className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card/95 backdrop-blur-sm text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-lg"
           />
           {searchQuery && (
             <button onClick={() => { setSearchQuery(""); setSearchResults([]); setShowResults(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -406,15 +414,16 @@ const CircuitEditorMap = ({
             </button>
           )}
         </div>
-        {showResults && (
-          <div className="mt-1 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-elevated overflow-hidden">
+        {showResults && searchResults.length > 0 && (
+          <div className="mt-1 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg overflow-hidden max-h-60 overflow-y-auto">
             {searchResults.map((r, i) => (
               <button
                 key={i}
-                onClick={() => selectPlace(r.lat, r.lon)}
-                className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors truncate"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => selectPlace(r.lat, r.lon, (r as any).boundingbox)}
+                className="w-full text-left px-3 py-2.5 text-sm text-foreground hover:bg-accent transition-colors border-b border-border/50 last:border-b-0"
               >
-                {r.display_name}
+                <span className="block truncate">{r.display_name}</span>
               </button>
             ))}
           </div>
