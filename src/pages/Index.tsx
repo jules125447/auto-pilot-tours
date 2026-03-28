@@ -27,9 +27,6 @@ const Index = () => {
     return matchSearch && matchRegion;
   });
 
-  const proCircuits = filteredCircuits.filter((c) => c.circuit_type === "pro");
-  const amateurCircuits = filteredCircuits.filter((c) => c.circuit_type === "amateur");
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
