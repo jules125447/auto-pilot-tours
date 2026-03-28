@@ -29,6 +29,8 @@ export interface AudioZoneData {
   lng: number;
   radius: number;
   text: string;
+  audioSource?: "tts" | "recorded" | "file";
+  audioUrl?: string;
 }
 
 export interface MusicSegmentData {
@@ -308,7 +310,8 @@ const CircuitCreator = () => {
             lat: a.lat,
             lng: a.lng,
             radius_meters: a.radius,
-            audio_text: a.text,
+            audio_text: a.audioSource === "tts" || !a.audioSource ? a.text : null,
+            audio_url: a.audioUrl || null,
             sort_order: i,
           }))
         );

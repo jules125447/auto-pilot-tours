@@ -133,11 +133,12 @@ const CircuitTestMode = ({
       const totalDist = cumDist[cumDist.length - 1];
       const carCum = prog * totalDist;
 
-      // Audio zones (radius-based)
+      // Audio zones (route-projection-based)
       const newActiveAudio = new Set<string>();
       audioZones.forEach((zone) => {
-        const d = dist(pos[0], pos[1], zone.lat, zone.lng);
-        if (d <= zone.radius) {
+        const zoneCum = projectOnRoute(zone.lat, zone.lng, route, cumDist);
+        const triggerDist = 30; // 30m window
+        if (carCum >= zoneCum - triggerDist && carCum <= zoneCum + triggerDist) {
           newActiveAudio.add(zone.id);
           if (!activeAudioZones.has(zone.id) && zone.text && !ttsActiveRef.current) {
             ttsActiveRef.current = true;
