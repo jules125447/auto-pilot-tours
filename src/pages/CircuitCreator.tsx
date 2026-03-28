@@ -382,6 +382,7 @@ const CircuitCreator = () => {
             route: route as unknown as any,
             published: publish,
             circuit_type: circuitType,
+            image_url: coverImageUrl || null,
           })
           .eq("id", editId)
           .eq("creator_id", user.id);
