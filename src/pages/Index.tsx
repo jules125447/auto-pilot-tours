@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Compass, Car, Loader2, PlusCircle, ArrowRight, Sparkles, Volume2 } from "lucide-react";
+import { Search, MapPin, Compass, Car, Loader2, PlusCircle, ArrowRight, Sparkles, Volume2, Award, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import CircuitCard from "@/components/CircuitCard";
 import Header from "@/components/Header";
