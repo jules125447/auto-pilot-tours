@@ -582,6 +582,7 @@ const CircuitCreator = () => {
             mode={mode}
             onMapClick={handleMapClick}
             onWaypointDrag={handleWaypointDrag}
+            onStopDrag={handleStopDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
