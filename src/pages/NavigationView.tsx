@@ -156,6 +156,10 @@ const NavigationView = () => {
         if (pos.coords.heading && pos.coords.heading > 0) {
           setHeading(pos.coords.heading);
         }
+        // Speed in km/h (coords.speed is m/s)
+        if (pos.coords.speed !== null && pos.coords.speed >= 0) {
+          setSpeed(Math.round(pos.coords.speed * 3.6));
+        }
       },
       (err) => console.warn("Geo error:", err.message),
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
