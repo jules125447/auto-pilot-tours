@@ -53,6 +53,8 @@ interface CreatorSidebarProps {
   routePointsCount: number;
   mode: EditorMode;
   isEditing?: boolean;
+  coverImageUrl?: string;
+  onCoverImageChange?: (url: string) => void;
 }
 
 const stopTypes = [
