@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Square, X, FastForward, Volume2, Music } from "lucide-react";
-import type { StopData, AudioZoneData, MusicSegmentData } from "@/pages/CircuitCreator";
+import { Play, Square, X, FastForward, Volume2, Music, Waves } from "lucide-react";
+import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData } from "@/pages/CircuitCreator";
 import { haversine } from "@/lib/turnDetection";
+import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
 import L from "leaflet";
 
 interface CircuitTestModeProps {
@@ -11,62 +12,75 @@ interface CircuitTestModeProps {
   stops: StopData[];
   audioZones: AudioZoneData[];
   musicSegments: MusicSegmentData[];
+  soundSegments: SoundSegmentData[];
   mapInstance: L.Map | null;
   onClose: () => void;
 }
 
-function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+function dist(lat1: number, lng1: number, lat2: number, lng2: number): number {
   return haversine(lat1, lng1, lat2, lng2);
 }
 
-function interpolateRoute(route: [number, number][], progress: number): [number, number] {
+// Compute cumulative distances along the route
+function computeCumulativeDist(route: [number, number][]): number[] {
+  const cum = [0];
+  for (let i = 1; i < route.length; i++) {
+    cum.push(cum[i - 1] + dist(route[i - 1][0], route[i - 1][1], route[i][0], route[i][1]));
+  }
+  return cum;
+}
+
+// Project a point onto the route and return cumulative distance along route
+function projectOnRoute(lat: number, lng: number, route: [number, number][], cumDist: number[]): number {
+  let bestDist = Infinity;
+  let bestCum = 0;
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const ax = route[i][0], ay = route[i][1];
+    const bx = route[i + 1][0], by = route[i + 1][1];
+    const dx = bx - ax, dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq === 0 ? 0 : ((lat - ax) * dx + (lng - ay) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const px = ax + t * dx, py = ay + t * dy;
+    const d = dist(lat, lng, px, py);
+    if (d < bestDist) {
+      bestDist = d;
+      bestCum = cumDist[i] + t * (cumDist[i + 1] - cumDist[i]);
+    }
+  }
+  return bestCum;
+}
+
+function interpolateRoute(route: [number, number][], progress: number, cumDist: number[]): [number, number] {
   if (route.length === 0) return [0, 0];
   if (route.length === 1 || progress <= 0) return route[0];
+  const totalDist = cumDist[cumDist.length - 1];
   if (progress >= 1) return route[route.length - 1];
 
-  const distances: number[] = [];
-  let totalDist = 0;
-  for (let i = 1; i < route.length; i++) {
-    const d = haversineDistance(route[i - 1][0], route[i - 1][1], route[i][0], route[i][1]);
-    distances.push(d);
-    totalDist += d;
-  }
-
   const targetDist = progress * totalDist;
-  let accumulated = 0;
 
-  for (let i = 0; i < distances.length; i++) {
-    if (accumulated + distances[i] >= targetDist) {
-      const segProgress = (targetDist - accumulated) / distances[i];
-      const lat = route[i][0] + (route[i + 1][0] - route[i][0]) * segProgress;
-      const lng = route[i][1] + (route[i + 1][1] - route[i][1]) * segProgress;
-      return [lat, lng];
+  for (let i = 0; i < cumDist.length - 1; i++) {
+    if (cumDist[i + 1] >= targetDist) {
+      const segLen = cumDist[i + 1] - cumDist[i];
+      const t = segLen === 0 ? 0 : (targetDist - cumDist[i]) / segLen;
+      return [
+        route[i][0] + (route[i + 1][0] - route[i][0]) * t,
+        route[i][1] + (route[i + 1][1] - route[i][1]) * t,
+      ];
     }
-    accumulated += distances[i];
   }
-
   return route[route.length - 1];
 }
 
-function isInMusicSegment(
-  carLat: number,
-  carLng: number,
-  seg: MusicSegmentData,
-  route: [number, number][]
-): boolean {
-  const distToStart = haversineDistance(carLat, carLng, seg.startLat, seg.startLng);
-  const distToEnd = haversineDistance(carLat, carLng, seg.endLat, seg.endLng);
-  const segLength = haversineDistance(seg.startLat, seg.startLng, seg.endLat, seg.endLng);
-  return distToStart <= segLength + 500 && distToEnd <= segLength + 500 && (distToStart + distToEnd) <= segLength * 1.5 + 200;
-}
-
-const FADE_DURATION = 2000; // 2s fade in/out
+const FADE_DURATION = 2000;
 
 const CircuitTestMode = ({
   route,
   stops,
   audioZones,
   musicSegments,
+  soundSegments,
   mapInstance,
   onClose,
 }: CircuitTestModeProps) => {
@@ -74,16 +88,23 @@ const CircuitTestMode = ({
   const [progress, setProgress] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [activeAudioZones, setActiveAudioZones] = useState<Set<string>>(new Set());
-  const [activeMusicSegments, setActiveMusicSegments] = useState<Set<string>>(new Set());
+  const [activeMusicIds, setActiveMusicIds] = useState<Set<string>>(new Set());
+  const [activeSoundIds, setActiveSoundIds] = useState<Set<string>>(new Set());
   const [triggeredStops, setTriggeredStops] = useState<Set<string>>(new Set());
 
   const carMarkerRef = useRef<L.Marker | null>(null);
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const musicAudioRef = useRef<Record<string, HTMLAudioElement>>({});
+  const soundInstancesRef = useRef<Record<string, ReturnType<typeof startAmbientSound>>>({});
   const ttsActiveRef = useRef(false);
 
-  const carPos = interpolateRoute(route, progress);
+  // Precompute cumulative distances
+  const cumDistRef = useRef<number[]>([]);
+  if (cumDistRef.current.length !== route.length) {
+    cumDistRef.current = computeCumulativeDist(route);
+  }
+  const cumDist = cumDistRef.current;
 
   // Create car marker
   useEffect(() => {
@@ -105,14 +126,18 @@ const CircuitTestMode = ({
   const updateCarPosition = useCallback(
     (prog: number) => {
       if (!carMarkerRef.current || route.length === 0) return;
-      const pos = interpolateRoute(route, prog);
+      const pos = interpolateRoute(route, prog, cumDist);
       carMarkerRef.current.setLatLng(pos);
       if (mapInstance) mapInstance.panTo(pos, { animate: true, duration: 0.3 });
 
+      const totalDist = cumDist[cumDist.length - 1];
+      const carCum = prog * totalDist;
+
+      // Audio zones (radius-based)
       const newActiveAudio = new Set<string>();
       audioZones.forEach((zone) => {
-        const dist = haversineDistance(pos[0], pos[1], zone.lat, zone.lng);
-        if (dist <= zone.radius) {
+        const d = dist(pos[0], pos[1], zone.lat, zone.lng);
+        if (d <= zone.radius) {
           newActiveAudio.add(zone.id);
           if (!activeAudioZones.has(zone.id) && zone.text && !ttsActiveRef.current) {
             ttsActiveRef.current = true;
@@ -125,34 +150,54 @@ const CircuitTestMode = ({
       });
       setActiveAudioZones(newActiveAudio);
 
+      // Stops
       const newTriggered = new Set(triggeredStops);
       stops.forEach((stop) => {
-        const dist = haversineDistance(pos[0], pos[1], stop.lat, stop.lng);
-        if (dist < 100 && !triggeredStops.has(stop.id)) newTriggered.add(stop.id);
+        const d = dist(pos[0], pos[1], stop.lat, stop.lng);
+        if (d < 100 && !triggeredStops.has(stop.id)) newTriggered.add(stop.id);
       });
       setTriggeredStops(newTriggered);
 
+      // Music segments (route-projection-based)
       const newActiveMusic = new Set<string>();
       musicSegments.forEach((seg) => {
-        if (isInMusicSegment(pos[0], pos[1], seg, route)) newActiveMusic.add(seg.id);
+        const startCum = projectOnRoute(seg.startLat, seg.startLng, route, cumDist);
+        const endCum = projectOnRoute(seg.endLat, seg.endLng, route, cumDist);
+        const minCum = Math.min(startCum, endCum);
+        const maxCum = Math.max(startCum, endCum);
+        if (carCum >= minCum && carCum <= maxCum) {
+          newActiveMusic.add(seg.id);
+        }
       });
-      setActiveMusicSegments(newActiveMusic);
+      setActiveMusicIds(newActiveMusic);
+
+      // Sound segments (route-projection-based)
+      const newActiveSound = new Set<string>();
+      soundSegments.forEach((seg) => {
+        const startCum = projectOnRoute(seg.startLat, seg.startLng, route, cumDist);
+        const endCum = projectOnRoute(seg.endLat, seg.endLng, route, cumDist);
+        const minCum = Math.min(startCum, endCum);
+        const maxCum = Math.max(startCum, endCum);
+        if (carCum >= minCum && carCum <= maxCum) {
+          newActiveSound.add(seg.id);
+        }
+      });
+      setActiveSoundIds(newActiveSound);
     },
-    [route, audioZones, musicSegments, stops, mapInstance, activeAudioZones, triggeredStops]
+    [route, cumDist, audioZones, musicSegments, soundSegments, stops, mapInstance, activeAudioZones, triggeredStops]
   );
 
-  // Music with fade in/out
+  // Music fade in/out
   useEffect(() => {
     musicSegments.forEach((seg) => {
       if (!seg.previewUrl) return;
-      if (activeMusicSegments.has(seg.id)) {
+      if (activeMusicIds.has(seg.id)) {
         if (!musicAudioRef.current[seg.id]) {
           const audio = new Audio(seg.previewUrl);
           audio.loop = true;
           audio.volume = 0;
           audio.play().catch(() => {});
           musicAudioRef.current[seg.id] = audio;
-          // Fade in
           const startTime = Date.now();
           const fadeIn = () => {
             const elapsed = Date.now() - startTime;
@@ -167,7 +212,6 @@ const CircuitTestMode = ({
       } else {
         if (musicAudioRef.current[seg.id]) {
           const audio = musicAudioRef.current[seg.id];
-          // Fade out
           const startVol = audio.volume;
           const startTime = Date.now();
           const fadeOut = () => {
@@ -185,8 +229,25 @@ const CircuitTestMode = ({
         }
       }
     });
-  }, [activeMusicSegments, musicSegments]);
+  }, [activeMusicIds, musicSegments]);
 
+  // Sound segments fade in/out
+  useEffect(() => {
+    soundSegments.forEach((seg) => {
+      if (activeSoundIds.has(seg.id)) {
+        if (!soundInstancesRef.current[seg.id]) {
+          soundInstancesRef.current[seg.id] = startAmbientSound(seg.soundType as AmbientSoundType, seg.volume);
+        }
+      } else {
+        if (soundInstancesRef.current[seg.id]) {
+          stopAmbientSound(soundInstancesRef.current[seg.id]);
+          delete soundInstancesRef.current[seg.id];
+        }
+      }
+    });
+  }, [activeSoundIds, soundSegments]);
+
+  // Animation loop
   useEffect(() => {
     if (!playing) {
       if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -208,11 +269,14 @@ const CircuitTestMode = ({
     return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
   }, [playing, speed, updateCarPosition]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       speechSynthesis.cancel();
       Object.values(musicAudioRef.current).forEach((a) => a.pause());
       musicAudioRef.current = {};
+      Object.values(soundInstancesRef.current).forEach((s) => stopAmbientSound(s));
+      soundInstancesRef.current = {};
     };
   }, []);
 
@@ -221,6 +285,8 @@ const CircuitTestMode = ({
     speechSynthesis.cancel();
     Object.values(musicAudioRef.current).forEach((a) => a.pause());
     musicAudioRef.current = {};
+    Object.values(soundInstancesRef.current).forEach((s) => stopAmbientSound(s));
+    soundInstancesRef.current = {};
     onClose();
   };
 
@@ -228,11 +294,14 @@ const CircuitTestMode = ({
     setPlaying(false);
     setProgress(0);
     setActiveAudioZones(new Set());
-    setActiveMusicSegments(new Set());
+    setActiveMusicIds(new Set());
+    setActiveSoundIds(new Set());
     setTriggeredStops(new Set());
     speechSynthesis.cancel();
     Object.values(musicAudioRef.current).forEach((a) => a.pause());
     musicAudioRef.current = {};
+    Object.values(soundInstancesRef.current).forEach((s) => stopAmbientSound(s));
+    soundInstancesRef.current = {};
     if (route.length > 0) updateCarPosition(0);
   };
 
@@ -247,7 +316,6 @@ const CircuitTestMode = ({
         </Button>
       </div>
 
-      {/* Progress bar */}
       <div className="mb-3">
         <Slider
           value={[progress * 100]}
@@ -263,7 +331,6 @@ const CircuitTestMode = ({
         <p className="text-xs text-muted-foreground mt-1">{Math.round(progress * 100)}% du trajet</p>
       </div>
 
-      {/* Controls */}
       <div className="flex items-center gap-2 mb-3">
         <Button size="sm" onClick={() => setPlaying(!playing)} className="gap-1.5">
           {playing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -288,11 +355,15 @@ const CircuitTestMode = ({
         </div>
       </div>
 
-      {/* Active indicators */}
       <div className="flex flex-wrap gap-1.5 text-xs">
-        {activeMusicSegments.size > 0 && (
+        {activeMusicIds.size > 0 && (
           <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/15 text-accent-foreground">
             <Music className="w-3 h-3" /> Musique active
+          </span>
+        )}
+        {activeSoundIds.size > 0 && (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/15 text-accent-foreground">
+            <Waves className="w-3 h-3" /> Son ambiance
           </span>
         )}
         {activeAudioZones.size > 0 && (

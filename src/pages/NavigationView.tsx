@@ -142,35 +142,60 @@ const NavigationView = () => {
     });
   }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone, audioUnlocked]);
 
-  // Music segments proximity detection
+  // Project a point onto the route and return cumulative distance
+  const projectOnRoute = useCallback((lat: number, lng: number, routeCoords: [number, number][]): number => {
+    let bestDist = Infinity;
+    let bestCum = 0;
+    let cumDist = 0;
+    for (let i = 0; i < routeCoords.length - 1; i++) {
+      const ax = routeCoords[i][0], ay = routeCoords[i][1];
+      const bx = routeCoords[i + 1][0], by = routeCoords[i + 1][1];
+      const segLen = haversine(ax, ay, bx, by);
+      const dx = bx - ax, dy = by - ay;
+      const lenSq = dx * dx + dy * dy;
+      let t = lenSq === 0 ? 0 : ((lat - ax) * dx + (lng - ay) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      const px = ax + t * dx, py = ay + t * dy;
+      const d = haversine(lat, lng, px, py);
+      if (d < bestDist) {
+        bestDist = d;
+        bestCum = cumDist + t * segLen;
+      }
+      cumDist += segLen;
+    }
+    return bestCum;
+  }, []);
+
+  // Music segments — route-projection-based detection
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
+    const routeCoords = circuit.route as [number, number][];
+    if (!routeCoords || routeCoords.length < 2) return;
+
+    const carCum = projectOnRoute(lat, lng, routeCoords);
 
     circuit.music_segments.forEach((seg) => {
-      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
-      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
+      const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
+      const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
+      const minCum = Math.min(startCum, endCum);
+      const maxCum = Math.max(startCum, endCum);
+      const isInside = carCum >= minCum && carCum <= maxCum;
 
-      // Start music when near start point
-      if (distToStart < 80 && activeMusicIdRef.current !== seg.id && seg.preview_url) {
-        // Stop current music if any
+      if (isInside && activeMusicIdRef.current !== seg.id && seg.preview_url) {
         if (musicAudioRef.current) {
           const old = musicAudioRef.current;
           fadeAudio(old, 0, () => { old.pause(); });
         }
-
         const audio = new Audio(seg.preview_url);
         audio.crossOrigin = "anonymous";
         audio.volume = 0;
         audio.loop = true;
         musicAudioRef.current = audio;
         activeMusicIdRef.current = seg.id;
-        
         const playPromise = audio.play();
         if (playPromise) {
-          playPromise.then(() => {
-            fadeAudio(audio, 0.7);
-          }).catch((err) => {
+          playPromise.then(() => { fadeAudio(audio, 0.7); }).catch((err) => {
             console.warn("Music play failed:", err);
             activeMusicIdRef.current = null;
             musicAudioRef.current = null;
@@ -178,8 +203,7 @@ const NavigationView = () => {
         }
       }
 
-      // Stop music when near end point
-      if (distToEnd < 80 && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
+      if (!isInside && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
         const audioToStop = musicAudioRef.current;
         fadeAudio(audioToStop, 0, () => {
           audioToStop.pause();
@@ -190,32 +214,37 @@ const NavigationView = () => {
         });
       }
     });
-  }, [userPos, circuit, fadeAudio, audioUnlocked]);
+  }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute]);
 
-  // Sound segments proximity detection
+  // Sound segments — route-projection-based detection
   useEffect(() => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
+    const routeCoords = circuit.route as [number, number][];
+    if (!routeCoords || routeCoords.length < 2) return;
 
+    const carCum = projectOnRoute(lat, lng, routeCoords);
     const soundSegs = circuit.sound_segments || [];
-    soundSegs.forEach((seg) => {
-      const distToStart = haversine(lat, lng, seg.start_lat, seg.start_lng);
-      const distToEnd = haversine(lat, lng, seg.end_lat, seg.end_lng);
 
-      // Start sound when near start point
-      if (distToStart < 80 && !activeSoundsRef.current.has(seg.id)) {
+    soundSegs.forEach((seg) => {
+      const startCum = projectOnRoute(seg.start_lat, seg.start_lng, routeCoords);
+      const endCum = projectOnRoute(seg.end_lat, seg.end_lng, routeCoords);
+      const minCum = Math.min(startCum, endCum);
+      const maxCum = Math.max(startCum, endCum);
+      const isInside = carCum >= minCum && carCum <= maxCum;
+
+      if (isInside && !activeSoundsRef.current.has(seg.id)) {
         const instance = startAmbientSound(seg.sound_type as AmbientSoundType, seg.volume);
         activeSoundsRef.current.set(seg.id, instance);
       }
 
-      // Stop sound when near end point
-      if (distToEnd < 80 && activeSoundsRef.current.has(seg.id)) {
+      if (!isInside && activeSoundsRef.current.has(seg.id)) {
         const instance = activeSoundsRef.current.get(seg.id);
         stopAmbientSound(instance);
         activeSoundsRef.current.delete(seg.id);
       }
     });
-  }, [userPos, circuit, audioUnlocked]);
+  }, [userPos, circuit, audioUnlocked, projectOnRoute]);
 
   // Stop arrival detection
   useEffect(() => {
