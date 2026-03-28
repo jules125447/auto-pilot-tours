@@ -336,6 +336,7 @@ const CreatorSidebar = ({
   onUpdateStop, onDeleteStop, onUpdateAudio, onDeleteAudio,
   onUpdateMusic, onDeleteMusic, onUpdateSound, onDeleteSound,
   onSave, onPublish, saving, routePointsCount, mode, isEditing,
+  coverImageUrl, onCoverImageChange,
 }: CreatorSidebarProps) => {
   const [musicSearch, setMusicSearch] = useState("");
   const [itunesResults, setItunesResults] = useState<any[]>([]);
