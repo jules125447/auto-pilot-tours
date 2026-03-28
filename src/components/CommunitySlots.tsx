@@ -194,7 +194,14 @@ const CommunitySlots = ({ circuitId }: CommunitySlotsProps) => {
           </div>
         ) : (
           <div className="space-y-4 mb-6">
-            {Object.entries(slotsByDate).map(([date, dateSlots]) => (
+            {Object.entries(slotsByDate).map(([date, dateSlots]) => {
+              // Group by time slot for chat
+              const timeGroups = dateSlots.reduce<Record<string, Slot[]>>((acc, s) => {
+                if (!acc[s.slot_time]) acc[s.slot_time] = [];
+                acc[s.slot_time].push(s);
+                return acc;
+              }, {});
+              return (
               <div key={date}>
                 <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-primary" />
