@@ -338,6 +338,15 @@ const CircuitCreator = () => {
     setMusicSegments((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)));
   };
 
+  const handleMusicDrag = useCallback((id: string, point: "start" | "end", lat: number, lng: number) => {
+    setMusicSegments((prev) => prev.map((m) => {
+      if (m.id !== id) return m;
+      return point === "start"
+        ? { ...m, startLat: lat, startLng: lng }
+        : { ...m, endLat: lat, endLng: lng };
+    }));
+  }, []);
+
   const handleDeleteSound = (id: string) => {
     setSoundSegments((prev) => prev.filter((s) => s.id !== id));
     if (selectedSoundId === id) setSelectedSoundId(null);
