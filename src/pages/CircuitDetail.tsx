@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2, Tag, ShoppingCart } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
 import CircuitReviews from "@/components/CircuitReviews";
+import { useToast } from "@/hooks/use-toast";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
   viewpoint: Eye,
@@ -22,6 +26,29 @@ const stopTypeLabels: Record<string, string> = {
 const CircuitDetail = () => {
   const { id } = useParams();
   const { data: circuit, isLoading } = useCircuit(id);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [promoCode, setPromoCode] = useState("");
+  const [buying, setBuying] = useState(false);
+
+  const handleBuy = async () => {
+    if (!user) {
+      toast({ title: "Connectez-vous", description: "Vous devez être connecté pour acheter un circuit.", variant: "destructive" });
+      return;
+    }
+    setBuying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { circuitId: id, promoCode: promoCode.trim() || undefined },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setBuying(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -94,10 +121,40 @@ const CircuitDetail = () => {
             </div>
           </div>
 
+          {/* Promo code + Buy */}
+          {circuit.price > 0 && (
+            <div className="bg-muted/50 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">Code promo</span>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Entrez votre code"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-card text-foreground text-sm border border-border placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
-              <Car className="w-5 h-5" /> Démarrer le circuit
-            </Link>
+            {circuit.price > 0 ? (
+              <button
+                onClick={handleBuy}
+                disabled={buying}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {buying ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
+                {buying ? "Redirection..." : `Acheter — ${circuit.price} €`}
+              </button>
+            ) : (
+              <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
+                <Car className="w-5 h-5" /> Démarrer le circuit
+              </Link>
+            )}
             <button className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
               <Download className="w-5 h-5" /> Hors-ligne
             </button>
