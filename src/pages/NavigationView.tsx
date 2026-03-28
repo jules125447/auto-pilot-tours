@@ -59,6 +59,9 @@ const NavigationView = () => {
     if (circuit.price === 0) { setHasAccess(true); setAccessChecked(true); return; }
     // Creator always has access
     if (user && circuit.creator_id === user.id) { setHasAccess(true); setAccessChecked(true); return; }
+    // Check if unlocked via access key (sessionStorage)
+    const unlockedCircuits = JSON.parse(sessionStorage.getItem("unlocked_circuits") || "[]");
+    if (unlockedCircuits.includes(id)) { setHasAccess(true); setAccessChecked(true); return; }
     // Check purchase
     if (!user) { setAccessChecked(true); return; }
     const check = async () => {
