@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Loader2, Volume2, VolumeX, Play } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Loader2, Volume2, VolumeX, Play, Lock } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import NavigationMap from "@/components/navigation/NavigationMap";
 import NavigationBar from "@/components/navigation/NavigationBar";
 import DirectionBanner from "@/components/navigation/DirectionBanner";
