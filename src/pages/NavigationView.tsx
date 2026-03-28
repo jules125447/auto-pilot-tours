@@ -175,8 +175,54 @@ const NavigationView = () => {
       if (fadeIntervalRef.current) cancelAnimationFrame(fadeIntervalRef.current);
       activeSoundsRef.current.forEach((instance) => stopAmbientSound(instance));
       activeSoundsRef.current.clear();
+      if (presenceChannelRef.current) {
+        supabase.removeChannel(presenceChannelRef.current);
+      }
     };
   }, []);
+
+  // Realtime presence for community participants
+  useEffect(() => {
+    if (!circuit || !user || !audioUnlocked) return;
+    const channelName = `circuit-live-${circuit.id}`;
+    const channel = supabase.channel(channelName, { config: { presence: { key: user.id } } });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const others: typeof participants = [];
+        Object.entries(state).forEach(([key, presences]) => {
+          if (key === user.id) return;
+          const p = (presences as any[])[0];
+          if (p?.lat && p?.lng) {
+            others.push({ id: key, display_name: p.display_name, lat: p.lat, lng: p.lng });
+          }
+        });
+        setParticipants(others);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            display_name: user.email?.split("@")[0] || "Anonyme",
+            lat: rawUserPos?.[0] || 0,
+            lng: rawUserPos?.[1] || 0,
+          });
+        }
+      });
+
+    presenceChannelRef.current = channel;
+    return () => { supabase.removeChannel(channel); };
+  }, [circuit?.id, user?.id, audioUnlocked]);
+
+  // Broadcast position updates
+  useEffect(() => {
+    if (!presenceChannelRef.current || !rawUserPos || !user) return;
+    presenceChannelRef.current.track({
+      display_name: user.email?.split("@")[0] || "Anonyme",
+      lat: rawUserPos[0],
+      lng: rawUserPos[1],
+    });
+  }, [rawUserPos]);
 
   // Voice announcements
   useEffect(() => {
