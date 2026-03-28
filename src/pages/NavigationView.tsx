@@ -431,6 +431,35 @@ const NavigationView = () => {
     );
   }
 
+  // Access gate - must have purchased or be creator
+  if (accessChecked && !hasAccess) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 px-4">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+          <Lock className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="font-display text-xl font-bold text-foreground text-center">Circuit verrouillé</h1>
+        <p className="text-muted-foreground text-sm text-center max-w-sm">
+          Vous devez acheter ce circuit pour y accéder. L'achat est définitif et vous donne un accès à vie.
+        </p>
+        <Link
+          to={`/circuit/${id}`}
+          className="px-6 py-3 rounded-xl bg-gradient-hero text-primary-foreground font-semibold hover:opacity-90 transition-opacity"
+        >
+          Voir le circuit
+        </Link>
+      </div>
+    );
+  }
+
+  if (!accessChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   // Show start button if audio not unlocked
   if (!audioUnlocked) {
     return (
