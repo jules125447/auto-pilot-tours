@@ -178,27 +178,53 @@ const FilePlayButton = ({ url }: { url: string }) => {
 const MusicPlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const buttonKey = `music:${url}`;
+
+  const stop = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current.src = "";
+      audioRef.current.load();
       audioRef.current = null;
-      setPlaying(false);
+    }
+    if (activePreviewKey === buttonKey) {
+      activePreviewKey = null;
+      activePreviewStop = null;
+    }
+    setPlaying(false);
+  }, [buttonKey]);
+
+  useEffect(() => stop, [stop]);
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (activePreviewKey === buttonKey && audioRef.current) {
+      stop();
       return;
     }
+
+    stopActivePreview();
     const [baseUrl, hash] = url.split("#t=");
     const startTime = hash ? parseFloat(hash) : 0;
     const audio = new Audio(baseUrl);
     audio.volume = 1;
-    if (startTime > 0) audio.currentTime = startTime;
+    audio.preload = "auto";
     audioRef.current = audio;
-    audio.onended = () => { setPlaying(false); audioRef.current = null; };
-    audio.onerror = () => { setPlaying(false); audioRef.current = null; };
-    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    audio.onloadedmetadata = () => {
+      if (startTime > 0) {
+        audio.currentTime = Math.min(startTime, audio.duration || startTime);
+      }
+    };
+    audio.onended = stop;
+    audio.onerror = stop;
+
+    registerActivePreview(buttonKey, stop);
+    audio.play().then(() => setPlaying(true)).catch(stop);
   };
+
   return (
     <button type="button" onClick={toggle} className="inline-flex items-center justify-center gap-1 shrink-0 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors">
       {playing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
