@@ -486,6 +486,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      register_professional: {
+        Args: { _business_type: string; _promo_code: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "creator" | "user"
