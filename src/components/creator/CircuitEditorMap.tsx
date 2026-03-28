@@ -92,6 +92,10 @@ const CircuitEditorMap = ({
   selectedStopId, selectedAudioId, selectedMusicId, selectedSoundId,
   routeLoading, onMapReady,
 }: CircuitEditorMapProps) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ display_name: string; lat: string; lon: string }[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const layersRef = useRef<{
