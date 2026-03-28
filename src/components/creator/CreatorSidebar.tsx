@@ -3,13 +3,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search, Waves } from "lucide-react";
+import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search, Waves, Mic, Upload, FileAudio } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, EditorMode } from "@/pages/CircuitCreator";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AMBIENT_SOUNDS, startAmbientSound, stopAmbientSound } from "@/lib/ambientSounds";
 import type { AmbientSoundType } from "@/lib/ambientSounds";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreatorSidebarProps {
   title: string;
@@ -92,6 +93,30 @@ const AudioPlayButton = ({ text }: { text: string }) => {
   );
 };
 
+const FilePlayButton = ({ url }: { url: string }) => {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const toggle = () => {
+    if (playing && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+      setPlaying(false);
+    } else {
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { setPlaying(false); audioRef.current = null; };
+      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    }
+  };
+  return (
+    <Button variant="outline" size="sm" onClick={toggle} className="gap-1" type="button">
+      {playing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+      {playing ? "Stop" : "Écouter"}
+    </Button>
+  );
+};
+
 const MusicPlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -133,7 +158,6 @@ const SoundPreviewButton = ({ soundType }: { soundType: string }) => {
     } else {
       instanceRef.current = startAmbientSound(soundType as AmbientSoundType, 0.5);
       setPlaying(true);
-      // Auto-stop after 5s preview
       setTimeout(async () => {
         if (instanceRef.current) {
           await stopAmbientSound(instanceRef.current);
@@ -150,6 +174,48 @@ const SoundPreviewButton = ({ soundType }: { soundType: string }) => {
   );
 };
 
+const RecordButton = ({ onRecorded }: { onRecorded: (blob: Blob) => void }) => {
+  const [recording, setRecording] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const toggle = async () => {
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      setRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mr = new MediaRecorder(stream);
+        chunksRef.current = [];
+        mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+        mr.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+          stream.getTracks().forEach(t => t.stop());
+          onRecorded(blob);
+        };
+        mediaRecorderRef.current = mr;
+        mr.start();
+        setRecording(true);
+        setDuration(0);
+        timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
+      } catch {
+        console.warn("Microphone access denied");
+      }
+    }
+  };
+
+  return (
+    <Button variant={recording ? "destructive" : "outline"} size="sm" onClick={toggle} className="gap-1.5" type="button">
+      <Mic className="w-3.5 h-3.5" />
+      {recording ? `⏹ ${duration}s` : "Enregistrer"}
+    </Button>
+  );
+};
+
 const CreatorSidebar = ({
   title, setTitle, description, setDescription, region, setRegion,
   difficulty, setDifficulty, duration, setDuration, distance, setDistance,
@@ -163,7 +229,10 @@ const CreatorSidebar = ({
   const [musicSearch, setMusicSearch] = useState("");
   const [itunesResults, setItunesResults] = useState<any[]>([]);
   const [itunesLoading, setItunesLoading] = useState(false);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadForZoneRef = useRef<string | null>(null);
 
   const searchItunes = useCallback((term: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -181,8 +250,37 @@ const CreatorSidebar = ({
 
   useEffect(() => { searchItunes(musicSearch); }, [musicSearch, searchItunes]);
 
+  const uploadAudioFile = async (file: Blob, zoneId: string, ext = "webm") => {
+    setUploadingAudio(true);
+    try {
+      const filename = `audio_${zoneId}_${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage.from("audio-files").upload(filename, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("audio-files").getPublicUrl(data.path);
+      onUpdateAudio(zoneId, { audioUrl: urlData.publicUrl, audioSource: "file" });
+    } catch (err: any) {
+      console.error("Upload error:", err);
+    } finally {
+      setUploadingAudio(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const zoneId = uploadForZoneRef.current;
+    if (!file || !zoneId) return;
+    const ext = file.name.split(".").pop() || "mp3";
+    uploadAudioFile(file, zoneId, ext);
+    e.target.value = "";
+  };
+
+  const handleRecorded = (blob: Blob, zoneId: string) => {
+    uploadAudioFile(blob, zoneId, "webm");
+  };
+
   return (
     <div className="w-80 lg:w-96 border-r border-border bg-card flex flex-col">
+      <input type="file" ref={fileInputRef} accept="audio/*" className="hidden" onChange={handleFileUpload} />
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
           {/* Circuit info */}
@@ -260,7 +358,7 @@ const CreatorSidebar = ({
           {(mode === "audio" || mode === "select") && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Volume2 className="w-4 h-4" /> Zones audio</h3>
-              <p className="text-xs text-muted-foreground">Placez un point sur la carte. La zone de diffusion est estimée automatiquement selon la longueur du texte.</p>
+              <p className="text-xs text-muted-foreground">Placez un point sur la carte. Choisissez entre texte lu, enregistrement micro ou fichier audio.</p>
               {audioZones.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Cliquez sur la carte en mode "Zone audio" pour placer un commentaire.</p>}
               {audioZones.map((zone) => {
                 const estDistance = estimateAudioDistance(zone.text);
@@ -269,26 +367,108 @@ const CreatorSidebar = ({
                   <div key={zone.id} onClick={() => setSelectedAudioId(zone.id)}
                     className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedAudioId === zone.id ? "border-secondary bg-secondary/5" : "border-border hover:border-secondary/30"}`}>
                     {selectedAudioId === zone.id ? (
-                      <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                        <Textarea value={zone.text} onChange={(e) => onUpdateAudio(zone.id, { text: e.target.value })} placeholder="Texte du commentaire audio..." rows={3} className="text-sm" />
-                        {zone.text.trim() && (
-                          <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 space-y-0.5">
-                            <p>⏱ Durée estimée : ~{estDuration}s</p>
-                            <p>📏 Zone de diffusion : ~{estDistance}m sur le parcours</p>
+                      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Audio source selector */}
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-2">Source audio :</p>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            <button type="button"
+                              onClick={() => onUpdateAudio(zone.id, { audioSource: "tts" })}
+                              className={`flex flex-col items-center gap-1 p-2 rounded-md text-xs transition-colors ${
+                                (zone.audioSource || "tts") === "tts" ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                              }`}>
+                              <Volume2 className="w-4 h-4" />
+                              <span>Texte lu</span>
+                            </button>
+                            <button type="button"
+                              onClick={() => onUpdateAudio(zone.id, { audioSource: "recorded" })}
+                              className={`flex flex-col items-center gap-1 p-2 rounded-md text-xs transition-colors ${
+                                zone.audioSource === "recorded" ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                              }`}>
+                              <Mic className="w-4 h-4" />
+                              <span>Enregistrer</span>
+                            </button>
+                            <button type="button"
+                              onClick={() => onUpdateAudio(zone.id, { audioSource: "file" })}
+                              className={`flex flex-col items-center gap-1 p-2 rounded-md text-xs transition-colors ${
+                                zone.audioSource === "file" ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                              }`}>
+                              <FileAudio className="w-4 h-4" />
+                              <span>Fichier</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* TTS mode */}
+                        {(zone.audioSource || "tts") === "tts" && (
+                          <>
+                            <Textarea value={zone.text} onChange={(e) => onUpdateAudio(zone.id, { text: e.target.value })} placeholder="Texte du commentaire audio..." rows={3} className="text-sm" />
+                            {zone.text.trim() && (
+                              <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 space-y-0.5">
+                                <p>⏱ Durée estimée : ~{estDuration}s</p>
+                                <p>📏 Zone de diffusion : ~{estDistance}m sur le parcours</p>
+                              </div>
+                            )}
+                            <AudioPlayButton text={zone.text} />
+                          </>
+                        )}
+
+                        {/* Record mode */}
+                        {zone.audioSource === "recorded" && (
+                          <div className="space-y-2">
+                            <RecordButton onRecorded={(blob) => handleRecorded(blob, zone.id)} />
+                            {uploadingAudio && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Upload en cours...
+                              </div>
+                            )}
+                            {zone.audioUrl && (
+                              <div className="flex items-center gap-2">
+                                <FileAudio className="w-4 h-4 text-primary" />
+                                <span className="text-xs text-foreground truncate flex-1">Audio enregistré</span>
+                                <FilePlayButton url={zone.audioUrl} />
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        {/* File upload mode */}
+                        {zone.audioSource === "file" && (
+                          <div className="space-y-2">
+                            <Button variant="outline" size="sm" className="gap-1.5 w-full" type="button"
+                              onClick={() => { uploadForZoneRef.current = zone.id; fileInputRef.current?.click(); }}>
+                              <Upload className="w-3.5 h-3.5" /> Choisir un fichier audio
+                            </Button>
+                            {uploadingAudio && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Upload en cours...
+                              </div>
+                            )}
+                            {zone.audioUrl && (
+                              <div className="flex items-center gap-2">
+                                <FileAudio className="w-4 h-4 text-primary" />
+                                <span className="text-xs text-foreground truncate flex-1">Fichier audio ajouté</span>
+                                <FilePlayButton url={zone.audioUrl} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div className="flex gap-2">
-                          <AudioPlayButton text={zone.text} />
                           <Button variant="default" size="sm" onClick={() => setSelectedAudioId(null)} className="flex-1 gap-1"><Check className="w-3.5 h-3.5" /> OK</Button>
                           <Button variant="destructive" size="sm" onClick={() => onDeleteAudio(zone.id)} className="flex-1 gap-1"><Trash2 className="w-3.5 h-3.5" /> Supprimer</Button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">🔊</span>
+                        <span className="text-lg">{zone.audioSource === "file" || zone.audioSource === "recorded" ? "🎙️" : "🔊"}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{zone.text ? zone.text.substring(0, 40) + "..." : "Zone audio sans texte"}</p>
-                          <p className="text-xs text-muted-foreground">~{estDistance}m · ~{estDuration}s</p>
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {zone.audioUrl ? "Audio personnalisé" : zone.text ? zone.text.substring(0, 40) + "..." : "Zone audio sans contenu"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {zone.audioSource === "file" ? "Fichier" : zone.audioSource === "recorded" ? "Enregistrement" : `TTS · ~${estDistance}m · ~${estDuration}s`}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -302,6 +482,7 @@ const CreatorSidebar = ({
           {(mode === "music" || mode === "select") && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Music className="w-4 h-4" /> Segments musicaux</h3>
+              <p className="text-xs text-muted-foreground">En mode "Musique", cliquez 2 points sur la carte pour définir un segment musical (A→B). La musique jouera entre ces deux points.</p>
               {musicSegments.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">En mode "Musique", cliquez 2 points sur la carte pour définir un segment musical (A→B).</p>}
               {musicSegments.map((seg) => (
                 <div key={seg.id} onClick={() => setSelectedMusicId(seg.id)}
@@ -378,8 +559,8 @@ const CreatorSidebar = ({
                               className={`flex items-center gap-2 p-2 rounded-md text-sm transition-colors ${
                                 seg.soundType === sound.type ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/50 hover:bg-muted text-muted-foreground"
                               }`}>
-                              <span>{sound.emoji}</span>
-                              <span className="truncate">{sound.label}</span>
+                              <span className="text-base leading-none">{sound.emoji}</span>
+                              <span className="truncate text-xs">{sound.label}</span>
                             </button>
                           ))}
                         </div>
@@ -399,7 +580,7 @@ const CreatorSidebar = ({
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{soundInfo?.emoji || "🔈"}</span>
+                        <span className="text-lg leading-none">{soundInfo?.emoji || "🔈"}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{soundInfo?.label || seg.soundType}</p>
                           <p className="text-xs text-muted-foreground">Vol: {Math.round(seg.volume * 100)}%</p>

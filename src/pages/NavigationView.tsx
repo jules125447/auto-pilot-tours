@@ -125,12 +125,30 @@ const NavigationView = () => {
     if (!userPos || !circuit || !audioUnlocked) return;
     const [lat, lng] = userPos;
 
+    const routeCoords = circuit.route as [number, number][];
+    if (!routeCoords || routeCoords.length < 2) return;
+
+    const carCum = projectOnRoute(lat, lng, routeCoords);
+
     circuit.audio_zones.forEach((zone) => {
       if (triggeredAudioZones.has(zone.id)) return;
-      const dist = haversine(lat, lng, zone.lat, zone.lng);
-      if (dist < (zone.radius_meters || 50)) {
+
+      // Project zone onto route and compute trigger window
+      const zoneCum = projectOnRoute(zone.lat, zone.lng, routeCoords);
+      // Trigger when car reaches the zone point (within 30m before)
+      const triggerDist = 30; // meters before zone point
+      if (carCum >= zoneCum - triggerDist && carCum <= zoneCum + triggerDist) {
         setTriggeredAudioZones((prev) => new Set(prev).add(zone.id));
-        if (zone.audio_text) {
+        
+        // Play audio file if available, otherwise use TTS
+        if (zone.audio_url) {
+          const audio = new Audio(zone.audio_url);
+          audio.play().catch(() => {});
+          setAudioOverlayText("🎙️ Audio en cours...");
+          setAudioPlaying(true);
+          audio.onended = () => setAudioPlaying(false);
+          audio.onerror = () => setAudioPlaying(false);
+        } else if (zone.audio_text) {
           setAudioOverlayText(zone.audio_text);
           setAudioPlaying(true);
           if (voiceEnabled) announceAudioZone(zone.audio_text);
@@ -140,7 +158,7 @@ const NavigationView = () => {
         }
       }
     });
-  }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone, audioUnlocked]);
+  }, [userPos, circuit, triggeredAudioZones, voiceEnabled, announceAudioZone, audioUnlocked, projectOnRoute]);
 
   // Project a point onto the route and return cumulative distance
   const projectOnRoute = useCallback((lat: number, lng: number, routeCoords: [number, number][]): number => {
