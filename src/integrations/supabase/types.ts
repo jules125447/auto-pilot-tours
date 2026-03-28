@@ -113,6 +113,7 @@ export type Database = {
       }
       circuits: {
         Row: {
+          circuit_type: string
           created_at: string
           creator_id: string
           description: string | null
@@ -131,6 +132,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          circuit_type?: string
           created_at?: string
           creator_id: string
           description?: string | null
@@ -149,6 +151,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          circuit_type?: string
           created_at?: string
           creator_id?: string
           description?: string | null

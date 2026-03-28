@@ -1,0 +1,1 @@
+ALTER TABLE public.circuits ADD COLUMN circuit_type text NOT NULL DEFAULT 'amateur';
