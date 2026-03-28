@@ -97,24 +97,36 @@ const CircuitEditorMap = ({
   const [showResults, setShowResults] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
+  const [isSearching, setIsSearching] = useState(false);
+
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (query.length < 3) { setSearchResults([]); setShowResults(false); return; }
+    if (query.length < 2) { setSearchResults([]); setShowResults(false); return; }
+    setIsSearching(true);
     searchTimeout.current = setTimeout(async () => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=fr`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&accept-language=fr&addressdetails=1`);
         const data = await res.json();
         setSearchResults(data);
         setShowResults(data.length > 0);
       } catch { setSearchResults([]); }
-    }, 400);
+      setIsSearching(false);
+    }, 350);
   }, []);
 
-  const selectPlace = useCallback((lat: string, lon: string) => {
+  const selectPlace = useCallback((lat: string, lon: string, boundingbox?: string[]) => {
     const map = mapInstance.current;
     if (!map) return;
-    map.setView([parseFloat(lat), parseFloat(lon)], 15, { animate: true });
+    if (boundingbox && boundingbox.length === 4) {
+      const bounds = L.latLngBounds(
+        [parseFloat(boundingbox[0]), parseFloat(boundingbox[2])],
+        [parseFloat(boundingbox[1]), parseFloat(boundingbox[3])]
+      );
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17, animate: true });
+    } else {
+      map.setView([parseFloat(lat), parseFloat(lon)], 15, { animate: true });
+    }
     setShowResults(false);
     setSearchQuery("");
     setSearchResults([]);
