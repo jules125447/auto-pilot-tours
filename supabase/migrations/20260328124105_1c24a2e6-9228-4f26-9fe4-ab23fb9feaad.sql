@@ -1,0 +1,1 @@
+ALTER TABLE public.music_segments ADD COLUMN start_time integer NOT NULL DEFAULT 0;
