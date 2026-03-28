@@ -73,6 +73,7 @@ const CircuitCreator = () => {
   const [difficulty, setDifficulty] = useState("Facile");
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
+  const [circuitType, setCircuitType] = useState("amateur");
 
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
