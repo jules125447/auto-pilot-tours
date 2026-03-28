@@ -406,6 +406,7 @@ const CircuitCreator = () => {
             route: route as unknown as any,
             creator_id: user.id,
             published: publish,
+            circuit_type: circuitType,
             price: 0,
           })
           .select("id")
