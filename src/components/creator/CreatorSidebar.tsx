@@ -125,27 +125,26 @@ const FilePlayButton = ({ url }: { url: string }) => {
 const MusicPlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (playing && audioRef.current) {
+    if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current = null;
       setPlaying(false);
-    } else {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      // Parse #t=N from URL
-      const [baseUrl, hash] = url.split("#t=");
-      const startTime = hash ? parseFloat(hash) : 0;
-      const audio = new Audio(baseUrl);
-      audio.volume = 1;
-      if (startTime > 0) audio.currentTime = startTime;
-      audioRef.current = audio;
-      audio.onended = () => { setPlaying(false); audioRef.current = null; };
-      audio.onerror = () => { setPlaying(false); audioRef.current = null; };
-      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      return;
     }
+    const [baseUrl, hash] = url.split("#t=");
+    const startTime = hash ? parseFloat(hash) : 0;
+    const audio = new Audio(baseUrl);
+    audio.volume = 1;
+    if (startTime > 0) audio.currentTime = startTime;
+    audioRef.current = audio;
+    audio.onended = () => { setPlaying(false); audioRef.current = null; };
+    audio.onerror = () => { setPlaying(false); audioRef.current = null; };
+    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   };
   return (
     <button type="button" onClick={toggle} className="inline-flex items-center justify-center gap-1 shrink-0 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors">
