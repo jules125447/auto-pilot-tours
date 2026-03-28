@@ -26,6 +26,29 @@ const stopTypeLabels: Record<string, string> = {
 const CircuitDetail = () => {
   const { id } = useParams();
   const { data: circuit, isLoading } = useCircuit(id);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [promoCode, setPromoCode] = useState("");
+  const [buying, setBuying] = useState(false);
+
+  const handleBuy = async () => {
+    if (!user) {
+      toast({ title: "Connectez-vous", description: "Vous devez être connecté pour acheter un circuit.", variant: "destructive" });
+      return;
+    }
+    setBuying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { circuitId: id, promoCode: promoCode.trim() || undefined },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      if (data?.url) window.open(data.url, "_blank");
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setBuying(false);
+    }
+  };
 
   if (isLoading) {
     return (
