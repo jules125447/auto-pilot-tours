@@ -276,8 +276,8 @@ const CircuitEditorMap = ({
       const emoji = soundInfo?.emoji || "🔈";
 
       const makeIcon = (label: string) => L.divIcon({
-        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "hsl(170,60%,40%)"};color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;">${emoji}${label}</div>`,
-        className: "custom-marker", iconSize: [24, 24], iconAnchor: [12, 12],
+        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "hsl(170,60%,40%)"};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;line-height:1;">${emoji}</div>`,
+        className: "custom-marker", iconSize: [32, 32], iconAnchor: [16, 16],
       });
 
       const mA = L.marker([seg.startLat, seg.startLng], { icon: makeIcon("A") }).addTo(map);

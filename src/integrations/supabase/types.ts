@@ -181,6 +181,7 @@ export type Database = {
           sort_order: number | null
           start_lat: number
           start_lng: number
+          start_time: number
           track_id: string
           track_name: string
         }
@@ -196,6 +197,7 @@ export type Database = {
           sort_order?: number | null
           start_lat: number
           start_lng: number
+          start_time?: number
           track_id: string
           track_name: string
         }
@@ -211,6 +213,7 @@ export type Database = {
           sort_order?: number | null
           start_lat?: number
           start_lng?: number
+          start_time?: number
           track_id?: string
           track_name?: string
         }

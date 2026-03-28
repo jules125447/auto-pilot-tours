@@ -44,6 +44,7 @@ export interface MusicSegmentData {
   previewUrl?: string;
   artworkUrl?: string;
   artistName?: string;
+  startTime?: number; // seconds offset to start playback (e.g. chorus)
 }
 
 export interface SoundSegmentData {
@@ -331,8 +332,9 @@ const CircuitCreator = () => {
             artist_name: m.artistName || null,
             preview_url: m.previewUrl || null,
             artwork_url: m.artworkUrl || null,
+            start_time: m.startTime || 0,
             sort_order: i,
-          }))
+          })) as any
         );
         if (musicErr) throw musicErr;
       }

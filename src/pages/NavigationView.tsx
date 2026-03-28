@@ -206,6 +206,10 @@ const NavigationView = () => {
         audio.crossOrigin = "anonymous";
         audio.volume = 0;
         audio.loop = true;
+        const startTimeSec = (seg as any).start_time;
+        if (startTimeSec && startTimeSec > 0) {
+          audio.currentTime = startTimeSec;
+        }
         musicAudioRef.current = audio;
         activeMusicIdRef.current = seg.id;
         const playPromise = audio.play();

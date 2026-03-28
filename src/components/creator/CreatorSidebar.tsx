@@ -130,8 +130,12 @@ const MusicPlayButton = ({ url }: { url: string }) => {
       setPlaying(false);
     } else {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      const audio = new Audio(url);
+      // Parse #t=N from URL
+      const [baseUrl, hash] = url.split("#t=");
+      const startTime = hash ? parseFloat(hash) : 0;
+      const audio = new Audio(baseUrl);
       audio.volume = 1;
+      if (startTime > 0) audio.currentTime = startTime;
       audioRef.current = audio;
       audio.onended = () => { setPlaying(false); audioRef.current = null; };
       audio.onerror = () => { setPlaying(false); audioRef.current = null; };
@@ -487,7 +491,7 @@ const CreatorSidebar = ({
               {musicSegments.map((seg) => (
                 <div key={seg.id} onClick={() => setSelectedMusicId(seg.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedMusicId === seg.id ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
-                  {selectedMusicId === seg.id ? (
+                   {selectedMusicId === seg.id ? (
                     <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                       <p className="text-xs font-semibold text-foreground">Rechercher sur iTunes :</p>
                       <div className="relative">
@@ -518,6 +522,29 @@ const CreatorSidebar = ({
                           </div>
                         ))}
                       </div>
+
+                      {/* Start time selector */}
+                      {seg.previewUrl && (
+                        <div className="space-y-1.5 pt-1 border-t border-border">
+                          <p className="text-xs font-semibold text-foreground">Démarrer à : {seg.startTime ? `${seg.startTime}s` : "0s (début)"}</p>
+                          <p className="text-xs text-muted-foreground">Choisissez le moment du morceau (ex: refrain, couplet…)</p>
+                          <Slider
+                            value={[seg.startTime || 0]}
+                            min={0}
+                            max={30}
+                            step={1}
+                            onValueChange={([v]) => onUpdateMusic(seg.id, { startTime: v })}
+                          />
+                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                            <span>0s</span>
+                            <span>10s</span>
+                            <span>20s</span>
+                            <span>30s</span>
+                          </div>
+                          <MusicPlayButton url={`${seg.previewUrl}#t=${seg.startTime || 0}`} />
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <Button variant="default" size="sm" onClick={() => { setSelectedMusicId(null); setMusicSearch(""); }} className="flex-1 gap-1"><Check className="w-3.5 h-3.5" /> OK</Button>
                         <Button variant="destructive" size="sm" onClick={() => onDeleteMusic(seg.id)} className="flex-1 gap-1"><Trash2 className="w-3.5 h-3.5" /> Supprimer</Button>
