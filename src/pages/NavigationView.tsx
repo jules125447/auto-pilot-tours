@@ -144,27 +144,66 @@ const NavigationView = () => {
   useEffect(() => {
     if (!audioUnlocked) return;
     if (!navigator.geolocation) return;
+
+    // Smooth heading using shortest-arc interpolation
+    const smoothHeading = (raw: number) => {
+      const prev = smoothedHeadingRef.current;
+      let delta = raw - prev;
+      // Shortest arc
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+      const smoothed = (prev + delta * 0.35 + 360) % 360;
+      smoothedHeadingRef.current = smoothed;
+      return smoothed;
+    };
+
+    // Calculate heading from two consecutive positions
+    const calcHeading = (from: [number, number], to: [number, number]): number => {
+      const dLng = (to[1] - from[1]) * Math.PI / 180;
+      const lat1 = from[0] * Math.PI / 180;
+      const lat2 = to[0] * Math.PI / 180;
+      const y = Math.sin(dLng) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    };
+
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         // Track first fix for calibration
         if (firstFixTimeRef.current === null) {
           firstFixTimeRef.current = Date.now();
-          // Start calibration timer
           calibrationTimerRef.current = setTimeout(() => {
             setCalibrated(true);
           }, CALIBRATION_DELAY_MS);
         }
-        setRawUserPos([pos.coords.latitude, pos.coords.longitude]);
-        if (pos.coords.heading && pos.coords.heading > 0) {
-          setHeading(pos.coords.heading);
+
+        const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setRawUserPos(newPos);
+
+        // Determine heading: prefer device heading, fallback to calculated
+        let rawHeading: number | null = null;
+        if (pos.coords.heading !== null && pos.coords.heading >= 0 && pos.coords.speed && pos.coords.speed > 0.5) {
+          rawHeading = pos.coords.heading;
+        } else if (prevPosRef.current) {
+          const dist = haversine(prevPosRef.current[0], prevPosRef.current[1], newPos[0], newPos[1]);
+          if (dist > 3) { // Only calc heading if moved > 3m to avoid jitter
+            rawHeading = calcHeading(prevPosRef.current, newPos);
+          }
         }
+
+        if (rawHeading !== null) {
+          setHeading(smoothHeading(rawHeading));
+        }
+
+        prevPosRef.current = newPos;
+
         // Speed in km/h (coords.speed is m/s)
         if (pos.coords.speed !== null && pos.coords.speed >= 0) {
           setSpeed(Math.round(pos.coords.speed * 3.6));
         }
       },
       (err) => console.warn("Geo error:", err.message),
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 8000 }
     );
     return () => {
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
