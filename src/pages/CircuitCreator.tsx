@@ -587,6 +587,7 @@ const CircuitCreator = () => {
             onMapClick={handleMapClick}
             onWaypointDrag={handleWaypointDrag}
             onStopDrag={handleStopDrag}
+            onAudioDrag={handleAudioDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
