@@ -4,7 +4,7 @@ import { Slider } from "@/components/ui/slider";
 import { Play, Square, X, FastForward, Volume2, Music, Waves } from "lucide-react";
 import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData } from "@/pages/CircuitCreator";
 import { haversine } from "@/lib/turnDetection";
-import { startAmbientSound, stopAmbientSound, AmbientSoundInstance } from "@/lib/ambientSounds";
+import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
 import L from "leaflet";
 
 interface CircuitTestModeProps {
