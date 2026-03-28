@@ -252,15 +252,27 @@ const NavigationMap = ({
     } else {
       userMarkerRef.current.setLatLng(userPos);
 
+      // Update arrow rotation (relative to map, since map rotates)
       const el = userMarkerRef.current.getElement();
       if (el) {
         const arrow = el.querySelector("div[style*='rotate']") as HTMLElement;
         if (arrow) {
-          arrow.style.transform = `rotate(${heading}deg)`;
+          // Arrow always points up since map rotates with heading
+          arrow.style.transform = `rotate(0deg)`;
         }
       }
 
       map.panTo(userPos, { animate: true, duration: 0.5 });
+    }
+
+    // Rotate the map container to match heading (north-up → heading-up)
+    const container = map.getContainer();
+    container.style.transition = "transform 0.5s ease-out";
+    container.style.transform = `rotate(${-heading}deg)`;
+    // Scale up slightly to hide corners when rotated
+    container.style.transformOrigin = "center center";
+    if (heading !== 0) {
+      container.style.transform = `rotate(${-heading}deg) scale(1.4)`;
     }
   }, [userPos, heading, route]);
 
