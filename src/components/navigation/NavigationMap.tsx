@@ -147,10 +147,63 @@ const NavigationMap = ({
       map.remove();
       mapInstance.current = null;
       stopMarkersRef.current = [];
+      participantMarkersRef.current.clear();
       traveledLineRef.current = null;
       remainingLineRef.current = null;
     };
   }, [route, stops]);
+
+  // Update participant markers
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const map = mapInstance.current;
+    const currentIds = new Set(participants.map(p => p.id));
+
+    // Remove markers for participants no longer present
+    participantMarkersRef.current.forEach((marker, id) => {
+      if (!currentIds.has(id)) {
+        map.removeLayer(marker);
+        participantMarkersRef.current.delete(id);
+      }
+    });
+
+    // Add/update participant markers
+    participants.forEach((p) => {
+      const existing = participantMarkersRef.current.get(p.id);
+      if (existing) {
+        existing.setLatLng([p.lat, p.lng]);
+      } else {
+        const icon = L.divIcon({
+          html: `
+            <div style="
+              width:36px;height:36px;position:relative;
+              display:flex;align-items:center;justify-content:center;
+            ">
+              <div style="
+                width:28px;height:28px;border-radius:50%;
+                background:hsl(35,85%,55%);
+                border:3px solid white;
+                display:flex;align-items:center;justify-content:center;
+                font-size:12px;color:white;font-weight:bold;
+                box-shadow:0 2px 8px rgba(0,0,0,0.2);
+              ">${(p.display_name || "?")[0].toUpperCase()}</div>
+            </div>
+          `,
+          className: "participant-marker",
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+        });
+        const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: 500 }).addTo(map);
+        marker.bindTooltip(p.display_name || "Participant", {
+          permanent: false,
+          direction: "top",
+          className: "poi-tooltip-light",
+          offset: [0, -18],
+        });
+        participantMarkersRef.current.set(p.id, marker);
+      }
+    });
+  }, [participants]);
 
   // Update user position marker + traveled/remaining route
   useEffect(() => {
