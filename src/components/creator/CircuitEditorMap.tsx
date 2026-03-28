@@ -96,6 +96,29 @@ const CircuitEditorMap = ({
   const [searchResults, setSearchResults] = useState<{ display_name: string; lat: string; lon: string }[]>([]);
   const [showResults, setShowResults] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (query.length < 3) { setSearchResults([]); setShowResults(false); return; }
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=fr`);
+        const data = await res.json();
+        setSearchResults(data);
+        setShowResults(data.length > 0);
+      } catch { setSearchResults([]); }
+    }, 400);
+  }, []);
+
+  const selectPlace = useCallback((lat: string, lon: string) => {
+    const map = mapInstance.current;
+    if (!map) return;
+    map.setView([parseFloat(lat), parseFloat(lon)], 15, { animate: true });
+    setShowResults(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  }, []);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const layersRef = useRef<{
