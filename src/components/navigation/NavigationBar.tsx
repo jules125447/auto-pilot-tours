@@ -18,6 +18,7 @@ interface NavigationBarProps {
   onPrev: () => void;
   hasGps: boolean;
   isLastStopDone?: boolean;
+  speed?: number | null;
 }
 
 function formatDist(meters: number): string {
@@ -37,6 +38,7 @@ const NavigationBar = ({
   onPrev,
   hasGps,
   isLastStopDone = false,
+  speed,
 }: NavigationBarProps) => {
   return (
     <div className="relative z-[1000]">
@@ -119,6 +121,16 @@ const NavigationBar = ({
               {hasGps && etaMinutes > 0 ? `${etaMinutes} min` : "—"}
             </p>
             <p className="text-muted-foreground text-[9px] font-mono uppercase">Temps est.</p>
+          </div>
+        </div>
+
+        {/* Speed */}
+        <div className="flex items-center gap-1.5">
+          <div className="text-center">
+            <p className="text-foreground text-lg font-bold font-mono">
+              {speed !== null && speed !== undefined ? speed : "—"}
+            </p>
+            <p className="text-muted-foreground text-[9px] font-mono uppercase">km/h</p>
           </div>
         </div>
 

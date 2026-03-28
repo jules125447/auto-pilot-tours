@@ -79,6 +79,7 @@ const NavigationView = () => {
 
   const [rawUserPos, setRawUserPos] = useState<[number, number] | null>(null);
   const [heading, setHeading] = useState(0);
+  const [speed, setSpeed] = useState<number | null>(null);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioOverlayText, setAudioOverlayText] = useState<string | null>(null);
@@ -154,6 +155,10 @@ const NavigationView = () => {
         setRawUserPos([pos.coords.latitude, pos.coords.longitude]);
         if (pos.coords.heading && pos.coords.heading > 0) {
           setHeading(pos.coords.heading);
+        }
+        // Speed in km/h (coords.speed is m/s)
+        if (pos.coords.speed !== null && pos.coords.speed >= 0) {
+          setSpeed(Math.round(pos.coords.speed * 3.6));
         }
       },
       (err) => console.warn("Geo error:", err.message),
@@ -598,6 +603,7 @@ const NavigationView = () => {
         onPrev={handlePrevStop}
         hasGps={!!userPos}
         isLastStopDone={currentStopIndex >= circuit.stops.length - 1 && visitedStops.has(currentStopIndex)}
+        speed={speed}
       />
     </div>
   );

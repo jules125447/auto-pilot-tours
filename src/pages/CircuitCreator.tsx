@@ -75,6 +75,7 @@ const CircuitCreator = () => {
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
   const [circuitType, setCircuitType] = useState("amateur");
+  const [coverImageUrl, setCoverImageUrl] = useState("");
 
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
@@ -121,6 +122,7 @@ const CircuitCreator = () => {
         setDuration(c.duration || "");
         setDistance(c.distance || "");
         setCircuitType((c as any).circuit_type || "amateur");
+        setCoverImageUrl(c.image_url || "");
         const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
         setRoute(loadedRoute);
         // Use route endpoints as waypoints for simplicity
@@ -380,6 +382,7 @@ const CircuitCreator = () => {
             route: route as unknown as any,
             published: publish,
             circuit_type: circuitType,
+            image_url: coverImageUrl || null,
           })
           .eq("id", editId)
           .eq("creator_id", user.id);
@@ -409,6 +412,7 @@ const CircuitCreator = () => {
             creator_id: user.id,
             published: publish,
             circuit_type: circuitType,
+            image_url: coverImageUrl || null,
             price: 0,
           })
           .select("id")
@@ -577,6 +581,8 @@ const CircuitCreator = () => {
           routePointsCount={waypoints.length}
           mode={mode}
           isEditing={isEditing}
+          coverImageUrl={coverImageUrl}
+          onCoverImageChange={setCoverImageUrl}
         />
 
         <div className="flex-1 relative">

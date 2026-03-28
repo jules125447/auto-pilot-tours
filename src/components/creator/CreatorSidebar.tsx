@@ -53,6 +53,8 @@ interface CreatorSidebarProps {
   routePointsCount: number;
   mode: EditorMode;
   isEditing?: boolean;
+  coverImageUrl?: string;
+  onCoverImageChange?: (url: string) => void;
 }
 
 const stopTypes = [
@@ -334,6 +336,7 @@ const CreatorSidebar = ({
   onUpdateStop, onDeleteStop, onUpdateAudio, onDeleteAudio,
   onUpdateMusic, onDeleteMusic, onUpdateSound, onDeleteSound,
   onSave, onPublish, saving, routePointsCount, mode, isEditing,
+  coverImageUrl, onCoverImageChange,
 }: CreatorSidebarProps) => {
   const [musicSearch, setMusicSearch] = useState("");
   const [itunesResults, setItunesResults] = useState<any[]>([]);
@@ -398,6 +401,35 @@ const CreatorSidebar = ({
             <div className="space-y-3">
               <Input placeholder="Titre du circuit" value={title} onChange={(e) => setTitle(e.target.value)} />
               <Textarea placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+              {/* Cover photo upload */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Photo de présentation</label>
+                {coverImageUrl ? (
+                  <div className="relative rounded-lg overflow-hidden">
+                    <img src={coverImageUrl} alt="" className="w-full h-32 object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => onCoverImageChange?.("")}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                    >×</button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 px-3 py-3 rounded-lg border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors text-sm text-muted-foreground">
+                    <Upload className="w-4 h-4" />
+                    <span>Ajouter une photo de couverture</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const filename = `cover_${Date.now()}.${file.name.split('.').pop()}`;
+                      const { data, error } = await supabase.storage.from("circuit-images").upload(filename, file, { upsert: true });
+                      if (!error && data) {
+                        const { data: urlData } = supabase.storage.from("circuit-images").getPublicUrl(data.path);
+                        onCoverImageChange?.(urlData.publicUrl);
+                      }
+                    }} />
+                  </label>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <Input placeholder="Région" value={region} onChange={(e) => setRegion(e.target.value)} />
                 <Select value={difficulty} onValueChange={setDifficulty}>
