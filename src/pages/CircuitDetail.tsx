@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2, Tag, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2, Tag, ShoppingCart, Key } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,10 @@ const CircuitDetail = () => {
   const { toast } = useToast();
   const [promoCode, setPromoCode] = useState("");
   const [buying, setBuying] = useState(false);
+  const [accessKey, setAccessKey] = useState("");
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const [checkingKey, setCheckingKey] = useState(false);
 
   const handleBuy = async () => {
     if (!user) {
@@ -48,6 +52,29 @@ const CircuitDetail = () => {
     } finally {
       setBuying(false);
     }
+  };
+
+  const handleAccessKey = async () => {
+    if (!accessKey.trim()) return;
+    setCheckingKey(true);
+    const { data } = await supabase
+      .from("access_keys")
+      .select("*")
+      .eq("key", accessKey.trim().toLowerCase())
+      .limit(1);
+
+    if (data && data.length > 0) {
+      const k = data[0] as any;
+      if (k.unlimited || (k.uses_remaining && k.uses_remaining > 0)) {
+        setUnlocked(true);
+        toast({ title: "Clé valide ✅", description: "Accès gratuit débloqué !" });
+      } else {
+        toast({ title: "Clé expirée", description: "Cette clé n'est plus valide.", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "Clé invalide", description: "Cette clé n'existe pas.", variant: "destructive" });
+    }
+    setCheckingKey(false);
   };
 
   if (isLoading) {
@@ -121,44 +148,90 @@ const CircuitDetail = () => {
             </div>
           </div>
 
-          {/* Promo code + Buy */}
-          {circuit.price > 0 && (
-            <div className="bg-muted/50 rounded-xl p-4 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Tag className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-foreground">Code promo</span>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Entrez votre code"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-card text-foreground text-sm border border-border placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            {circuit.price > 0 ? (
-              <button
-                onClick={handleBuy}
-                disabled={buying}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {buying ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
-                {buying ? "Redirection..." : `Acheter — ${circuit.price} €`}
-              </button>
-            ) : (
+          {/* Promo code + Buy OR Unlocked */}
+          {unlocked ? (
+            <div className="flex flex-col sm:flex-row gap-3">
               <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
                 <Car className="w-5 h-5" /> Démarrer le circuit
               </Link>
-            )}
-            <button className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
-              <Download className="w-5 h-5" /> Hors-ligne
-            </button>
-          </div>
+              <button className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
+                <Download className="w-5 h-5" /> Hors-ligne
+              </button>
+            </div>
+          ) : (
+            <>
+              {circuit.price > 0 && (
+                <div className="bg-muted/50 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Code promo</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Entrez votre code"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      className="flex-1 px-4 py-2.5 rounded-lg bg-card text-foreground text-sm border border-border placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Access key section */}
+              {showKeyInput ? (
+                <div className="bg-primary/5 rounded-xl p-4 mb-4 border border-primary/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Key className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Clé d'accès</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Entrez votre clé"
+                      value={accessKey}
+                      onChange={(e) => setAccessKey(e.target.value)}
+                      className="flex-1 px-4 py-2.5 rounded-lg bg-card text-foreground text-sm border border-border placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <button
+                      onClick={handleAccessKey}
+                      disabled={checkingKey}
+                      className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                    >
+                      {checkingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : "Valider"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowKeyInput(true)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
+                >
+                  <Key className="w-4 h-4" /> J'ai une clé d'accès
+                </button>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {circuit.price > 0 ? (
+                  <button
+                    onClick={handleBuy}
+                    disabled={buying}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {buying ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
+                    {buying ? "Redirection..." : `Acheter — ${circuit.price} €`}
+                  </button>
+                ) : (
+                  <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
+                    <Car className="w-5 h-5" /> Démarrer le circuit
+                  </Link>
+                )}
+                <button className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
+                  <Download className="w-5 h-5" /> Hors-ligne
+                </button>
+              </div>
+            </>
+          )}
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card rounded-2xl shadow-card overflow-hidden mb-8">
