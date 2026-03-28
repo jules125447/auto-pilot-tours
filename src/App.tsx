@@ -31,6 +31,7 @@ const App = () => (
             <Route path="/my-circuits" element={<MyCircuits />} />
             <Route path="/creator" element={<CircuitCreator />} />
             <Route path="/pro" element={<ProDashboard />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

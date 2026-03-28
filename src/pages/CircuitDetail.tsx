@@ -121,10 +121,40 @@ const CircuitDetail = () => {
             </div>
           </div>
 
+          {/* Promo code + Buy */}
+          {circuit.price > 0 && (
+            <div className="bg-muted/50 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">Code promo</span>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Entrez votre code"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-card text-foreground text-sm border border-border placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
-              <Car className="w-5 h-5" /> Démarrer le circuit
-            </Link>
+            {circuit.price > 0 ? (
+              <button
+                onClick={handleBuy}
+                disabled={buying}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {buying ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
+                {buying ? "Redirection..." : `Acheter — ${circuit.price} €`}
+              </button>
+            ) : (
+              <Link to={`/navigate/${circuit.id}`} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity">
+                <Car className="w-5 h-5" /> Démarrer le circuit
+              </Link>
+            )}
             <button className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
               <Download className="w-5 h-5" /> Hors-ligne
             </button>
