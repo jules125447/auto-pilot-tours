@@ -50,11 +50,13 @@ const NavigationMap = ({
   userPos,
   heading,
   currentStopIndex,
+  participants = [],
 }: NavigationMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const stopMarkersRef = useRef<L.Marker[]>([]);
+  const participantMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const traveledLineRef = useRef<L.Polyline | null>(null);
   const remainingLineRef = useRef<L.Polyline | null>(null);
 
