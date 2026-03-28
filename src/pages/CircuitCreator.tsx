@@ -465,6 +465,7 @@ const CircuitCreator = () => {
               stops={stops}
               audioZones={audioZones}
               musicSegments={musicSegments}
+              soundSegments={soundSegments}
               mapInstance={mapInstanceRef.current}
               onClose={() => setTestMode(false)}
             />
