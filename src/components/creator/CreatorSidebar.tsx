@@ -50,6 +50,7 @@ interface CreatorSidebarProps {
   saving: boolean;
   routePointsCount: number;
   mode: EditorMode;
+  isEditing?: boolean;
 }
 
 const stopTypes = [
@@ -329,7 +330,7 @@ const CreatorSidebar = ({
   selectedMusicId, setSelectedMusicId, selectedSoundId, setSelectedSoundId,
   onUpdateStop, onDeleteStop, onUpdateAudio, onDeleteAudio,
   onUpdateMusic, onDeleteMusic, onUpdateSound, onDeleteSound,
-  onSave, onPublish, saving, routePointsCount, mode,
+  onSave, onPublish, saving, routePointsCount, mode, isEditing,
 }: CreatorSidebarProps) => {
   const [musicSearch, setMusicSearch] = useState("");
   const [itunesResults, setItunesResults] = useState<any[]>([]);
@@ -734,11 +735,11 @@ const CreatorSidebar = ({
       <div className="p-4 border-t border-border space-y-2">
         <Button onClick={onSave} disabled={saving} variant="outline" className="w-full gap-2">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Sauvegarder le brouillon
+          {isEditing ? "Enregistrer les modifications" : "Sauvegarder le brouillon"}
         </Button>
         <Button onClick={onPublish} disabled={saving} className="w-full gap-2 bg-gradient-hero text-primary-foreground">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          Publier le circuit
+          {isEditing ? "Modifier et publier" : "Publier le circuit"}
         </Button>
       </div>
     </div>

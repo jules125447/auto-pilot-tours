@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import CircuitEditorMap from "@/components/creator/CircuitEditorMap";
@@ -63,6 +63,9 @@ const CircuitCreator = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const isEditing = !!editId;
 
   const [title, setTitle] = useState("Nouveau circuit");
   const [description, setDescription] = useState("");
@@ -71,13 +74,12 @@ const CircuitCreator = () => {
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
 
-  // waypoints are the user-placed control points
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
-  // route is the full road-snapped polyline
   const [route, setRoute] = useState<[number, number][]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
+  const [loadingEdit, setLoadingEdit] = useState(!!editId);
 
   const [stops, setStops] = useState<StopData[]>([]);
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
@@ -94,6 +96,78 @@ const CircuitCreator = () => {
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const [selectedMusicId, setSelectedMusicId] = useState<string | null>(null);
   const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
+
+  // Load existing circuit when editing
+  useEffect(() => {
+    if (!editId || !user) return;
+    const load = async () => {
+      setLoadingEdit(true);
+      try {
+        const [circuitRes, stopsRes, audioRes, musicRes, soundRes] = await Promise.all([
+          supabase.from("circuits").select("*").eq("id", editId).eq("creator_id", user.id).single(),
+          supabase.from("circuit_stops").select("*").eq("circuit_id", editId).order("sort_order"),
+          supabase.from("audio_zones").select("*").eq("circuit_id", editId).order("sort_order"),
+          supabase.from("music_segments").select("*").eq("circuit_id", editId),
+          supabase.from("sound_segments").select("*").eq("circuit_id", editId),
+        ]);
+        if (circuitRes.error) throw circuitRes.error;
+        const c = circuitRes.data;
+        setTitle(c.title);
+        setDescription(c.description || "");
+        setRegion(c.region || "");
+        setDifficulty(c.difficulty || "Facile");
+        setDuration(c.duration || "");
+        setDistance(c.distance || "");
+        const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
+        setRoute(loadedRoute);
+        // Use route endpoints as waypoints for simplicity
+        if (loadedRoute.length >= 2) {
+          // Sample waypoints from route (first, last, and some in between)
+          const wp: [number, number][] = [loadedRoute[0]];
+          if (loadedRoute.length > 2) {
+            const mid = Math.floor(loadedRoute.length / 2);
+            wp.push(loadedRoute[mid]);
+          }
+          wp.push(loadedRoute[loadedRoute.length - 1]);
+          setWaypoints(wp);
+        }
+
+        if (stopsRes.data) {
+          setStops(stopsRes.data.map(s => ({
+            id: s.id, title: s.title, description: s.description || "",
+            lat: s.lat, lng: s.lng, type: s.stop_type || "site", duration: s.duration || "15 min",
+          })));
+        }
+        if (audioRes.data) {
+          setAudioZones(audioRes.data.map(a => ({
+            id: a.id, lat: a.lat, lng: a.lng, radius: a.radius_meters || 100, text: a.audio_text || "",
+            audioUrl: a.audio_url || undefined,
+          })));
+        }
+        if (musicRes.data) {
+          setMusicSegments(musicRes.data.map(m => ({
+            id: m.id, startLat: m.start_lat, startLng: m.start_lng,
+            endLat: m.end_lat, endLng: m.end_lng, trackId: m.track_id,
+            trackName: m.track_name, artistName: m.artist_name || undefined,
+            previewUrl: m.preview_url || undefined, artworkUrl: m.artwork_url || undefined,
+            startTime: m.start_time || 0,
+          })));
+        }
+        if (soundRes.data) {
+          setSoundSegments(soundRes.data.map(s => ({
+            id: s.id, startLat: s.start_lat, startLng: s.start_lng,
+            endLat: s.end_lat, endLng: s.end_lng, soundType: s.sound_type, volume: s.volume,
+          })));
+        }
+      } catch (err: any) {
+        toast({ title: "Erreur", description: "Impossible de charger le circuit.", variant: "destructive" });
+        navigate("/my-circuits");
+      } finally {
+        setLoadingEdit(false);
+      }
+    };
+    load();
+  }, [editId, user]);
 
   // Rebuild the full route from all waypoints
   const rebuildRoute = useCallback(async (newWaypoints: [number, number][]) => {
@@ -269,29 +343,62 @@ const CircuitCreator = () => {
     if (!user) return;
     setSaving(true);
     try {
-      const { data: circuit, error: circuitErr } = await supabase
-        .from("circuits")
-        .insert({
-          title,
-          description,
-          region,
-          difficulty,
-          duration,
-          distance,
-          route: route as unknown as any,
-          creator_id: user.id,
-          published: publish,
-          price: 0,
-        })
-        .select("id")
-        .single();
+      let circuitId: string;
 
-      if (circuitErr) throw circuitErr;
+      if (isEditing && editId) {
+        // Update existing circuit
+        const { error: circuitErr } = await supabase
+          .from("circuits")
+          .update({
+            title,
+            description,
+            region,
+            difficulty,
+            duration,
+            distance,
+            route: route as unknown as any,
+            published: publish,
+          })
+          .eq("id", editId)
+          .eq("creator_id", user.id);
+
+        if (circuitErr) throw circuitErr;
+        circuitId = editId;
+
+        // Delete old related data and re-insert
+        await Promise.all([
+          supabase.from("circuit_stops").delete().eq("circuit_id", circuitId),
+          supabase.from("audio_zones").delete().eq("circuit_id", circuitId),
+          supabase.from("music_segments").delete().eq("circuit_id", circuitId),
+          supabase.from("sound_segments").delete().eq("circuit_id", circuitId),
+        ]);
+      } else {
+        // Create new circuit
+        const { data: circuit, error: circuitErr } = await supabase
+          .from("circuits")
+          .insert({
+            title,
+            description,
+            region,
+            difficulty,
+            duration,
+            distance,
+            route: route as unknown as any,
+            creator_id: user.id,
+            published: publish,
+            price: 0,
+          })
+          .select("id")
+          .single();
+
+        if (circuitErr) throw circuitErr;
+        circuitId = circuit.id;
+      }
 
       if (stops.length > 0) {
         const { error: stopsErr } = await supabase.from("circuit_stops").insert(
           stops.map((s, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             title: s.title,
             description: s.description,
             lat: s.lat,
@@ -307,7 +414,7 @@ const CircuitCreator = () => {
       if (audioZones.length > 0) {
         const { error: audioErr } = await supabase.from("audio_zones").insert(
           audioZones.map((a, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             lat: a.lat,
             lng: a.lng,
             radius_meters: a.radius,
@@ -322,7 +429,7 @@ const CircuitCreator = () => {
       if (musicSegments.length > 0) {
         const { error: musicErr } = await supabase.from("music_segments").insert(
           musicSegments.map((m, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             start_lat: m.startLat,
             start_lng: m.startLng,
             end_lat: m.endLat,
@@ -342,7 +449,7 @@ const CircuitCreator = () => {
       if (soundSegments.length > 0) {
         const { error: soundErr } = await supabase.from("sound_segments").insert(
           soundSegments.map((s, i) => ({
-            circuit_id: circuit.id,
+            circuit_id: circuitId,
             start_lat: s.startLat,
             start_lng: s.startLng,
             end_lat: s.endLat,
@@ -356,12 +463,14 @@ const CircuitCreator = () => {
       }
 
       toast({
-        title: publish ? "Circuit publié !" : "Brouillon sauvegardé",
-        description: publish
-          ? "Votre circuit est maintenant visible par tous."
-          : "Vous pourrez le modifier plus tard.",
+        title: isEditing
+          ? (publish ? "Circuit modifié et publié !" : "Circuit modifié !")
+          : (publish ? "Circuit publié !" : "Brouillon sauvegardé"),
+        description: isEditing
+          ? "Les modifications ont été enregistrées."
+          : (publish ? "Votre circuit est maintenant visible par tous." : "Vous pourrez le modifier plus tard."),
       });
-      navigate(`/circuit/${circuit.id}`);
+      navigate(`/circuit/${circuitId}`);
     } catch (err: any) {
       toast({
         title: "Erreur",
@@ -382,6 +491,17 @@ const CircuitCreator = () => {
           <Link to="/auth" className="px-6 py-3 rounded-xl bg-gradient-hero text-primary-foreground font-semibold">
             Se connecter
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingEdit) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-muted-foreground">Chargement du circuit...</p>
         </div>
       </div>
     );
@@ -430,6 +550,7 @@ const CircuitCreator = () => {
           saving={saving}
           routePointsCount={waypoints.length}
           mode={mode}
+          isEditing={isEditing}
         />
 
         <div className="flex-1 relative">
