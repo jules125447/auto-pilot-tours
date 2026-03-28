@@ -310,6 +310,10 @@ const NavigationMap = ({
           background: none !important;
           border: none !important;
         }
+        .participant-marker {
+          background: none !important;
+          border: none !important;
+        }
       `}</style>
       <div ref={mapRef} className="w-full h-full" />
     </>
