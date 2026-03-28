@@ -171,6 +171,51 @@ export type Database = {
         }
         Relationships: []
       }
+      commissions: {
+        Row: {
+          amount: number
+          created_at: string
+          creator_id: string
+          id: string
+          promo_code_id: string
+          purchase_id: string
+          status: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          creator_id: string
+          id?: string
+          promo_code_id: string
+          purchase_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          creator_id?: string
+          id?: string
+          promo_code_id?: string
+          purchase_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       music_segments: {
         Row: {
           artist_name: string | null
@@ -233,6 +278,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          business_type: string | null
           created_at: string
           display_name: string | null
           id: string
@@ -241,6 +287,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          business_type?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
@@ -249,6 +296,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          business_type?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
@@ -257,11 +305,39 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          code: string
+          commission_percent: number
+          created_at: string
+          creator_id: string
+          discount_percent: number
+          id: string
+        }
+        Insert: {
+          code: string
+          commission_percent?: number
+          created_at?: string
+          creator_id: string
+          discount_percent?: number
+          id?: string
+        }
+        Update: {
+          code?: string
+          commission_percent?: number
+          created_at?: string
+          creator_id?: string
+          discount_percent?: number
+          id?: string
+        }
+        Relationships: []
+      }
       purchases: {
         Row: {
           amount: number
           circuit_id: string
           id: string
+          promo_code_id: string | null
           purchased_at: string
           user_id: string
         }
@@ -269,6 +345,7 @@ export type Database = {
           amount: number
           circuit_id: string
           id?: string
+          promo_code_id?: string | null
           purchased_at?: string
           user_id: string
         }
@@ -276,6 +353,7 @@ export type Database = {
           amount?: number
           circuit_id?: string
           id?: string
+          promo_code_id?: string | null
           purchased_at?: string
           user_id?: string
         }
@@ -285,6 +363,13 @@ export type Database = {
             columns: ["circuit_id"]
             isOneToOne: false
             referencedRelation: "circuits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -400,6 +485,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      register_professional: {
+        Args: { _business_type: string; _promo_code: string }
+        Returns: undefined
       }
     }
     Enums: {
