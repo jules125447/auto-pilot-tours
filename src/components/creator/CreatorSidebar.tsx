@@ -130,8 +130,12 @@ const MusicPlayButton = ({ url }: { url: string }) => {
       setPlaying(false);
     } else {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      const audio = new Audio(url);
+      // Parse #t=N from URL
+      const [baseUrl, hash] = url.split("#t=");
+      const startTime = hash ? parseFloat(hash) : 0;
+      const audio = new Audio(baseUrl);
       audio.volume = 1;
+      if (startTime > 0) audio.currentTime = startTime;
       audioRef.current = audio;
       audio.onended = () => { setPlaying(false); audioRef.current = null; };
       audio.onerror = () => { setPlaying(false); audioRef.current = null; };
