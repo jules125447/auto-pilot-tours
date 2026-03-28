@@ -122,6 +122,7 @@ const CircuitCreator = () => {
         setDuration(c.duration || "");
         setDistance(c.distance || "");
         setCircuitType((c as any).circuit_type || "amateur");
+        setCoverImageUrl(c.image_url || "");
         const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
         setRoute(loadedRoute);
         // Use route endpoints as waypoints for simplicity
