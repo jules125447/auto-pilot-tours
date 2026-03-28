@@ -267,8 +267,13 @@ const CommunitySlots = ({ circuitId }: CommunitySlotsProps) => {
                     );
                   })}
                 </div>
+                {/* Chat buttons per time slot */}
+                {Object.entries(timeGroups).map(([time, _]) => (
+                  <SlotChat key={`${date}-${time}`} circuitId={circuitId} slotDate={date} slotTime={time} />
+                ))}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
