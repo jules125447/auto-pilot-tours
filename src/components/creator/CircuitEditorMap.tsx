@@ -16,6 +16,8 @@ interface CircuitEditorMapProps {
   mode: EditorMode;
   onMapClick: (lat: number, lng: number) => void;
   onWaypointDrag: (index: number, lat: number, lng: number) => void;
+  onStopDrag?: (id: string, lat: number, lng: number) => void;
+  onAudioDrag?: (id: string, lat: number, lng: number) => void;
   selectedStopId: string | null;
   selectedAudioId: string | null;
   selectedMusicId: string | null;
