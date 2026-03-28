@@ -139,6 +139,7 @@ const CircuitCreator = () => {
           setStops(stopsRes.data.map(s => ({
             id: s.id, title: s.title, description: s.description || "",
             lat: s.lat, lng: s.lng, type: s.stop_type || "site", duration: s.duration || "15 min",
+            photoUrl: s.photo_url || undefined,
           })));
         }
         if (audioRes.data) {
