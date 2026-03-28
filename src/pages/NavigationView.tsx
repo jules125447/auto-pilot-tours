@@ -46,7 +46,33 @@ function snapToRoute(
 
 const NavigationView = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data: circuit, isLoading } = useCircuit(id);
+  const { user } = useAuth();
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
+
+  // Check purchase/access
+  useEffect(() => {
+    if (!circuit) return;
+    // Free circuits
+    if (circuit.price === 0) { setHasAccess(true); setAccessChecked(true); return; }
+    // Creator always has access
+    if (user && circuit.creator_id === user.id) { setHasAccess(true); setAccessChecked(true); return; }
+    // Check purchase
+    if (!user) { setAccessChecked(true); return; }
+    const check = async () => {
+      const { data } = await supabase
+        .from("purchases")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("circuit_id", id!)
+        .limit(1);
+      setHasAccess(!!(data && data.length > 0));
+      setAccessChecked(true);
+    };
+    check();
+  }, [user, circuit, id]);
 
   const [rawUserPos, setRawUserPos] = useState<[number, number] | null>(null);
   const [heading, setHeading] = useState(0);
