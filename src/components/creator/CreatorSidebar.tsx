@@ -132,21 +132,41 @@ const AudioPlayButton = ({ text }: { text: string }) => {
 const FilePlayButton = ({ url }: { url: string }) => {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => { return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, []);
-  const toggle = () => {
+  const buttonKey = `file:${url}`;
+
+  const stop = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current.src = "";
+      audioRef.current.load();
       audioRef.current = null;
-      setPlaying(false);
+    }
+    if (activePreviewKey === buttonKey) {
+      activePreviewKey = null;
+      activePreviewStop = null;
+    }
+    setPlaying(false);
+  }, [buttonKey]);
+
+  useEffect(() => stop, [stop]);
+
+  const toggle = () => {
+    if (activePreviewKey === buttonKey && audioRef.current) {
+      stop();
       return;
     }
+
+    stopActivePreview();
     const audio = new Audio(url);
     audioRef.current = audio;
-    audio.onended = () => { setPlaying(false); audioRef.current = null; };
-    audio.onerror = () => { setPlaying(false); audioRef.current = null; };
-    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    audio.onended = stop;
+    audio.onerror = stop;
+
+    registerActivePreview(buttonKey, stop);
+    audio.play().then(() => setPlaying(true)).catch(stop);
   };
+
   return (
     <Button variant="outline" size="sm" onClick={toggle} className="gap-1" type="button">
       {playing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
