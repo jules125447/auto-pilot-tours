@@ -63,6 +63,9 @@ const CircuitCreator = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const isEditing = !!editId;
 
   const [title, setTitle] = useState("Nouveau circuit");
   const [description, setDescription] = useState("");
@@ -71,13 +74,12 @@ const CircuitCreator = () => {
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
 
-  // waypoints are the user-placed control points
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
-  // route is the full road-snapped polyline
   const [route, setRoute] = useState<[number, number][]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
+  const [loadingEdit, setLoadingEdit] = useState(!!editId);
 
   const [stops, setStops] = useState<StopData[]>([]);
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
@@ -94,6 +96,78 @@ const CircuitCreator = () => {
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const [selectedMusicId, setSelectedMusicId] = useState<string | null>(null);
   const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
+
+  // Load existing circuit when editing
+  useEffect(() => {
+    if (!editId || !user) return;
+    const load = async () => {
+      setLoadingEdit(true);
+      try {
+        const [circuitRes, stopsRes, audioRes, musicRes, soundRes] = await Promise.all([
+          supabase.from("circuits").select("*").eq("id", editId).eq("creator_id", user.id).single(),
+          supabase.from("circuit_stops").select("*").eq("circuit_id", editId).order("sort_order"),
+          supabase.from("audio_zones").select("*").eq("circuit_id", editId).order("sort_order"),
+          supabase.from("music_segments").select("*").eq("circuit_id", editId),
+          supabase.from("sound_segments").select("*").eq("circuit_id", editId),
+        ]);
+        if (circuitRes.error) throw circuitRes.error;
+        const c = circuitRes.data;
+        setTitle(c.title);
+        setDescription(c.description || "");
+        setRegion(c.region || "");
+        setDifficulty(c.difficulty || "Facile");
+        setDuration(c.duration || "");
+        setDistance(c.distance || "");
+        const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
+        setRoute(loadedRoute);
+        // Use route endpoints as waypoints for simplicity
+        if (loadedRoute.length >= 2) {
+          // Sample waypoints from route (first, last, and some in between)
+          const wp: [number, number][] = [loadedRoute[0]];
+          if (loadedRoute.length > 2) {
+            const mid = Math.floor(loadedRoute.length / 2);
+            wp.push(loadedRoute[mid]);
+          }
+          wp.push(loadedRoute[loadedRoute.length - 1]);
+          setWaypoints(wp);
+        }
+
+        if (stopsRes.data) {
+          setStops(stopsRes.data.map(s => ({
+            id: s.id, title: s.title, description: s.description || "",
+            lat: s.lat, lng: s.lng, type: s.stop_type || "site", duration: s.duration || "15 min",
+          })));
+        }
+        if (audioRes.data) {
+          setAudioZones(audioRes.data.map(a => ({
+            id: a.id, lat: a.lat, lng: a.lng, radius: a.radius_meters || 100, text: a.audio_text || "",
+            audioUrl: a.audio_url || undefined,
+          })));
+        }
+        if (musicRes.data) {
+          setMusicSegments(musicRes.data.map(m => ({
+            id: m.id, startLat: m.start_lat, startLng: m.start_lng,
+            endLat: m.end_lat, endLng: m.end_lng, trackId: m.track_id,
+            trackName: m.track_name, artistName: m.artist_name || undefined,
+            previewUrl: m.preview_url || undefined, artworkUrl: m.artwork_url || undefined,
+            startTime: m.start_time || 0,
+          })));
+        }
+        if (soundRes.data) {
+          setSoundSegments(soundRes.data.map(s => ({
+            id: s.id, startLat: s.start_lat, startLng: s.start_lng,
+            endLat: s.end_lat, endLng: s.end_lng, soundType: s.sound_type, volume: s.volume,
+          })));
+        }
+      } catch (err: any) {
+        toast({ title: "Erreur", description: "Impossible de charger le circuit.", variant: "destructive" });
+        navigate("/my-circuits");
+      } finally {
+        setLoadingEdit(false);
+      }
+    };
+    load();
+  }, [editId, user]);
 
   // Rebuild the full route from all waypoints
   const rebuildRoute = useCallback(async (newWaypoints: [number, number][]) => {
