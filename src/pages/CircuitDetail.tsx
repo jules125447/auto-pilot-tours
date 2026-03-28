@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2 } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
 import RouteMap from "@/components/RouteMap";
+import CircuitReviews from "@/components/CircuitReviews";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
   viewpoint: Eye,
