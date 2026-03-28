@@ -233,7 +233,7 @@ const CircuitEditorMap = ({
         }
       }
     });
-  }, [audioZones, selectedAudioId, route]);
+  }, [audioZones, selectedAudioId, route, onAudioDrag]);
 
   // Music segments
   useEffect(() => {
