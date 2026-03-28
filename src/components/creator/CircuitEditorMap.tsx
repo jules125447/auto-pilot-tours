@@ -18,6 +18,7 @@ interface CircuitEditorMapProps {
   onWaypointDrag: (index: number, lat: number, lng: number) => void;
   onStopDrag?: (id: string, lat: number, lng: number) => void;
   onAudioDrag?: (id: string, lat: number, lng: number) => void;
+  onMusicDrag?: (id: string, point: "start" | "end", lat: number, lng: number) => void;
   selectedStopId: string | null;
   selectedAudioId: string | null;
   selectedMusicId: string | null;
@@ -86,7 +87,7 @@ function getPointAtDistance(route: [number, number][], startIdx: number, distanc
 const CircuitEditorMap = ({
   route, waypoints, stops, audioZones, musicSegments, soundSegments,
   musicPlacingStart, soundPlacingStart, mode, onMapClick, onWaypointDrag,
-  onStopDrag, onAudioDrag,
+  onStopDrag, onAudioDrag, onMusicDrag,
   selectedStopId, selectedAudioId, selectedMusicId, selectedSoundId,
   routeLoading, onMapReady,
 }: CircuitEditorMapProps) => {
@@ -248,13 +249,15 @@ const CircuitEditorMap = ({
     musicSegments.forEach((seg) => {
       const isSelected = seg.id === selectedMusicId;
       const makeIcon = (label: string) => L.divIcon({
-        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "hsl(280,60%,55%)"};color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;">♫${label}</div>`,
+        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "hsl(280,60%,55%)"};color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;cursor:grab;">♫${label}</div>`,
         className: "custom-marker", iconSize: [24, 24], iconAnchor: [12, 12],
       });
-      const mA = L.marker([seg.startLat, seg.startLng], { icon: makeIcon("A") }).addTo(map);
+      const mA = L.marker([seg.startLat, seg.startLng], { icon: makeIcon("A"), draggable: true }).addTo(map);
       mA.bindTooltip(`🎵 ${seg.trackName} — début`, { direction: "top", offset: [0, -14] });
-      const mB = L.marker([seg.endLat, seg.endLng], { icon: makeIcon("B") }).addTo(map);
+      mA.on("dragend", () => { const pos = mA.getLatLng(); onMusicDrag?.(seg.id, "start", pos.lat, pos.lng); });
+      const mB = L.marker([seg.endLat, seg.endLng], { icon: makeIcon("B"), draggable: true }).addTo(map);
       mB.bindTooltip(`🎵 ${seg.trackName} — fin`, { direction: "top", offset: [0, -14] });
+      mB.on("dragend", () => { const pos = mB.getLatLng(); onMusicDrag?.(seg.id, "end", pos.lat, pos.lng); });
       layers.musicMarkers.push(mA, mB);
 
       if (route.length > 1) {
@@ -269,7 +272,7 @@ const CircuitEditorMap = ({
         }
       }
     });
-  }, [musicSegments, selectedMusicId, route]);
+  }, [musicSegments, selectedMusicId, route, onMusicDrag]);
 
   // Sound segments (green/teal color to differentiate)
   useEffect(() => {
