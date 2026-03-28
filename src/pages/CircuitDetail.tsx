@@ -296,6 +296,9 @@ const CircuitDetail = () => {
                         {stopTypeLabels[stop.type]}
                       </span>
                     </div>
+                    {stop.photo_url && (
+                      <img src={stop.photo_url} alt={stop.title} className="w-full h-32 object-cover rounded-lg mb-2" />
+                    )}
                     <p className="text-sm text-muted-foreground mb-1">{stop.description}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {stop.duration}</span>
