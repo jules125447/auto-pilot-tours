@@ -543,6 +543,8 @@ const CircuitCreator = () => {
           setDuration={setDuration}
           distance={distance}
           setDistance={setDistance}
+          circuitType={circuitType}
+          setCircuitType={setCircuitType}
           stops={stops}
           audioZones={audioZones}
           musicSegments={musicSegments}
