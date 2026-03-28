@@ -95,6 +95,12 @@ const CircuitDetail = () => {
       const k = data[0] as any;
       if (k.unlimited || (k.uses_remaining && k.uses_remaining > 0)) {
         setUnlocked(true);
+        // Store unlocked circuits in sessionStorage so NavigationView can check
+        const unlockedCircuits = JSON.parse(sessionStorage.getItem("unlocked_circuits") || "[]");
+        if (!unlockedCircuits.includes(id)) {
+          unlockedCircuits.push(id);
+          sessionStorage.setItem("unlocked_circuits", JSON.stringify(unlockedCircuits));
+        }
         toast({ title: "Clé valide ✅", description: "Accès gratuit débloqué !" });
       } else {
         toast({ title: "Clé expirée", description: "Cette clé n'est plus valide.", variant: "destructive" });
