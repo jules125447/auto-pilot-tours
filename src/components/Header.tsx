@@ -1,11 +1,20 @@
 import { Link } from "react-router-dom";
-import { Car, User, LogOut, Menu, X } from "lucide-react";
+import { Car, User, LogOut, Menu, X, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsPro(false); return; }
+    supabase.from("profiles").select("business_type").eq("user_id", user.id).single().then(({ data }) => {
+      setIsPro(!!(data as any)?.business_type);
+    });
+  }, [user]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/40">
@@ -22,6 +31,11 @@ const Header = () => {
           <Link to="/" className="px-4 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">Explorer</Link>
           {user && <Link to="/my-circuits" className="px-4 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">Mes circuits</Link>}
           {user && <Link to="/creator" className="px-4 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">Créateur</Link>}
+          {user && isPro && (
+            <Link to="/pro" className="px-4 py-2 rounded-xl text-primary hover:bg-primary/10 transition-all flex items-center gap-1.5">
+              <Building2 className="w-4 h-4" /> Dashboard Pro
+            </Link>
+          )}
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
@@ -53,6 +67,11 @@ const Header = () => {
           <Link to="/" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-foreground font-medium hover:bg-muted transition-colors">Explorer</Link>
           {user && <Link to="/my-circuits" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-foreground font-medium hover:bg-muted transition-colors">Mes circuits</Link>}
           {user && <Link to="/creator" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-foreground font-medium hover:bg-muted transition-colors">Créateur</Link>}
+          {user && isPro && (
+            <Link to="/pro" onClick={() => setMenuOpen(false)} className="block py-2.5 px-3 rounded-xl text-primary font-medium hover:bg-primary/10 transition-colors">
+              <Building2 className="w-4 h-4 inline mr-2" /> Dashboard Pro
+            </Link>
+          )}
           {user ? (
             <button onClick={() => { signOut(); setMenuOpen(false); }} className="block w-full text-left py-2.5 px-3 rounded-xl text-destructive font-medium hover:bg-destructive/10 transition-colors">Déconnexion</button>
           ) : (

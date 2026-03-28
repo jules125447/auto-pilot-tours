@@ -48,20 +48,15 @@ const Auth = () => {
         return;
       }
 
-      // If pro signup, update profile and create promo code
+      // If pro signup, register as professional
       if (isPro && businessType) {
-        // Wait a moment for the trigger to create the profile
-        await new Promise((r) => setTimeout(r, 1000));
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Update profile with business type
-          await supabase.from("profiles").update({ business_type: businessType } as any).eq("user_id", user.id);
-          // Add creator role
-          await supabase.rpc("has_role", { _user_id: user.id, _role: "creator" as any });
-          // Create promo code
-          const code = generatePromoCode(displayName);
-          await supabase.from("promo_codes").insert({ creator_id: user.id, code, discount_percent: 10, commission_percent: 30 } as any);
-        }
+        // Wait for trigger to create profile
+        await new Promise((r) => setTimeout(r, 1500));
+        const code = generatePromoCode(displayName);
+        await supabase.rpc("register_professional", {
+          _business_type: businessType,
+          _promo_code: code,
+        } as any);
       }
 
       navigate("/");

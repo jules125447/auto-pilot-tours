@@ -10,6 +10,7 @@ import NavigationView from "./pages/NavigationView";
 import Auth from "./pages/Auth";
 import MyCircuits from "./pages/MyCircuits";
 import CircuitCreator from "./pages/CircuitCreator";
+import ProDashboard from "./pages/ProDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/my-circuits" element={<MyCircuits />} />
             <Route path="/creator" element={<CircuitCreator />} />
+            <Route path="/pro" element={<ProDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
