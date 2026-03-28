@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          unlimited: boolean
+          uses_remaining: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          unlimited?: boolean
+          uses_remaining?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          unlimited?: boolean
+          uses_remaining?: number | null
+        }
+        Relationships: []
+      }
       audio_zones: {
         Row: {
           audio_text: string | null
