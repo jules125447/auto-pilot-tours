@@ -79,6 +79,7 @@ const NavigationView = () => {
 
   const [rawUserPos, setRawUserPos] = useState<[number, number] | null>(null);
   const [heading, setHeading] = useState(0);
+  const [speed, setSpeed] = useState<number | null>(null);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioOverlayText, setAudioOverlayText] = useState<string | null>(null);
