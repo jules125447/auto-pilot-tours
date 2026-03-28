@@ -192,11 +192,15 @@ const CircuitEditorMap = ({
       const isSelected = zone.id === selectedAudioId;
       const estDistance = estimateAudioDistance(zone.text);
       const startIcon = L.divIcon({
-        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "hsl(280,60%,55%)"};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;">🔊</div>`,
+        html: `<div style="background:${isSelected ? "hsl(35,85%,55%)" : "hsl(280,60%,55%)"};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid white;cursor:grab;">🔊</div>`,
         className: "custom-marker", iconSize: [28, 28], iconAnchor: [14, 14],
       });
-      const startMarker = L.marker([zone.lat, zone.lng], { icon: startIcon }).addTo(map);
+      const startMarker = L.marker([zone.lat, zone.lng], { icon: startIcon, draggable: true }).addTo(map);
       startMarker.bindTooltip(zone.text ? zone.text.substring(0, 30) + "..." : "Zone audio", { direction: "top", offset: [0, -16] });
+      startMarker.on("dragend", () => {
+        const pos = startMarker.getLatLng();
+        onAudioDrag?.(zone.id, pos.lat, pos.lng);
+      });
       layers.audioMarkers.push(startMarker);
 
       if (route.length > 1 && zone.text.trim()) {

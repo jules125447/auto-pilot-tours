@@ -325,6 +325,10 @@ const CircuitCreator = () => {
     setAudioZones((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
   };
 
+  const handleAudioDrag = useCallback((id: string, lat: number, lng: number) => {
+    setAudioZones((prev) => prev.map((a) => (a.id === id ? { ...a, lat, lng } : a)));
+  }, []);
+
   const handleDeleteMusic = (id: string) => {
     setMusicSegments((prev) => prev.filter((m) => m.id !== id));
     if (selectedMusicId === id) setSelectedMusicId(null);
