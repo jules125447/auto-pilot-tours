@@ -38,8 +38,8 @@ const NavigationBar = ({
 }: NavigationBarProps) => {
   return (
     <div className="relative z-[1000]">
-      {/* Next stop card */}
-      {currentStop && (
+      {/* Next stop card — hide after last stop is visited */}
+      {currentStop && !isLastStopDone && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
