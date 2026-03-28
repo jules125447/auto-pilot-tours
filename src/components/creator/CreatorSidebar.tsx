@@ -73,14 +73,17 @@ const estimateAudioDistance = (text: string): number => {
 
 const AudioPlayButton = ({ text }: { text: string }) => {
   const [playing, setPlaying] = useState(false);
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const playingRef = useRef(false);
+  useEffect(() => { return () => { speechSynthesis.cancel(); }; }, []);
   const toggle = () => {
-    if (playing) { speechSynthesis.cancel(); setPlaying(false); }
+    speechSynthesis.cancel();
+    if (playingRef.current) { playingRef.current = false; setPlaying(false); }
     else if (text.trim()) {
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = "fr-FR";
-      utter.onend = () => setPlaying(false);
-      utterRef.current = utter;
+      utter.onend = () => { playingRef.current = false; setPlaying(false); };
+      utter.onerror = () => { playingRef.current = false; setPlaying(false); };
+      playingRef.current = true;
       speechSynthesis.speak(utter);
       setPlaying(true);
     }
