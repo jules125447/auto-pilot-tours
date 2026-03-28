@@ -86,6 +86,7 @@ function mapCircuit(
     route,
     published: circuit.published,
     creator_id: circuit.creator_id,
+    circuit_type: (circuit as any).circuit_type || "amateur",
     stops: stops
       .filter((s) => s.circuit_id === circuit.id)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
