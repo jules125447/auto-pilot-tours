@@ -308,6 +308,10 @@ const CircuitCreator = () => {
     if (selectedStopId === id) setSelectedStopId(null);
   };
 
+  const handleStopDrag = useCallback((id: string, lat: number, lng: number) => {
+    setStops((prev) => prev.map((s) => (s.id === id ? { ...s, lat, lng } : s)));
+  }, []);
+
   const handleUpdateStop = (id: string, data: Partial<StopData>) => {
     setStops((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
   };
@@ -578,6 +582,7 @@ const CircuitCreator = () => {
             mode={mode}
             onMapClick={handleMapClick}
             onWaypointDrag={handleWaypointDrag}
+            onStopDrag={handleStopDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
