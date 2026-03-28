@@ -480,6 +480,39 @@ export type Database = {
           },
         ]
       }
+      slot_messages: {
+        Row: {
+          circuit_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          message: string
+          slot_date: string
+          slot_time: string
+          user_id: string
+        }
+        Insert: {
+          circuit_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          message: string
+          slot_date: string
+          slot_time: string
+          user_id: string
+        }
+        Update: {
+          circuit_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          message?: string
+          slot_date?: string
+          slot_time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sound_segments: {
         Row: {
           circuit_id: string
