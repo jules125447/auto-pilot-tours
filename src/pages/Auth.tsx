@@ -29,7 +29,7 @@ const Auth = () => {
     } else {
       const { error } = await signUp(email, password, displayName);
       if (error) setError(error.message);
-      else setSuccess("Vérifiez votre email pour confirmer votre compte !");
+      else navigate("/");
     }
     setLoading(false);
   };
