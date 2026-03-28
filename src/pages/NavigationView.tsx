@@ -18,7 +18,7 @@ const NavigationView = () => {
   const { id } = useParams();
   const { data: circuit, isLoading } = useCircuit(id);
 
-  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const [rawUserPos, setRawUserPos] = useState<[number, number] | null>(null);
   const [heading, setHeading] = useState(0);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [audioPlaying, setAudioPlaying] = useState(false);
@@ -27,11 +27,13 @@ const NavigationView = () => {
   const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [calibrated, setCalibrated] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeMusicIdRef = useRef<string | null>(null);
   const activeSoundsRef = useRef<Map<string, any>>(new Map());
   const fadeIntervalRef = useRef<number | null>(null);
+  const firstFixTimeRef = useRef<number | null>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
