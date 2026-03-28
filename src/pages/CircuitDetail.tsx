@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Route, Star, MapPin, Download, Play, Car, Eye, UtensilsCrossed, ParkingCircle, Landmark, Loader2, Tag, ShoppingCart } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
 import CircuitReviews from "@/components/CircuitReviews";
+import { useToast } from "@/hooks/use-toast";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
   viewpoint: Eye,
