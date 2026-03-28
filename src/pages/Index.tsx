@@ -143,8 +143,19 @@ const Index = () => {
       </section>
 
       {/* Circuits */}
-      <section className="pb-12">
+      <section className="pb-20">
         <div className="container max-w-5xl">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground tracking-tight">
+                Circuits
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {filteredCircuits.length} circuit{filteredCircuits.length > 1 ? "s" : ""} disponible{filteredCircuits.length > 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -156,55 +167,11 @@ const Index = () => {
               <p className="text-sm mt-1">Essayez une autre recherche ou région</p>
             </div>
           ) : (
-            <>
-              {/* Pro / Local circuits */}
-              {proCircuits.length > 0 && (
-                <div className="mb-14">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-xl bg-primary/10">
-                      <Award className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground tracking-tight">
-                        Circuits professionnels & locaux
-                      </h2>
-                      <p className="text-muted-foreground text-sm mt-0.5">
-                        Créés par nos guides et experts locaux
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {proCircuits.map((circuit, i) => (
-                      <CircuitCard key={circuit.id} circuit={circuit} index={i} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Amateur circuits */}
-              {amateurCircuits.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 rounded-xl bg-secondary">
-                      <Users className="w-5 h-5 text-secondary-foreground" />
-                    </div>
-                    <div>
-                      <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground tracking-tight">
-                        Circuits de la communauté
-                      </h2>
-                      <p className="text-muted-foreground text-sm mt-0.5">
-                        Créés par des passionnés comme vous
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {amateurCircuits.map((circuit, i) => (
-                      <CircuitCard key={circuit.id} circuit={circuit} index={i} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCircuits.map((circuit, i) => (
+                <CircuitCard key={circuit.id} circuit={circuit} index={i} />
+              ))}
+            </div>
           )}
         </div>
       </section>
