@@ -375,6 +375,40 @@ const CircuitEditorMap = ({
   return (
     <div className="absolute inset-0">
       <div ref={mapRef} className="absolute inset-0" />
+
+      {/* Search bar */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] w-80">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            onFocus={() => searchResults.length > 0 && setShowResults(true)}
+            placeholder="Rechercher une ville, rue…"
+            className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card/95 backdrop-blur-sm text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary shadow-elevated"
+          />
+          {searchQuery && (
+            <button onClick={() => { setSearchQuery(""); setSearchResults([]); setShowResults(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {showResults && (
+          <div className="mt-1 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-elevated overflow-hidden">
+            {searchResults.map((r, i) => (
+              <button
+                key={i}
+                onClick={() => selectPlace(r.lat, r.lon)}
+                className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors truncate"
+              >
+                {r.display_name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {routeLoading && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-card/95 backdrop-blur-sm rounded-lg shadow-elevated px-4 py-2 flex items-center gap-2 border border-border">
           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
