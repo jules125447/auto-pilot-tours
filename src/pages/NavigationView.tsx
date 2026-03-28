@@ -97,6 +97,8 @@ const NavigationView = () => {
   const firstFixTimeRef = useRef<number | null>(null);
   const calibrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const presenceChannelRef = useRef<any>(null);
+  const prevPosRef = useRef<[number, number] | null>(null);
+  const smoothedHeadingRef = useRef<number>(0);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
