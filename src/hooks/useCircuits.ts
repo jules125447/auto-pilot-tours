@@ -21,6 +21,7 @@ export interface CircuitWithStops {
   route: [number, number][];
   published: boolean | null;
   creator_id: string;
+  circuit_type: string;
   stops: {
     id: string;
     title: string;
