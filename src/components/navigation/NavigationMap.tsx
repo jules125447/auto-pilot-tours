@@ -10,12 +10,20 @@ interface Stop {
   type: string;
 }
 
+interface Participant {
+  id: string;
+  display_name: string | null;
+  lat: number;
+  lng: number;
+}
+
 interface NavigationMapProps {
   route: [number, number][];
   stops: Stop[];
   userPos: [number, number] | null;
   heading: number;
   currentStopIndex: number;
+  participants?: Participant[];
 }
 
 const poiEmoji: Record<string, string> = {
