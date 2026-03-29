@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
 import CircuitReviews from "@/components/CircuitReviews";
-import CommunitySlots from "@/components/CommunitySlots";
+
 import { useToast } from "@/hooks/use-toast";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
@@ -315,7 +315,7 @@ const CircuitDetail = () => {
           </div>
         </motion.div>
 
-        <CommunitySlots circuitId={circuit.id} />
+        
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <CircuitReviews circuitId={circuit.id} />
