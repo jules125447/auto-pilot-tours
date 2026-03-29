@@ -252,23 +252,20 @@ const CircuitCreator = () => {
         setAudioZones((prev) => [...prev, newZone]);
         setSelectedAudioId(newZone.id);
       } else if (mode === "music") {
-        if (!musicPlacingStart) {
-          setMusicPlacingStart({ lat, lng });
-          toast({ title: "Point A placé", description: "Cliquez pour placer le point B du segment musical." });
-        } else {
-          const newSegment: MusicSegmentData = {
-            id: crypto.randomUUID(),
-            startLat: musicPlacingStart.lat,
-            startLng: musicPlacingStart.lng,
-            endLat: lat,
-            endLng: lng,
-            trackId: "",
-            trackName: "Aucune musique sélectionnée",
-          };
-          setMusicSegments((prev) => [...prev, newSegment]);
-          setSelectedMusicId(newSegment.id);
-          setMusicPlacingStart(null);
-        }
+        // Auto-place point B ~30 seconds along the route from point A
+        const endPoint = findPointAlongRoute(routeRef.current, [lat, lng], 420); // ~420m ≈ 30s at 50km/h
+        const newSegment: MusicSegmentData = {
+          id: crypto.randomUUID(),
+          startLat: lat,
+          startLng: lng,
+          endLat: endPoint[0],
+          endLng: endPoint[1],
+          trackId: "",
+          trackName: "Aucune musique sélectionnée",
+        };
+        setMusicSegments((prev) => [...prev, newSegment]);
+        setSelectedMusicId(newSegment.id);
+        toast({ title: "Segment musical ajouté", description: "Point B placé automatiquement (~30s de trajet). Vous pouvez le déplacer." });
       } else if (mode === "sound") {
         if (!soundPlacingStart) {
           setSoundPlacingStart({ lat, lng });
