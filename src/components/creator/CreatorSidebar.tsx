@@ -671,8 +671,8 @@ const CreatorSidebar = ({
           {(mode === "music" || mode === "select") && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Music className="w-4 h-4" /> Segments musicaux</h3>
-              <p className="text-xs text-muted-foreground">En mode "Musique", cliquez 2 points sur la carte pour définir un segment musical (A→B). La musique jouera entre ces deux points.</p>
-              {musicSegments.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">En mode "Musique", cliquez 2 points sur la carte pour définir un segment musical (A→B).</p>}
+              <p className="text-xs text-muted-foreground">En mode "Musique", cliquez sur la carte pour placer un segment musical. Le point B est placé automatiquement (~30s de trajet).</p>
+              {musicSegments.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">En mode "Musique", cliquez sur la carte pour ajouter un segment musical.</p>}
               {musicSegments.map((seg) => (
                 <div key={seg.id} onClick={() => setSelectedMusicId(seg.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedMusicId === seg.id ? "border-accent bg-accent/5" : "border-border hover:border-accent/30"}`}>
