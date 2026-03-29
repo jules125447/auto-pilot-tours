@@ -1,6 +1,7 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Locate } from "lucide-react";
 
 interface Stop {
   id: string;
@@ -80,11 +81,17 @@ const NavigationMap = ({
   const participantMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const traveledLineRef = useRef<L.Polyline | null>(null);
   const remainingLineRef = useRef<L.Polyline | null>(null);
+  const [tracking, setTracking] = useState(true);
+  const userInteractingRef = useRef(false);
 
   const routeBearing = useMemo(() => {
     if (!userPos || route.length < 2) return 0;
     return getRouteBearing(route, userPos);
   }, [userPos, route]);
+
+  const handleRecenter = useCallback(() => {
+    setTracking(true);
+  }, []);
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -92,10 +99,10 @@ const NavigationMap = ({
     const map = L.map(mapRef.current, {
       zoomControl: false,
       attributionControl: false,
-      scrollWheelZoom: false,
-      dragging: false,
-      doubleClickZoom: false,
-      touchZoom: false,
+      scrollWheelZoom: true,
+      dragging: true,
+      doubleClickZoom: true,
+      touchZoom: true,
     });
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
@@ -154,9 +161,23 @@ const NavigationMap = ({
       stopMarkersRef.current.push(marker);
     });
 
+    // Detect user interaction to break tracking
+    const onDragStart = () => {
+      userInteractingRef.current = true;
+      setTracking(false);
+    };
+    map.on("dragstart", onDragStart);
+    map.on("zoomstart", () => {
+      // Only break tracking if user initiated (not programmatic)
+      if (userInteractingRef.current) {
+        setTracking(false);
+      }
+    });
+
     mapInstance.current = map;
 
     return () => {
+      map.off("dragstart", onDragStart);
       map.remove();
       mapInstance.current = null;
       stopMarkersRef.current = [];
@@ -237,32 +258,39 @@ const NavigationMap = ({
       arrowIcon.style.transform = `rotate(${routeBearing}deg)`;
     }
 
-    const mapContainer = map.getContainer();
-    mapContainer.style.transition = "transform 0.45s ease-out";
-    mapContainer.style.transformOrigin = "center 78%";
-    // Reduce scale on small screens to avoid overflow
-    const isMobile = map.getSize().x < 500;
-    const mapScale = isMobile ? 1.35 : 1.62;
-    mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(${mapScale})`;
+    // Only auto-center/rotate when tracking
+    if (tracking) {
+      userInteractingRef.current = false;
 
-    const targetZoom = isMobile ? Math.max(map.getZoom(), 17) : Math.max(map.getZoom(), 16.5);
-    // First center exactly on user
-    map.setView(userPos, targetZoom, { animate: false });
+      const mapContainer = map.getContainer();
+      mapContainer.style.transition = "transform 0.45s ease-out";
+      mapContainer.style.transformOrigin = "center 78%";
+      const isMobile = map.getSize().x < 500;
+      const mapScale = isMobile ? 1.35 : 1.62;
+      mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(${mapScale})`;
 
-    const mapSize = map.getSize();
-    // Offset to push user marker to ~75% down on screen
-    const offsetPx = mapSize.y * (isMobile ? 0.25 : 0.28);
-    const horizontalBiasPx = isMobile ? 10 : 4;
-    const bearingRad = (routeBearing * Math.PI) / 180;
-    const offsetX = offsetPx * Math.sin(bearingRad);
-    const offsetY = offsetPx * Math.cos(bearingRad);
+      const targetZoom = isMobile ? Math.max(map.getZoom(), 17) : Math.max(map.getZoom(), 16.5);
+      map.setView(userPos, targetZoom, { animate: false });
 
-    const userPoint = map.latLngToContainerPoint(userPos);
-    const newCenter = map.containerPointToLatLng(
-      L.point(userPoint.x - offsetX - horizontalBiasPx, userPoint.y - offsetY)
-    );
-    map.setView(newCenter, targetZoom, { animate: false });
-  }, [userPos, routeBearing, route, heading]);
+      const mapSize = map.getSize();
+      const offsetPx = mapSize.y * (isMobile ? 0.25 : 0.28);
+      const horizontalBiasPx = isMobile ? 10 : 4;
+      const bearingRad = (routeBearing * Math.PI) / 180;
+      const offsetX = offsetPx * Math.sin(bearingRad);
+      const offsetY = offsetPx * Math.cos(bearingRad);
+
+      const userPoint = map.latLngToContainerPoint(userPos);
+      const newCenter = map.containerPointToLatLng(
+        L.point(userPoint.x - offsetX - horizontalBiasPx, userPoint.y - offsetY)
+      );
+      map.setView(newCenter, targetZoom, { animate: false });
+    } else {
+      // When not tracking, reset map container rotation/scale so user can explore freely
+      const mapContainer = map.getContainer();
+      mapContainer.style.transition = "transform 0.45s ease-out";
+      mapContainer.style.transform = "rotate(0deg) scale(1)";
+    }
+  }, [userPos, routeBearing, route, heading, tracking]);
 
   useEffect(() => {
     stopMarkersRef.current.forEach((marker, i) => {
@@ -356,6 +384,16 @@ const NavigationMap = ({
       `}</style>
       <div className="nav-map-perspective">
         <div ref={mapRef} className="nav-map-tilted" />
+        {/* Recenter button — shown when user has panned away */}
+        {!tracking && userPos && (
+          <button
+            onClick={handleRecenter}
+            className="absolute bottom-6 right-4 z-[1100] flex items-center gap-2 px-4 py-3 rounded-full bg-card/95 backdrop-blur-md border border-border shadow-elevated transition-all active:scale-95 hover:bg-card"
+          >
+            <Locate className="w-5 h-5 text-primary" />
+            <span className="text-sm font-semibold text-foreground">Recentrer</span>
+          </button>
+        )}
       </div>
     </>
   );
