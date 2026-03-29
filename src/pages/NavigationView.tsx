@@ -660,6 +660,7 @@ const NavigationView = () => {
             userPos={null}
             heading={0}
             currentStopIndex={0}
+            routeToStart={routeToStart}
           />
           <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
             {!preloading && !preloadDone && (
