@@ -17,31 +17,76 @@ import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
 
-// Snap a raw GPS position onto the closest point of a route polyline
-function snapToRoute(
+interface RouteProjection {
+  point: [number, number];
+  cumulative: number;
+  distance: number;
+  total: number;
+}
+
+function projectClosestPointOnRoute(
   lat: number,
   lng: number,
   route: [number, number][]
-): [number, number] {
+): RouteProjection {
   let bestDist = Infinity;
   let bestPoint: [number, number] = [lat, lng];
+  let bestCum = 0;
+  let total = 0;
 
   for (let i = 0; i < route.length - 1; i++) {
     const ax = route[i][0], ay = route[i][1];
     const bx = route[i + 1][0], by = route[i + 1][1];
+    const segLen = haversine(ax, ay, bx, by);
     const dx = bx - ax, dy = by - ay;
     const lenSq = dx * dx + dy * dy;
     let t = lenSq === 0 ? 0 : ((lat - ax) * dx + (lng - ay) * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
+
     const px = ax + t * dx;
     const py = ay + t * dy;
-    const d = (lat - px) ** 2 + (lng - py) ** 2; // squared distance is fine for comparison
-    if (d < bestDist) {
-      bestDist = d;
+    const distance = haversine(lat, lng, px, py);
+
+    if (distance < bestDist) {
+      bestDist = distance;
       bestPoint = [px, py];
+      bestCum = total + t * segLen;
     }
+
+    total += segLen;
   }
-  return bestPoint;
+
+  return {
+    point: bestPoint,
+    cumulative: bestCum,
+    distance: bestDist,
+    total,
+  };
+}
+
+function interpolateRoutePoint(route: [number, number][], targetDistance: number): [number, number] {
+  if (route.length < 2) return route[0] ?? [0, 0];
+
+  let covered = 0;
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const start = route[i];
+    const end = route[i + 1];
+    const segLen = haversine(start[0], start[1], end[0], end[1]);
+
+    if (covered + segLen >= targetDistance) {
+      const remaining = targetDistance - covered;
+      const ratio = segLen === 0 ? 0 : remaining / segLen;
+      return [
+        start[0] + (end[0] - start[0]) * ratio,
+        start[1] + (end[1] - start[1]) * ratio,
+      ];
+    }
+
+    covered += segLen;
+  }
+
+  return route[route.length - 1];
 }
 
 const NavigationView = () => {
@@ -99,18 +144,49 @@ const NavigationView = () => {
   const presenceChannelRef = useRef<any>(null);
   const prevPosRef = useRef<[number, number] | null>(null);
   const smoothedHeadingRef = useRef<number>(0);
+  const routeProgressRef = useRef<number | null>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
-  // Compute snapped position (always on the route)
-  const userPos = useMemo<[number, number] | null>(() => {
-    if (!rawUserPos) return null;
+  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    if (!rawUserPos) {
+      setUserPos(null);
+      routeProgressRef.current = null;
+      return;
+    }
+
     const routeCoords = circuit?.route as [number, number][] | undefined;
-    if (!routeCoords || routeCoords.length < 2) return rawUserPos;
-    // Only snap if within 200m of the route (otherwise show raw)
-    const snapped = snapToRoute(rawUserPos[0], rawUserPos[1], routeCoords);
-    const distToRoute = haversine(rawUserPos[0], rawUserPos[1], snapped[0], snapped[1]);
-    return distToRoute < 200 ? snapped : rawUserPos;
+    if (!routeCoords || routeCoords.length < 2) {
+      setUserPos(rawUserPos);
+      routeProgressRef.current = null;
+      return;
+    }
+
+    const projected = projectClosestPointOnRoute(rawUserPos[0], rawUserPos[1], routeCoords);
+    if (projected.distance >= 200) {
+      setUserPos(rawUserPos);
+      routeProgressRef.current = null;
+      return;
+    }
+
+    const previousProgress = routeProgressRef.current;
+    let nextProgress = projected.cumulative;
+
+    if (previousProgress !== null) {
+      const maxBackwardStep = 4;
+      const maxForwardStep = 18;
+      const clampedProgress = Math.max(
+        Math.max(0, previousProgress - maxBackwardStep),
+        Math.min(projected.total, Math.min(projected.cumulative, previousProgress + maxForwardStep))
+      );
+
+      nextProgress = previousProgress + (clampedProgress - previousProgress) * 0.35;
+    }
+
+    routeProgressRef.current = nextProgress;
+    setUserPos(interpolateRoutePoint(routeCoords, nextProgress));
   }, [rawUserPos, circuit?.route]);
 
   const turns = useMemo(() => {
@@ -295,26 +371,7 @@ const NavigationView = () => {
 
   // Project a point onto the route and return cumulative distance
   const projectOnRoute = useCallback((lat: number, lng: number, routeCoords: [number, number][]): number => {
-    let bestDist = Infinity;
-    let bestCum = 0;
-    let cumDist = 0;
-    for (let i = 0; i < routeCoords.length - 1; i++) {
-      const ax = routeCoords[i][0], ay = routeCoords[i][1];
-      const bx = routeCoords[i + 1][0], by = routeCoords[i + 1][1];
-      const segLen = haversine(ax, ay, bx, by);
-      const dx = bx - ax, dy = by - ay;
-      const lenSq = dx * dx + dy * dy;
-      let t = lenSq === 0 ? 0 : ((lat - ax) * dx + (lng - ay) * dy) / lenSq;
-      t = Math.max(0, Math.min(1, t));
-      const px = ax + t * dx, py = ay + t * dy;
-      const d = haversine(lat, lng, px, py);
-      if (d < bestDist) {
-        bestDist = d;
-        bestCum = cumDist + t * segLen;
-      }
-      cumDist += segLen;
-    }
-    return bestCum;
+    return projectClosestPointOnRoute(lat, lng, routeCoords).cumulative;
   }, []);
 
   // Audio zones — only trigger after calibration, use route projection
