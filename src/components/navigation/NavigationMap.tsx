@@ -83,6 +83,7 @@ const NavigationMap = ({
   const participantMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const traveledLineRef = useRef<L.Polyline | null>(null);
   const remainingLineRef = useRef<L.Polyline | null>(null);
+  const routeToStartLineRef = useRef<L.Polyline | null>(null);
   const [tracking, setTracking] = useState(true);
   const userInteractingRef = useRef(false);
 
