@@ -13,6 +13,7 @@ import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
 import { useCircuitPreload } from "@/hooks/useCircuitPreload";
+import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 
 const FADE_DURATION = 2000;
