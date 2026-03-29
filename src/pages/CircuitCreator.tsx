@@ -385,6 +385,7 @@ const CircuitCreator = () => {
             published: publish,
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
+            price,
           })
           .eq("id", editId)
           .eq("creator_id", user.id);
