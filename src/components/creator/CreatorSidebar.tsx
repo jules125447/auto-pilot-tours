@@ -27,6 +27,8 @@ interface CreatorSidebarProps {
   setDistance: (v: string) => void;
   circuitType: string;
   setCircuitType: (v: string) => void;
+  price: number;
+  setPrice: (v: number) => void;
   stops: StopData[];
   audioZones: AudioZoneData[];
   musicSegments: MusicSegmentData[];
