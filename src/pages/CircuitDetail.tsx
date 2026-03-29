@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
 import CircuitReviews from "@/components/CircuitReviews";
-import CommunitySlots from "@/components/CommunitySlots";
+
 import { useToast } from "@/hooks/use-toast";
 
 const stopTypeIcons: Record<string, typeof Eye> = {
