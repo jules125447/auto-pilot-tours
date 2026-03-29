@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -43,11 +43,23 @@ function findClosestRouteIndex(route: [number, number][], pos: [number, number])
   return idx;
 }
 
-// Offset a lat/lng by pixels on screen, used to position user at bottom-center
-function offsetLatLng(map: L.Map, latlng: [number, number], pixelOffsetY: number): L.LatLng {
-  const point = map.latLngToContainerPoint(latlng);
-  const offsetPoint = L.point(point.x, point.y - pixelOffsetY);
-  return map.containerPointToLatLng(offsetPoint);
+/** Compute bearing from route at the user's position (direction of travel along route) */
+function getRouteBearing(route: [number, number][], pos: [number, number]): number {
+  const idx = findClosestRouteIndex(route, pos);
+  // Look ahead a few points for smoother bearing
+  const lookAhead = Math.min(idx + 5, route.length - 1);
+  const from = route[idx];
+  const to = route[lookAhead];
+  if (from[0] === to[0] && from[1] === to[1]) return 0;
+
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const dLng = toRad(to[1] - from[1]);
+  const y = Math.sin(dLng) * Math.cos(toRad(to[0]));
+  const x =
+    Math.cos(toRad(from[0])) * Math.sin(toRad(to[0])) -
+    Math.sin(toRad(from[0])) * Math.cos(toRad(to[0])) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
 const NavigationMap = ({
@@ -58,7 +70,6 @@ const NavigationMap = ({
   currentStopIndex,
   participants = [],
 }: NavigationMapProps) => {
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
@@ -66,7 +77,12 @@ const NavigationMap = ({
   const participantMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const traveledLineRef = useRef<L.Polyline | null>(null);
   const remainingLineRef = useRef<L.Polyline | null>(null);
-  const labelsPaneRef = useRef<HTMLElement | null>(null);
+
+  // Compute route-based bearing so arrow always points along the road
+  const routeBearing = useMemo(() => {
+    if (!userPos || route.length < 2) return 0;
+    return getRouteBearing(route, userPos);
+  }, [userPos, route]);
 
   // Init map
   useEffect(() => {
@@ -75,49 +91,43 @@ const NavigationMap = ({
     const map = L.map(mapRef.current, {
       zoomControl: false,
       attributionControl: false,
+      scrollWheelZoom: false,
+      dragging: false,
+      doubleClickZoom: false,
+      touchZoom: false,
     });
 
-    // Base tiles (no labels)
+    // Clean map style like Waze
     L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       { maxZoom: 19 }
-    ).addTo(map);
-
-    // Labels-only layer in its own pane for counter-rotation
-    const labelsPane = map.createPane("labelsPane");
-    labelsPane.style.zIndex = "450";
-    labelsPaneRef.current = labelsPane;
-
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
-      { maxZoom: 19, pane: "labelsPane" }
     ).addTo(map);
 
     // Draw route
     if (route.length > 0) {
-      // Shadow
+      // Route shadow
       L.polyline(route, {
-        color: "hsl(205, 60%, 48%)",
-        weight: 14,
-        opacity: 0.15,
+        color: "#4A66F4",
+        weight: 16,
+        opacity: 0.2,
         smoothFactor: 1,
       }).addTo(map);
 
-      // Remaining (full route initially)
+      // Remaining route (blue like Waze)
       remainingLineRef.current = L.polyline(route, {
-        color: "hsl(205, 60%, 48%)",
-        weight: 6,
+        color: "#4A66F4",
+        weight: 8,
         opacity: 0.9,
         smoothFactor: 1,
         lineCap: "round",
         lineJoin: "round",
       }).addTo(map);
 
-      // Traveled (empty initially)
+      // Traveled route (darker)
       traveledLineRef.current = L.polyline([], {
-        color: "hsl(35, 85%, 55%)",
-        weight: 6,
-        opacity: 0.9,
+        color: "#8B9DC3",
+        weight: 8,
+        opacity: 0.6,
         smoothFactor: 1,
         lineCap: "round",
         lineJoin: "round",
@@ -132,30 +142,30 @@ const NavigationMap = ({
       const icon = L.divIcon({
         html: `
           <div style="
-            width:40px;height:40px;
+            width:36px;height:36px;
             display:flex;align-items:center;justify-content:center;
           ">
             <div style="
-              width:36px;height:36px;border-radius:50%;
+              width:32px;height:32px;border-radius:50%;
               background:white;
-              border:3px solid hsl(205,60%,48%);
+              border:2px solid #4A66F4;
               display:flex;align-items:center;justify-content:center;
-              font-size:16px;
-              box-shadow:0 2px 8px rgba(0,0,0,0.15);
+              font-size:14px;
+              box-shadow:0 2px 8px rgba(0,0,0,0.2);
             ">${poiEmoji[stop.type] || "📍"}</div>
           </div>
         `,
         className: "poi-marker",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
       });
 
       const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map);
       marker.bindTooltip(stop.title, {
         permanent: false,
         direction: "top",
-        className: "poi-tooltip-light",
-        offset: [0, -22],
+        className: "poi-tooltip-nav",
+        offset: [0, -20],
       });
       stopMarkersRef.current.push(marker);
     });
@@ -169,7 +179,6 @@ const NavigationMap = ({
       participantMarkersRef.current.clear();
       traveledLineRef.current = null;
       remainingLineRef.current = null;
-      labelsPaneRef.current = null;
     };
   }, [route, stops]);
 
@@ -194,36 +203,24 @@ const NavigationMap = ({
         const icon = L.divIcon({
           html: `
             <div style="
-              width:36px;height:36px;position:relative;
+              width:32px;height:32px;border-radius:50%;
+              background:#FF9500;border:3px solid white;
               display:flex;align-items:center;justify-content:center;
-            ">
-              <div style="
-                width:28px;height:28px;border-radius:50%;
-                background:hsl(35,85%,55%);
-                border:3px solid white;
-                display:flex;align-items:center;justify-content:center;
-                font-size:12px;color:white;font-weight:bold;
-                box-shadow:0 2px 8px rgba(0,0,0,0.2);
-              ">${(p.display_name || "?")[0].toUpperCase()}</div>
-            </div>
+              font-size:12px;color:white;font-weight:bold;
+              box-shadow:0 2px 6px rgba(0,0,0,0.3);
+            ">${(p.display_name || "?")[0].toUpperCase()}</div>
           `,
           className: "participant-marker",
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
         });
         const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: 500 }).addTo(map);
-        marker.bindTooltip(p.display_name || "Participant", {
-          permanent: false,
-          direction: "top",
-          className: "poi-tooltip-light",
-          offset: [0, -18],
-        });
         participantMarkersRef.current.set(p.id, marker);
       }
     });
   }, [participants]);
 
-  // Update user position marker + traveled/remaining route
+  // Update user position + rotate map so route is always "up"
   useEffect(() => {
     if (!mapInstance.current || !userPos) return;
     const map = mapInstance.current;
@@ -233,66 +230,53 @@ const NavigationMap = ({
       const closestIdx = findClosestRouteIndex(route, userPos);
       const traveled = route.slice(0, closestIdx + 1).concat([userPos]);
       const remaining = [userPos].concat(route.slice(closestIdx + 1));
-
       if (traveledLineRef.current) traveledLineRef.current.setLatLngs(traveled);
       if (remainingLineRef.current) remainingLineRef.current.setLatLngs(remaining);
     }
 
+    // Create or update user marker (Waze-style chevron)
     if (!userMarkerRef.current) {
       const icon = L.divIcon({
         html: `
-          <div style="
-            width:52px;height:52px;position:relative;
-            display:flex;align-items:center;justify-content:center;
-          ">
-            <div style="
-              position:absolute;width:52px;height:52px;border-radius:50%;
-              background:hsl(205,80%,55%,0.15);
-              animation:gps-pulse-light 2s ease-out infinite;
-            "></div>
-            <div style="
-              width:22px;height:22px;position:relative;
-              transform:rotate(0deg);
-            ">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L4 20L12 16L20 20L12 2Z" fill="hsl(205,60%,48%)" stroke="white" stroke-width="2"/>
+          <div class="waze-arrow-container">
+            <div class="waze-arrow-pulse"></div>
+            <div class="waze-arrow-icon">
+              <svg viewBox="0 0 40 40" width="40" height="40">
+                <polygon points="20,4 8,32 20,26 32,32" fill="#4A66F4" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
               </svg>
             </div>
           </div>
         `,
-        className: "user-marker-icon",
-        iconSize: [52, 52],
-        iconAnchor: [26, 26],
+        className: "waze-user-marker",
+        iconSize: [56, 56],
+        iconAnchor: [28, 28],
       });
-
       userMarkerRef.current = L.marker(userPos, { icon, zIndexOffset: 1000 }).addTo(map);
-      map.setView(userPos, 16);
     } else {
       userMarkerRef.current.setLatLng(userPos);
     }
 
-    // Position user at bottom-center: offset the map center upward
-    // so the user marker appears ~70% down the screen
+    // Rotate map so route direction = up. The map rotates by -routeBearing
+    // so the arrow always points "up" on screen.
+    const mapContainer = map.getContainer();
+    mapContainer.style.transition = "transform 0.6s ease-out";
+    mapContainer.style.transformOrigin = "center 70%";
+    // Scale up to fill the perspective-cropped area, rotate to heading-up
+    mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(1.5)`;
+
+    // Position user at ~70% down the viewport
+    // First set view to user pos, then offset
+    const targetZoom = Math.max(map.getZoom(), 16);
+    map.setView(userPos, targetZoom, { animate: false });
+
+    // Now offset: move the center UP so user appears at 70% down
     const mapSize = map.getSize();
-    const offsetY = mapSize.y * 0.12; // shift center slightly up → user at ~55% down (slightly below middle)
-    const newCenter = offsetLatLng(map, userPos, offsetY);
-    map.setView(newCenter, map.getZoom(), { animate: true, duration: 0.5 });
+    const offsetY = mapSize.y * 0.25; // push center up by 25% → user at ~70% down
+    const point = map.latLngToContainerPoint(userPos);
+    const newCenter = map.containerPointToLatLng(L.point(point.x, point.y - offsetY));
+    map.setView(newCenter, targetZoom, { animate: true, duration: 0.5 });
 
-    // Rotate the map to match heading + apply perspective tilt via wrapper
-    const container = map.getContainer();
-    container.style.transition = "transform 0.5s ease-out";
-    container.style.transformOrigin = "center center";
-    container.style.transform = `rotate(${-heading}deg) scale(1.42)`;
-
-    // Counter-rotate labels pane so text stays readable
-    if (labelsPaneRef.current) {
-      // Labels pane needs to counter-rotate relative to the map container
-      // The pane is inside the rotated container, so we rotate it back
-      labelsPaneRef.current.style.transition = "transform 0.5s ease-out";
-      labelsPaneRef.current.style.transformOrigin = "center center";
-      labelsPaneRef.current.style.transform = `rotate(${heading}deg)`;
-    }
-  }, [userPos, heading, route]);
+  }, [userPos, routeBearing, route]);
 
   // Highlight current stop
   useEffect(() => {
@@ -303,11 +287,11 @@ const NavigationMap = ({
       if (!inner) return;
 
       if (i === currentStopIndex) {
-        inner.style.borderColor = "hsl(35,85%,55%)";
-        inner.style.boxShadow = "0 2px 12px hsl(35,85%,55%,0.4)";
+        inner.style.borderColor = "#FF9500";
+        inner.style.boxShadow = "0 2px 12px rgba(255,149,0,0.5)";
       } else {
-        inner.style.borderColor = "hsl(205,60%,48%)";
-        inner.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+        inner.style.borderColor = "#4A66F4";
+        inner.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
       }
     });
   }, [currentStopIndex]);
@@ -315,26 +299,29 @@ const NavigationMap = ({
   return (
     <>
       <style>{`
-        @keyframes gps-pulse-light {
-          0% { transform: scale(0.8); opacity: 1; }
+        @keyframes waze-pulse {
+          0% { transform: scale(0.8); opacity: 0.6; }
           100% { transform: scale(2.5); opacity: 0; }
         }
-        .poi-tooltip-light {
-          background: white !important;
-          color: hsl(160,30%,10%) !important;
-          border: 1px solid hsl(0,0%,88%) !important;
-          border-radius: 10px !important;
-          padding: 5px 12px !important;
-          font-size: 12px !important;
-          font-weight: 600 !important;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-        }
-        .poi-tooltip-light::before {
-          border-top-color: white !important;
-        }
-        .user-marker-icon {
+        .waze-user-marker {
           background: none !important;
           border: none !important;
+        }
+        .waze-arrow-container {
+          width: 56px; height: 56px;
+          position: relative;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .waze-arrow-pulse {
+          position: absolute;
+          width: 56px; height: 56px;
+          border-radius: 50%;
+          background: rgba(74, 102, 244, 0.2);
+          animation: waze-pulse 2s ease-out infinite;
+        }
+        .waze-arrow-icon {
+          position: relative;
+          z-index: 2;
         }
         .poi-marker {
           background: none !important;
@@ -344,21 +331,34 @@ const NavigationMap = ({
           background: none !important;
           border: none !important;
         }
-        .nav-map-wrapper {
-          perspective: 800px;
-          overflow: hidden;
-          width: 100%;
-          height: 100%;
+        .poi-tooltip-nav {
+          background: white !important;
+          color: #333 !important;
+          border: 1px solid #ddd !important;
+          border-radius: 8px !important;
+          padding: 4px 10px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
         }
-        .nav-map-inner {
+        .poi-tooltip-nav::before {
+          border-top-color: white !important;
+        }
+        .nav-map-perspective {
           width: 100%;
           height: 100%;
-          transform: rotateX(30deg);
+          overflow: hidden;
+          perspective: 600px;
+        }
+        .nav-map-tilted {
+          width: 100%;
+          height: 100%;
+          transform: rotateX(35deg);
           transform-origin: center 70%;
         }
       `}</style>
-      <div ref={wrapperRef} className="nav-map-wrapper">
-        <div ref={mapRef} className="nav-map-inner" />
+      <div className="nav-map-perspective">
+        <div ref={mapRef} className="nav-map-tilted" />
       </div>
     </>
   );
