@@ -133,6 +133,7 @@ const NavigationView = () => {
   const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const { preload, loading: preloading, progress: preloadProgress, done: preloadDone } = useCircuitPreload();
   const [calibrated, setCalibrated] = useState(false);
   const [participants, setParticipants] = useState<{ id: string; display_name: string | null; lat: number; lng: number }[]>([]);
   const watchIdRef = useRef<number | null>(null);
