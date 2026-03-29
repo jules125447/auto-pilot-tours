@@ -74,6 +74,7 @@ const NavigationMap = ({
   heading,
   currentStopIndex,
   participants = [],
+  routeToStart,
 }: NavigationMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
