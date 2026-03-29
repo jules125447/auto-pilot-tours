@@ -327,7 +327,7 @@ const CircuitCreator = () => {
         }
       }
     },
-    [mode, stops.length, waypoints, rebuildRoute, musicPlacingStart, soundPlacingStart, toast]
+    [mode, stops.length, waypoints, rebuildRoute, route, soundPlacingStart, toast]
   );
 
   const handleWaypointDrag = useCallback((index: number, lat: number, lng: number) => {
