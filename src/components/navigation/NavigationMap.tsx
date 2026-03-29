@@ -243,14 +243,25 @@ const NavigationMap = ({
     mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(1.62)`;
 
     const targetZoom = Math.max(map.getZoom(), 16.5);
+    // First center exactly on user, then compute offset to place user at 78% down
     map.setView(userPos, targetZoom, { animate: false });
 
     const mapSize = map.getSize();
-    const point = map.latLngToContainerPoint(userPos);
+    // We want the user to appear at (center-x, 78% height) in screen space.
+    // But the map container is rotated, so we must offset in the rotated coordinate system.
+    // Convert the desired screen offset into map-rotation-aware offset:
+    const offsetPx = mapSize.y * 0.28; // push user 28% below center -> appears at ~78%
+    const bearingRad = (routeBearing * Math.PI) / 180;
+    // The rotation is -routeBearing on the container, so to move "down" in screen space
+    // we need to offset in the direction of routeBearing in map space
+    const offsetX = offsetPx * Math.sin(bearingRad);
+    const offsetY = offsetPx * Math.cos(bearingRad);
+
+    const userPoint = map.latLngToContainerPoint(userPos);
     const newCenter = map.containerPointToLatLng(
-      L.point(point.x, point.y - mapSize.y * 0.3)
+      L.point(userPoint.x - offsetX, userPoint.y - offsetY)
     );
-    map.setView(newCenter, targetZoom, { animate: true, duration: 0.45 });
+    map.setView(newCenter, targetZoom, { animate: false });
   }, [userPos, routeBearing, route, heading]);
 
   useEffect(() => {
