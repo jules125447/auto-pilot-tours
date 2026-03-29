@@ -25,6 +25,7 @@ interface NavigationMapProps {
   heading: number;
   currentStopIndex: number;
   participants?: Participant[];
+  routeToStart?: [number, number][] | null;
 }
 
 const poiEmoji: Record<string, string> = {
