@@ -222,6 +222,38 @@ const NavigationMap = ({
     });
   }, [participants]);
 
+  // Draw orange route-to-start polyline
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const map = mapInstance.current;
+
+    // Remove old line
+    if (routeToStartLineRef.current) {
+      map.removeLayer(routeToStartLineRef.current);
+      routeToStartLineRef.current = null;
+    }
+
+    if (routeToStart && routeToStart.length > 1) {
+      // Orange glow
+      L.polyline(routeToStart, {
+        color: "#FF9500",
+        weight: 16,
+        opacity: 0.15,
+        smoothFactor: 1,
+      }).addTo(map);
+
+      routeToStartLineRef.current = L.polyline(routeToStart, {
+        color: "#FF9500",
+        weight: 6,
+        opacity: 0.9,
+        smoothFactor: 1,
+        lineCap: "round",
+        lineJoin: "round",
+        dashArray: "12 8",
+      }).addTo(map);
+    }
+  }, [routeToStart]);
+
   useEffect(() => {
     if (!mapInstance.current || !userPos) return;
     const map = mapInstance.current;
