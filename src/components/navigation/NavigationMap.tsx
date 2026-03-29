@@ -252,13 +252,14 @@ const NavigationMap = ({
     const mapSize = map.getSize();
     // Offset to push user marker to ~75% down on screen
     const offsetPx = mapSize.y * (isMobile ? 0.25 : 0.28);
+    const horizontalBiasPx = isMobile ? 10 : 4;
     const bearingRad = (routeBearing * Math.PI) / 180;
     const offsetX = offsetPx * Math.sin(bearingRad);
     const offsetY = offsetPx * Math.cos(bearingRad);
 
     const userPoint = map.latLngToContainerPoint(userPos);
     const newCenter = map.containerPointToLatLng(
-      L.point(userPoint.x - offsetX, userPoint.y - offsetY)
+      L.point(userPoint.x - offsetX - horizontalBiasPx, userPoint.y - offsetY)
     );
     map.setView(newCenter, targetZoom, { animate: false });
   }, [userPos, routeBearing, route, heading]);
