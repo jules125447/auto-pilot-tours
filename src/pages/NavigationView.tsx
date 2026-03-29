@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Volume2, VolumeX, Play, Lock } from "lucide-react";
+import { ArrowLeft, Loader2, Volume2, VolumeX, Play, Lock, Download } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
+import { useCircuitPreload } from "@/hooks/useCircuitPreload";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 
 const FADE_DURATION = 2000;
@@ -132,6 +133,7 @@ const NavigationView = () => {
   const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const { preload, loading: preloading, progress: preloadProgress, done: preloadDone } = useCircuitPreload();
   const [calibrated, setCalibrated] = useState(false);
   const [participants, setParticipants] = useState<{ id: string; display_name: string | null; lat: number; lng: number }[]>([]);
   const watchIdRef = useRef<number | null>(null);
@@ -614,8 +616,16 @@ const NavigationView = () => {
     );
   }
 
-  // Show start button if audio not unlocked
+  // Show preload / start button if audio not unlocked
   if (!audioUnlocked) {
+    const handleStartPreload = () => {
+      if (circuit) preload(circuit);
+    };
+
+    const handleLaunch = () => {
+      handleUnlockAudio();
+    };
+
     return (
       <div className="h-screen flex flex-col relative overflow-hidden bg-background">
         <div className="flex-1 relative">
@@ -627,20 +637,64 @@ const NavigationView = () => {
             currentStopIndex={0}
           />
           <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <motion.button
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={handleUnlockAudio}
-              className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card/95 border border-border shadow-elevated"
-            >
-              <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
-                <Play className="w-10 h-10 text-primary-foreground ml-1" />
-              </div>
-              <div className="text-center">
-                <h2 className="font-display text-xl font-bold text-foreground">Démarrer la navigation</h2>
-                <p className="text-sm text-muted-foreground mt-1">Appuyez pour activer le GPS et l'audio</p>
-              </div>
-            </motion.button>
+            {!preloading && !preloadDone && (
+              <motion.button
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                onClick={handleStartPreload}
+                className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card/95 border border-border shadow-elevated"
+              >
+                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
+                  <Download className="w-10 h-10 text-primary-foreground" />
+                </div>
+                <div className="text-center">
+                  <h2 className="font-display text-xl font-bold text-foreground">Préparer le circuit</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Télécharge les données pour fonctionner hors-ligne
+                  </p>
+                </div>
+              </motion.button>
+            )}
+
+            {preloading && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="flex flex-col items-center gap-5 p-8 rounded-2xl bg-card/95 border border-border shadow-elevated w-[320px]"
+              >
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                <div className="text-center w-full">
+                  <h2 className="font-display text-lg font-bold text-foreground mb-1">Téléchargement…</h2>
+                  <p className="text-xs text-muted-foreground mb-3">{preloadProgress.label}</p>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-primary rounded-full"
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${preloadProgress.percent}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 font-mono">{preloadProgress.percent}%</p>
+                </div>
+              </motion.div>
+            )}
+
+            {preloadDone && (
+              <motion.button
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                onClick={handleLaunch}
+                className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card/95 border border-border shadow-elevated"
+              >
+                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
+                  <Play className="w-10 h-10 text-primary-foreground ml-1" />
+                </div>
+                <div className="text-center">
+                  <h2 className="font-display text-xl font-bold text-foreground">Lancer la navigation</h2>
+                  <p className="text-sm text-muted-foreground mt-1">Toutes les données sont prêtes ✅</p>
+                </div>
+              </motion.button>
+            )}
           </div>
         </div>
       </div>

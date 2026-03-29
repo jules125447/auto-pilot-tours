@@ -1,7 +1,9 @@
-import { MapPin, Clock, Route, Star } from "lucide-react";
+import { MapPin, Clock, Route, Star, Navigation } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { CircuitWithStops } from "@/hooks/useCircuits";
+import { useUserLocation } from "@/hooks/useUserLocation";
+import { haversine } from "@/lib/turnDetection";
 
 interface CircuitCardProps {
   circuit: CircuitWithStops;
@@ -14,8 +16,35 @@ const difficultyLabel: Record<string, { bg: string; text: string }> = {
   Difficile: { bg: "bg-destructive/15", text: "text-destructive" },
 };
 
+function formatDistanceToStart(meters: number): string {
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(1)} km`;
+  }
+  return `${Math.round(meters)} m`;
+}
+
 const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
   const diff = difficultyLabel[circuit.difficulty || "Facile"] || difficultyLabel["Facile"];
+  const userPos = useUserLocation();
+
+  // Calculate distance to circuit start (first stop or first route point)
+  let distToStart: number | null = null;
+  if (userPos) {
+    let startLat: number | undefined;
+    let startLng: number | undefined;
+
+    if (circuit.stops.length > 0) {
+      startLat = circuit.stops[0].lat;
+      startLng = circuit.stops[0].lng;
+    } else if (circuit.route.length > 0) {
+      startLat = circuit.route[0][0];
+      startLng = circuit.route[0][1];
+    }
+
+    if (startLat !== undefined && startLng !== undefined) {
+      distToStart = haversine(userPos[0], userPos[1], startLat, startLng);
+    }
+  }
 
   return (
     <motion.div
@@ -58,6 +87,15 @@ const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
             <p className="text-muted-foreground text-sm line-clamp-2 mb-4 leading-relaxed">
               {circuit.description}
             </p>
+
+            {/* Distance to start */}
+            {distToStart !== null && (
+              <div className="flex items-center gap-1.5 mb-3 text-sm text-primary font-medium">
+                <Navigation className="w-3.5 h-3.5" />
+                <span>À {formatDistanceToStart(distToStart)} du départ</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
