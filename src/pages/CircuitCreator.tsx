@@ -416,7 +416,7 @@ const CircuitCreator = () => {
             published: publish,
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
-            price: 0,
+            price,
           })
           .select("id")
           .single();

@@ -454,6 +454,17 @@ const CreatorSidebar = ({
                   <SelectItem value="amateur">👤 Communauté (amateur)</SelectItem>
                 </SelectContent>
               </Select>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Prix (€)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="9.99"
+                  value={price}
+                  onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                />
+              </div>
             </div>
           </div>
 
