@@ -33,7 +33,6 @@ const poiEmoji: Record<string, string> = {
   site: "🏛️",
 };
 
-// Find the closest route point index to a given position
 function findClosestRouteIndex(route: [number, number][], pos: [number, number]): number {
   let minDist = Infinity;
   let idx = 0;
@@ -44,6 +43,13 @@ function findClosestRouteIndex(route: [number, number][], pos: [number, number])
   return idx;
 }
 
+// Offset a lat/lng by pixels on screen, used to position user at bottom-center
+function offsetLatLng(map: L.Map, latlng: [number, number], pixelOffsetY: number): L.LatLng {
+  const point = map.latLngToContainerPoint(latlng);
+  const offsetPoint = L.point(point.x, point.y - pixelOffsetY);
+  return map.containerPointToLatLng(offsetPoint);
+}
+
 const NavigationMap = ({
   route,
   stops,
@@ -52,6 +58,7 @@ const NavigationMap = ({
   currentStopIndex,
   participants = [],
 }: NavigationMapProps) => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
@@ -59,6 +66,7 @@ const NavigationMap = ({
   const participantMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const traveledLineRef = useRef<L.Polyline | null>(null);
   const remainingLineRef = useRef<L.Polyline | null>(null);
+  const labelsPaneRef = useRef<HTMLElement | null>(null);
 
   // Init map
   useEffect(() => {
@@ -69,9 +77,20 @@ const NavigationMap = ({
       attributionControl: false,
     });
 
+    // Base tiles (no labels)
     L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",
       { maxZoom: 19 }
+    ).addTo(map);
+
+    // Labels-only layer in its own pane for counter-rotation
+    const labelsPane = map.createPane("labelsPane");
+    labelsPane.style.zIndex = "450";
+    labelsPaneRef.current = labelsPane;
+
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
+      { maxZoom: 19, pane: "labelsPane" }
     ).addTo(map);
 
     // Draw route
@@ -150,6 +169,7 @@ const NavigationMap = ({
       participantMarkersRef.current.clear();
       traveledLineRef.current = null;
       remainingLineRef.current = null;
+      labelsPaneRef.current = null;
     };
   }, [route, stops]);
 
@@ -159,7 +179,6 @@ const NavigationMap = ({
     const map = mapInstance.current;
     const currentIds = new Set(participants.map(p => p.id));
 
-    // Remove markers for participants no longer present
     participantMarkersRef.current.forEach((marker, id) => {
       if (!currentIds.has(id)) {
         map.removeLayer(marker);
@@ -167,7 +186,6 @@ const NavigationMap = ({
       }
     });
 
-    // Add/update participant markers
     participants.forEach((p) => {
       const existing = participantMarkersRef.current.get(p.id);
       if (existing) {
@@ -234,7 +252,7 @@ const NavigationMap = ({
             "></div>
             <div style="
               width:22px;height:22px;position:relative;
-              transform:rotate(${heading}deg);
+              transform:rotate(0deg);
             ">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L4 20L12 16L20 20L12 2Z" fill="hsl(205,60%,48%)" stroke="white" stroke-width="2"/>
@@ -251,28 +269,28 @@ const NavigationMap = ({
       map.setView(userPos, 16);
     } else {
       userMarkerRef.current.setLatLng(userPos);
-
-      // Update arrow rotation (relative to map, since map rotates)
-      const el = userMarkerRef.current.getElement();
-      if (el) {
-        const arrow = el.querySelector("div[style*='rotate']") as HTMLElement;
-        if (arrow) {
-          // Arrow always points up since map rotates with heading
-          arrow.style.transform = `rotate(0deg)`;
-        }
-      }
-
-      map.panTo(userPos, { animate: true, duration: 0.5 });
     }
 
-    // Rotate the map container to match heading (north-up → heading-up)
+    // Position user at bottom-center: offset the map center upward
+    // so the user marker appears ~70% down the screen
+    const mapSize = map.getSize();
+    const offsetY = mapSize.y * 0.3; // shift center 30% up from middle → user at ~70% down
+    const newCenter = offsetLatLng(map, userPos, offsetY);
+    map.setView(newCenter, map.getZoom(), { animate: true, duration: 0.5 });
+
+    // Rotate the map to match heading + apply perspective tilt via wrapper
     const container = map.getContainer();
     container.style.transition = "transform 0.5s ease-out";
-    container.style.transform = `rotate(${-heading}deg)`;
-    // Scale up slightly to hide corners when rotated
     container.style.transformOrigin = "center center";
-    if (heading !== 0) {
-      container.style.transform = `rotate(${-heading}deg) scale(1.4)`;
+    container.style.transform = `rotate(${-heading}deg) scale(1.42)`;
+
+    // Counter-rotate labels pane so text stays readable
+    if (labelsPaneRef.current) {
+      // Labels pane needs to counter-rotate relative to the map container
+      // The pane is inside the rotated container, so we rotate it back
+      labelsPaneRef.current.style.transition = "transform 0.5s ease-out";
+      labelsPaneRef.current.style.transformOrigin = "center center";
+      labelsPaneRef.current.style.transform = `rotate(${heading}deg)`;
     }
   }, [userPos, heading, route]);
 
@@ -326,8 +344,22 @@ const NavigationMap = ({
           background: none !important;
           border: none !important;
         }
+        .nav-map-wrapper {
+          perspective: 800px;
+          overflow: hidden;
+          width: 100%;
+          height: 100%;
+        }
+        .nav-map-inner {
+          width: 100%;
+          height: 100%;
+          transform: rotateX(30deg);
+          transform-origin: center 70%;
+        }
       `}</style>
-      <div ref={mapRef} className="w-full h-full" />
+      <div ref={wrapperRef} className="nav-map-wrapper">
+        <div ref={mapRef} className="nav-map-inner" />
+      </div>
     </>
   );
 };
