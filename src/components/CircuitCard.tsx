@@ -92,10 +92,10 @@ const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
             </p>
 
             {/* Distance to start */}
-            {distToStart !== null && (
+            {roadInfo && (
               <div className="flex items-center gap-1.5 mb-3 text-sm text-primary font-medium">
-                <Navigation className="w-3.5 h-3.5" />
-                <span>À {formatDistanceToStart(distToStart)} du départ</span>
+                <Car className="w-3.5 h-3.5" />
+                <span>À {formatDistanceToStart(roadInfo.distance)} · {formatDurationToStart(roadInfo.duration)} de route</span>
               </div>
             )}
 
