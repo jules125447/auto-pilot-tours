@@ -259,12 +259,18 @@ const NavigationMap = ({
     const map = mapInstance.current;
 
     if (route.length > 1) {
-      const closestIdx = findClosestRouteIndex(route, userPos);
-      const traveled = route.slice(0, closestIdx + 1).concat([userPos]);
-      const remaining = [userPos].concat(route.slice(closestIdx + 1));
+      // Don't split traveled/remaining when routeToStart is active (user hasn't reached start)
+      if (routeToStart && routeToStart.length > 1) {
+        if (traveledLineRef.current) traveledLineRef.current.setLatLngs([]);
+        if (remainingLineRef.current) remainingLineRef.current.setLatLngs(route);
+      } else {
+        const closestIdx = findClosestRouteIndex(route, userPos);
+        const traveled = route.slice(0, closestIdx + 1).concat([userPos]);
+        const remaining = [userPos].concat(route.slice(closestIdx + 1));
 
-      if (traveledLineRef.current) traveledLineRef.current.setLatLngs(traveled);
-      if (remainingLineRef.current) remainingLineRef.current.setLatLngs(remaining);
+        if (traveledLineRef.current) traveledLineRef.current.setLatLngs(traveled);
+        if (remainingLineRef.current) remainingLineRef.current.setLatLngs(remaining);
+      }
     }
 
     if (!userMarkerRef.current) {
