@@ -1,9 +1,8 @@
-import { MapPin, Clock, Route, Star, Navigation } from "lucide-react";
+import { MapPin, Clock, Route, Star, Navigation, Car } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { CircuitWithStops } from "@/hooks/useCircuits";
-import { useUserLocation } from "@/hooks/useUserLocation";
-import { haversine } from "@/lib/turnDetection";
+import { useRoadDistance } from "@/hooks/useRoadDistance";
 
 interface CircuitCardProps {
   circuit: CircuitWithStops;
