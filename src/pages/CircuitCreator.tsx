@@ -558,6 +558,8 @@ const CircuitCreator = () => {
           setDistance={setDistance}
           circuitType={circuitType}
           setCircuitType={setCircuitType}
+          price={price}
+          setPrice={setPrice}
           stops={stops}
           audioZones={audioZones}
           musicSegments={musicSegments}
