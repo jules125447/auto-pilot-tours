@@ -240,20 +240,19 @@ const NavigationMap = ({
     const mapContainer = map.getContainer();
     mapContainer.style.transition = "transform 0.45s ease-out";
     mapContainer.style.transformOrigin = "center 78%";
-    mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(1.62)`;
+    // Reduce scale on small screens to avoid overflow
+    const isMobile = map.getSize().x < 500;
+    const mapScale = isMobile ? 1.35 : 1.62;
+    mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(${mapScale})`;
 
-    const targetZoom = Math.max(map.getZoom(), 16.5);
-    // First center exactly on user, then compute offset to place user at 78% down
+    const targetZoom = isMobile ? Math.max(map.getZoom(), 17) : Math.max(map.getZoom(), 16.5);
+    // First center exactly on user
     map.setView(userPos, targetZoom, { animate: false });
 
     const mapSize = map.getSize();
-    // We want the user to appear at (center-x, 78% height) in screen space.
-    // But the map container is rotated, so we must offset in the rotated coordinate system.
-    // Convert the desired screen offset into map-rotation-aware offset:
-    const offsetPx = mapSize.y * 0.28; // push user 28% below center -> appears at ~78%
+    // Offset to push user marker to ~75% down on screen
+    const offsetPx = mapSize.y * (isMobile ? 0.25 : 0.28);
     const bearingRad = (routeBearing * Math.PI) / 180;
-    // The rotation is -routeBearing on the container, so to move "down" in screen space
-    // we need to offset in the direction of routeBearing in map space
     const offsetX = offsetPx * Math.sin(bearingRad);
     const offsetY = offsetPx * Math.cos(bearingRad);
 
