@@ -148,6 +148,7 @@ const NavigationView = () => {
   const prevPosRef = useRef<[number, number] | null>(null);
   const smoothedHeadingRef = useRef<number>(0);
   const routeProgressRef = useRef<number | null>(null);
+  const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
