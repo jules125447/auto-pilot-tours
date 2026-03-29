@@ -331,7 +331,7 @@ const RecordButton = ({ onRecorded }: { onRecorded: (blob: Blob) => void }) => {
 const CreatorSidebar = ({
   title, setTitle, description, setDescription, region, setRegion,
   difficulty, setDifficulty, duration, setDuration, distance, setDistance,
-  circuitType, setCircuitType,
+  circuitType, setCircuitType, price, setPrice,
   stops, audioZones, musicSegments, soundSegments,
   selectedStopId, setSelectedStopId, selectedAudioId, setSelectedAudioId,
   selectedMusicId, setSelectedMusicId, selectedSoundId, setSelectedSoundId,
