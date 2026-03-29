@@ -332,13 +332,25 @@ const NavigationMap = ({
           height: 100%;
           overflow: hidden;
           perspective: 700px;
-          background: #f3f4f6;
+          background: hsl(var(--muted));
+          position: relative;
         }
         .nav-map-tilted {
           width: 100%;
           height: 100%;
-          transform: rotateX(43deg);
+          transform: translateY(-10%) scale(1.08) rotateX(43deg);
           transform-origin: center 78%;
+          will-change: transform;
+        }
+        @media (max-width: 768px) {
+          .nav-map-perspective {
+            perspective: 900px;
+          }
+          .nav-map-tilted {
+            height: 128%;
+            transform: translateY(-18%) scale(1.14) rotateX(52deg);
+            transform-origin: center 84%;
+          }
         }
       `}</style>
       <div className="nav-map-perspective">
