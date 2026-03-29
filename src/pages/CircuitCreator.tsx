@@ -75,6 +75,7 @@ const CircuitCreator = () => {
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
   const [circuitType, setCircuitType] = useState("amateur");
+  const [price, setPrice] = useState(9.99);
   const [coverImageUrl, setCoverImageUrl] = useState("");
 
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
@@ -122,6 +123,7 @@ const CircuitCreator = () => {
         setDuration(c.duration || "");
         setDistance(c.distance || "");
         setCircuitType((c as any).circuit_type || "amateur");
+        setPrice(c.price ?? 9.99);
         setCoverImageUrl(c.image_url || "");
         const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
         setRoute(loadedRoute);
@@ -383,6 +385,7 @@ const CircuitCreator = () => {
             published: publish,
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
+            price,
           })
           .eq("id", editId)
           .eq("creator_id", user.id);
@@ -413,7 +416,7 @@ const CircuitCreator = () => {
             published: publish,
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
-            price: 0,
+            price,
           })
           .select("id")
           .single();
@@ -555,6 +558,8 @@ const CircuitCreator = () => {
           setDistance={setDistance}
           circuitType={circuitType}
           setCircuitType={setCircuitType}
+          price={price}
+          setPrice={setPrice}
           stops={stops}
           audioZones={audioZones}
           musicSegments={musicSegments}

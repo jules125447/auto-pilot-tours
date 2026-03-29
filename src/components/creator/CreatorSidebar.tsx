@@ -27,6 +27,8 @@ interface CreatorSidebarProps {
   setDistance: (v: string) => void;
   circuitType: string;
   setCircuitType: (v: string) => void;
+  price: number;
+  setPrice: (v: number) => void;
   stops: StopData[];
   audioZones: AudioZoneData[];
   musicSegments: MusicSegmentData[];
@@ -329,7 +331,7 @@ const RecordButton = ({ onRecorded }: { onRecorded: (blob: Blob) => void }) => {
 const CreatorSidebar = ({
   title, setTitle, description, setDescription, region, setRegion,
   difficulty, setDifficulty, duration, setDuration, distance, setDistance,
-  circuitType, setCircuitType,
+  circuitType, setCircuitType, price, setPrice,
   stops, audioZones, musicSegments, soundSegments,
   selectedStopId, setSelectedStopId, selectedAudioId, setSelectedAudioId,
   selectedMusicId, setSelectedMusicId, selectedSoundId, setSelectedSoundId,
@@ -452,6 +454,17 @@ const CreatorSidebar = ({
                   <SelectItem value="amateur">👤 Communauté (amateur)</SelectItem>
                 </SelectContent>
               </Select>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Prix (€)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="9.99"
+                  value={price}
+                  onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                />
+              </div>
             </div>
           </div>
 

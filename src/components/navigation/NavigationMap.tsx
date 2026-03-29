@@ -274,7 +274,7 @@ const NavigationMap = ({
     // Position user at bottom-center: offset the map center upward
     // so the user marker appears ~70% down the screen
     const mapSize = map.getSize();
-    const offsetY = mapSize.y * 0.3; // shift center 30% up from middle → user at ~70% down
+    const offsetY = mapSize.y * 0.2; // shift center 20% up from middle → user at ~60% down
     const newCenter = offsetLatLng(map, userPos, offsetY);
     map.setView(newCenter, map.getZoom(), { animate: true, duration: 0.5 });
 
