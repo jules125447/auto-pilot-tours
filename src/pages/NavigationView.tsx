@@ -621,7 +621,30 @@ const NavigationView = () => {
   // Show preload / start button if audio not unlocked
   if (!audioUnlocked) {
     const handleStartPreload = () => {
-      if (circuit) preload(circuit);
+      if (circuit) {
+        preload(circuit);
+        // Fetch route to start from user position
+        navigator.geolocation?.getCurrentPosition(
+          async (pos) => {
+            const userCoords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+            let startLat: number | undefined;
+            let startLng: number | undefined;
+            if (circuit.stops.length > 0) {
+              startLat = circuit.stops[0].lat;
+              startLng = circuit.stops[0].lng;
+            } else if (circuit.route.length > 0) {
+              startLat = circuit.route[0][0];
+              startLng = circuit.route[0][1];
+            }
+            if (startLat !== undefined && startLng !== undefined) {
+              const result = await getRoute([userCoords, [startLat, startLng]]);
+              if (result) setRouteToStart(result.coordinates);
+            }
+          },
+          () => {},
+          { enableHighAccuracy: false, timeout: 10000 }
+        );
+      }
     };
 
     const handleLaunch = () => {
