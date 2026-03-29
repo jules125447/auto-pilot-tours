@@ -123,6 +123,7 @@ const CircuitCreator = () => {
         setDuration(c.duration || "");
         setDistance(c.distance || "");
         setCircuitType((c as any).circuit_type || "amateur");
+        setPrice(c.price ?? 9.99);
         setCoverImageUrl(c.image_url || "");
         const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
         setRoute(loadedRoute);
