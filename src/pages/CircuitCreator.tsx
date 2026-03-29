@@ -60,6 +60,47 @@ export interface SoundSegmentData {
 
 export type EditorMode = "route" | "stop" | "audio" | "music" | "sound" | "select";
 
+/** Given a route, find a point ~distanceMeters along it from the closest point to `origin`. */
+function findPointAlongRoute(
+  route: [number, number][],
+  origin: [number, number],
+  distanceMeters: number
+): [number, number] {
+  if (route.length < 2) return origin;
+
+  // Find closest route index to origin
+  let minDist = Infinity;
+  let startIdx = 0;
+  for (let i = 0; i < route.length; i++) {
+    const d = (route[i][0] - origin[0]) ** 2 + (route[i][1] - origin[1]) ** 2;
+    if (d < minDist) { minDist = d; startIdx = i; }
+  }
+
+  // Walk along route from startIdx until we've covered distanceMeters
+  let remaining = distanceMeters;
+  for (let i = startIdx; i < route.length - 1; i++) {
+    const segDist = haversineDistance(route[i], route[i + 1]);
+    if (remaining <= segDist) {
+      const ratio = remaining / segDist;
+      return [
+        route[i][0] + (route[i + 1][0] - route[i][0]) * ratio,
+        route[i][1] + (route[i + 1][1] - route[i][1]) * ratio,
+      ];
+    }
+    remaining -= segDist;
+  }
+  return route[route.length - 1];
+}
+
+function haversineDistance(a: [number, number], b: [number, number]): number {
+  const R = 6371000;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(b[0] - a[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const sin2 = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(sin2), Math.sqrt(1 - sin2));
+}
+
 const CircuitCreator = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
