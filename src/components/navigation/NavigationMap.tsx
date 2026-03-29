@@ -187,6 +187,7 @@ const NavigationMap = ({
       participantMarkersRef.current.clear();
       traveledLineRef.current = null;
       remainingLineRef.current = null;
+      routeToStartLineRef.current = null;
     };
   }, [route, stops]);
 
