@@ -75,6 +75,7 @@ const CircuitCreator = () => {
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState("");
   const [circuitType, setCircuitType] = useState("amateur");
+  const [price, setPrice] = useState(9.99);
   const [coverImageUrl, setCoverImageUrl] = useState("");
 
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
