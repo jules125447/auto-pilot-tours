@@ -130,7 +130,7 @@ const CircuitCreator = () => {
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
   const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
   const [soundSegments, setSoundSegments] = useState<SoundSegmentData[]>([]);
-  const [musicPlacingStart, setMusicPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
+  const [musicPlacingStart] = useState<{ lat: number; lng: number } | null>(null); // kept for map prop compatibility
   const [soundPlacingStart, setSoundPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
   const [testMode, setTestMode] = useState(false);
