@@ -22,28 +22,32 @@ function formatDistanceToStart(meters: number): string {
   return `${Math.round(meters)} m`;
 }
 
+function formatDurationToStart(seconds: number): string {
+  const mins = Math.round(seconds / 60);
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h${m > 0 ? `${m.toString().padStart(2, "0")}` : ""}`;
+  }
+  return `${mins} min`;
+}
+
 const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
   const diff = difficultyLabel[circuit.difficulty || "Facile"] || difficultyLabel["Facile"];
-  const userPos = useUserLocation();
 
-  // Calculate distance to circuit start (first stop or first route point)
-  let distToStart: number | null = null;
-  if (userPos) {
-    let startLat: number | undefined;
-    let startLng: number | undefined;
+  // Get start coordinates
+  let startLat: number | undefined;
+  let startLng: number | undefined;
 
-    if (circuit.stops.length > 0) {
-      startLat = circuit.stops[0].lat;
-      startLng = circuit.stops[0].lng;
-    } else if (circuit.route.length > 0) {
-      startLat = circuit.route[0][0];
-      startLng = circuit.route[0][1];
-    }
-
-    if (startLat !== undefined && startLng !== undefined) {
-      distToStart = haversine(userPos[0], userPos[1], startLat, startLng);
-    }
+  if (circuit.stops.length > 0) {
+    startLat = circuit.stops[0].lat;
+    startLng = circuit.stops[0].lng;
+  } else if (circuit.route.length > 0) {
+    startLat = circuit.route[0][0];
+    startLng = circuit.route[0][1];
   }
+
+  const roadInfo = useRoadDistance(startLat, startLng);
 
   return (
     <motion.div
