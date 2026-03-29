@@ -25,6 +25,7 @@ interface NavigationMapProps {
   heading: number;
   currentStopIndex: number;
   participants?: Participant[];
+  routeToStart?: [number, number][] | null;
 }
 
 const poiEmoji: Record<string, string> = {
@@ -73,6 +74,7 @@ const NavigationMap = ({
   heading,
   currentStopIndex,
   participants = [],
+  routeToStart,
 }: NavigationMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
@@ -81,6 +83,7 @@ const NavigationMap = ({
   const participantMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const traveledLineRef = useRef<L.Polyline | null>(null);
   const remainingLineRef = useRef<L.Polyline | null>(null);
+  const routeToStartLineRef = useRef<L.Polyline | null>(null);
   const [tracking, setTracking] = useState(true);
   const userInteractingRef = useRef(false);
 
@@ -184,6 +187,7 @@ const NavigationMap = ({
       participantMarkersRef.current.clear();
       traveledLineRef.current = null;
       remainingLineRef.current = null;
+      routeToStartLineRef.current = null;
     };
   }, [route, stops]);
 
@@ -217,6 +221,38 @@ const NavigationMap = ({
       }
     });
   }, [participants]);
+
+  // Draw orange route-to-start polyline
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const map = mapInstance.current;
+
+    // Remove old line
+    if (routeToStartLineRef.current) {
+      map.removeLayer(routeToStartLineRef.current);
+      routeToStartLineRef.current = null;
+    }
+
+    if (routeToStart && routeToStart.length > 1) {
+      // Orange glow
+      L.polyline(routeToStart, {
+        color: "#FF9500",
+        weight: 16,
+        opacity: 0.15,
+        smoothFactor: 1,
+      }).addTo(map);
+
+      routeToStartLineRef.current = L.polyline(routeToStart, {
+        color: "#FF9500",
+        weight: 6,
+        opacity: 0.9,
+        smoothFactor: 1,
+        lineCap: "round",
+        lineJoin: "round",
+        dashArray: "12 8",
+      }).addTo(map);
+    }
+  }, [routeToStart]);
 
   useEffect(() => {
     if (!mapInstance.current || !userPos) return;

@@ -1,9 +1,8 @@
-import { MapPin, Clock, Route, Star, Navigation } from "lucide-react";
+import { MapPin, Clock, Route, Star, Navigation, Car } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { CircuitWithStops } from "@/hooks/useCircuits";
-import { useUserLocation } from "@/hooks/useUserLocation";
-import { haversine } from "@/lib/turnDetection";
+import { useRoadDistance } from "@/hooks/useRoadDistance";
 
 interface CircuitCardProps {
   circuit: CircuitWithStops;
@@ -23,28 +22,32 @@ function formatDistanceToStart(meters: number): string {
   return `${Math.round(meters)} m`;
 }
 
+function formatDurationToStart(seconds: number): string {
+  const mins = Math.round(seconds / 60);
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h${m > 0 ? `${m.toString().padStart(2, "0")}` : ""}`;
+  }
+  return `${mins} min`;
+}
+
 const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
   const diff = difficultyLabel[circuit.difficulty || "Facile"] || difficultyLabel["Facile"];
-  const userPos = useUserLocation();
 
-  // Calculate distance to circuit start (first stop or first route point)
-  let distToStart: number | null = null;
-  if (userPos) {
-    let startLat: number | undefined;
-    let startLng: number | undefined;
+  // Get start coordinates
+  let startLat: number | undefined;
+  let startLng: number | undefined;
 
-    if (circuit.stops.length > 0) {
-      startLat = circuit.stops[0].lat;
-      startLng = circuit.stops[0].lng;
-    } else if (circuit.route.length > 0) {
-      startLat = circuit.route[0][0];
-      startLng = circuit.route[0][1];
-    }
-
-    if (startLat !== undefined && startLng !== undefined) {
-      distToStart = haversine(userPos[0], userPos[1], startLat, startLng);
-    }
+  if (circuit.stops.length > 0) {
+    startLat = circuit.stops[0].lat;
+    startLng = circuit.stops[0].lng;
+  } else if (circuit.route.length > 0) {
+    startLat = circuit.route[0][0];
+    startLng = circuit.route[0][1];
   }
+
+  const roadInfo = useRoadDistance(startLat, startLng);
 
   return (
     <motion.div
@@ -89,10 +92,10 @@ const CircuitCard = ({ circuit, index = 0 }: CircuitCardProps) => {
             </p>
 
             {/* Distance to start */}
-            {distToStart !== null && (
+            {roadInfo && (
               <div className="flex items-center gap-1.5 mb-3 text-sm text-primary font-medium">
-                <Navigation className="w-3.5 h-3.5" />
-                <span>À {formatDistanceToStart(distToStart)} du départ</span>
+                <Car className="w-3.5 h-3.5" />
+                <span>À {formatDistanceToStart(roadInfo.distance)} · {formatDurationToStart(roadInfo.duration)} de route</span>
               </div>
             )}
 

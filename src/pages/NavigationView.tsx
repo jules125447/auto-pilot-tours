@@ -13,6 +13,7 @@ import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
 import { useCircuitPreload } from "@/hooks/useCircuitPreload";
+import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 
 const FADE_DURATION = 2000;
@@ -147,6 +148,7 @@ const NavigationView = () => {
   const prevPosRef = useRef<[number, number] | null>(null);
   const smoothedHeadingRef = useRef<number>(0);
   const routeProgressRef = useRef<number | null>(null);
+  const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
@@ -619,7 +621,30 @@ const NavigationView = () => {
   // Show preload / start button if audio not unlocked
   if (!audioUnlocked) {
     const handleStartPreload = () => {
-      if (circuit) preload(circuit);
+      if (circuit) {
+        preload(circuit);
+        // Fetch route to start from user position
+        navigator.geolocation?.getCurrentPosition(
+          async (pos) => {
+            const userCoords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+            let startLat: number | undefined;
+            let startLng: number | undefined;
+            if (circuit.stops.length > 0) {
+              startLat = circuit.stops[0].lat;
+              startLng = circuit.stops[0].lng;
+            } else if (circuit.route.length > 0) {
+              startLat = circuit.route[0][0];
+              startLng = circuit.route[0][1];
+            }
+            if (startLat !== undefined && startLng !== undefined) {
+              const result = await getRoute([userCoords, [startLat, startLng]]);
+              if (result) setRouteToStart(result.coordinates);
+            }
+          },
+          () => {},
+          { enableHighAccuracy: false, timeout: 10000 }
+        );
+      }
     };
 
     const handleLaunch = () => {
@@ -635,6 +660,7 @@ const NavigationView = () => {
             userPos={null}
             heading={0}
             currentStopIndex={0}
+            routeToStart={routeToStart}
           />
           <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
             {!preloading && !preloadDone && (
@@ -715,6 +741,7 @@ const NavigationView = () => {
           heading={heading}
           currentStopIndex={currentStopIndex}
           participants={participants}
+          routeToStart={routeToStart}
         />
         <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
         <Link to={`/circuit/${circuit.id}`} className="absolute top-5 left-4 z-[1002] w-11 h-11 rounded-full bg-card/90 backdrop-blur-md border border-border flex items-center justify-center transition-all hover:bg-card active:scale-95 shadow-md">
