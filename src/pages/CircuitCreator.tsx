@@ -253,7 +253,7 @@ const CircuitCreator = () => {
         setSelectedAudioId(newZone.id);
       } else if (mode === "music") {
         // Auto-place point B ~30 seconds along the route from point A
-        const endPoint = findPointAlongRoute(routeRef.current, [lat, lng], 420); // ~420m ≈ 30s at 50km/h
+        const endPoint = findPointAlongRoute(route, [lat, lng], 420); // ~420m ≈ 30s at 50km/h
         const newSegment: MusicSegmentData = {
           id: crypto.randomUUID(),
           startLat: lat,
