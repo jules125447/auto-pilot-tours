@@ -30,8 +30,14 @@ const RouteMap = ({ route, stops = [], className = "", interactive = true }: Rou
       attributionControl: false,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg", {
       maxZoom: 18,
+    }).addTo(map);
+
+    // Subtle label overlay for readability
+    L.tileLayer("https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png", {
+      maxZoom: 18,
+      opacity: 0.4,
     }).addTo(map);
 
     if (route.length > 0) {
