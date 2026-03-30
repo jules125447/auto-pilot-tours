@@ -561,6 +561,37 @@ const NavigationView = () => {
   }, [circuit, userPos, currentStopIndex]);
 
   const navInfo = getNavInfo();
+  const circuitStartPoint = useMemo<[number, number] | null>(() => {
+    if (!circuit) return null;
+    if (circuit.stops.length > 0) {
+      return [circuit.stops[0].lat, circuit.stops[0].lng];
+    }
+
+    const firstRoutePoint = circuit.route?.[0] as [number, number] | undefined;
+    return firstRoutePoint ?? null;
+  }, [circuit]);
+
+  useEffect(() => {
+    if (!routeToStart) return;
+
+    if (currentStopIndex > 0) {
+      setRouteToStart(null);
+      return;
+    }
+
+    if (!userPos || !circuitStartPoint) return;
+
+    const distanceToStart = haversine(
+      userPos[0],
+      userPos[1],
+      circuitStartPoint[0],
+      circuitStartPoint[1]
+    );
+
+    if (distanceToStart < 45) {
+      setRouteToStart(null);
+    }
+  }, [routeToStart, currentStopIndex, userPos, circuitStartPoint]);
 
   const handleNextStop = () => {
     if (!circuit) return;
@@ -627,17 +658,8 @@ const NavigationView = () => {
         navigator.geolocation?.getCurrentPosition(
           async (pos) => {
             const userCoords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-            let startLat: number | undefined;
-            let startLng: number | undefined;
-            if (circuit.stops.length > 0) {
-              startLat = circuit.stops[0].lat;
-              startLng = circuit.stops[0].lng;
-            } else if (circuit.route.length > 0) {
-              startLat = circuit.route[0][0];
-              startLng = circuit.route[0][1];
-            }
-            if (startLat !== undefined && startLng !== undefined) {
-              const result = await getRoute([userCoords, [startLat, startLng]]);
+            if (circuitStartPoint) {
+              const result = await getRoute([userCoords, circuitStartPoint]);
               if (result) setRouteToStart(result.coordinates);
             }
           },

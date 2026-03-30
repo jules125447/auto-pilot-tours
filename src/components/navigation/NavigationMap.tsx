@@ -2,6 +2,8 @@ import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Locate } from "lucide-react";
+import FixedUserArrow from "@/components/navigation/FixedUserArrow";
+import { MAP_TILE_SOURCES, createBaseTileLayer, findClosestRouteIndex, getRouteBearing } from "@/lib/navigationMap";
 
 interface Stop {
   id: string;
@@ -28,44 +30,17 @@ interface NavigationMapProps {
   routeToStart?: [number, number][] | null;
 }
 
+const MOBILE_TRACK_ANCHOR_Y = 0.78;
+const DESKTOP_TRACK_ANCHOR_Y = 0.76;
+const MOBILE_TRACK_SCALE = 1.35;
+const DESKTOP_TRACK_SCALE = 1.52;
+
 const poiEmoji: Record<string, string> = {
   viewpoint: "👁️",
   restaurant: "🍽️",
   parking: "🅿️",
   site: "🏛️",
 };
-
-function findClosestRouteIndex(route: [number, number][], pos: [number, number]): number {
-  let minDist = Infinity;
-  let idx = 0;
-  for (let i = 0; i < route.length; i++) {
-    const d = (route[i][0] - pos[0]) ** 2 + (route[i][1] - pos[1]) ** 2;
-    if (d < minDist) {
-      minDist = d;
-      idx = i;
-    }
-  }
-  return idx;
-}
-
-function getRouteBearing(route: [number, number][], pos: [number, number]): number {
-  const idx = findClosestRouteIndex(route, pos);
-  const startIdx = Math.max(0, idx - 1);
-  const endIdx = Math.min(route.length - 1, idx + 6);
-  const from = route[startIdx];
-  const to = route[endIdx];
-  if (from[0] === to[0] && from[1] === to[1]) return 0;
-
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const toDeg = (r: number) => (r * 180) / Math.PI;
-  const dLng = toRad(to[1] - from[1]);
-  const y = Math.sin(dLng) * Math.cos(toRad(to[0]));
-  const x =
-    Math.cos(toRad(from[0])) * Math.sin(toRad(to[0])) -
-    Math.sin(toRad(from[0])) * Math.cos(toRad(to[0])) * Math.cos(dLng);
-
-  return (toDeg(Math.atan2(y, x)) + 360) % 360;
-}
 
 const NavigationMap = ({
   route,
@@ -84,16 +59,26 @@ const NavigationMap = ({
   const traveledLineRef = useRef<L.Polyline | null>(null);
   const remainingLineRef = useRef<L.Polyline | null>(null);
   const routeToStartLineRef = useRef<L.Polyline | null>(null);
+  const routeToStartGlowRef = useRef<L.Polyline | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [tracking, setTracking] = useState(true);
   const userInteractingRef = useRef(false);
+  const activeRoute = useMemo(() => {
+    if (routeToStart && routeToStart.length > 1) return routeToStart;
+    return route;
+  }, [route, routeToStart]);
 
   const routeBearing = useMemo(() => {
-    if (!userPos || route.length < 2) return 0;
-    return getRouteBearing(route, userPos);
-  }, [userPos, route]);
+    if (!userPos) return heading;
+    if (activeRoute.length < 2) return heading;
+    return getRouteBearing(activeRoute, userPos) || heading;
+  }, [userPos, activeRoute, heading]);
 
   const handleRecenter = useCallback(() => {
+    userInteractingRef.current = false;
     setTracking(true);
+    mapInstance.current?.invalidateSize({ pan: false });
   }, []);
 
   useEffect(() => {
@@ -106,11 +91,26 @@ const NavigationMap = ({
       dragging: true,
       doubleClickZoom: true,
       touchZoom: true,
+      preferCanvas: true,
     });
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-    }).addTo(map);
+    const attachTileLayer = (sourceIndex: number) => {
+      const tileLayer = createBaseTileLayer(MAP_TILE_SOURCES[sourceIndex]);
+      let tileErrors = 0;
+
+      tileLayer.on("tileerror", () => {
+        tileErrors += 1;
+        if (tileErrors < 4 || sourceIndex >= MAP_TILE_SOURCES.length - 1) return;
+
+        map.removeLayer(tileLayer);
+        tileLayerRef.current = attachTileLayer(sourceIndex + 1);
+      });
+
+      tileLayer.addTo(map);
+      return tileLayer;
+    };
+
+    tileLayerRef.current = attachTileLayer(0);
 
     if (route.length > 0) {
       L.polyline(route, {
@@ -164,14 +164,40 @@ const NavigationMap = ({
       stopMarkersRef.current.push(marker);
     });
 
+    const invalidateMapSize = () => {
+      requestAnimationFrame(() => {
+        map.invalidateSize({ pan: false });
+      });
+    };
+
+    map.whenReady(invalidateMapSize);
+    window.addEventListener("resize", invalidateMapSize);
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserverRef.current = new ResizeObserver(invalidateMapSize);
+      resizeObserverRef.current.observe(mapRef.current);
+    }
+
     // Detect user interaction to break tracking
+    const mapContainer = map.getContainer();
+    const markUserInteraction = () => {
+      userInteractingRef.current = true;
+    };
     const onDragStart = () => {
       userInteractingRef.current = true;
       setTracking(false);
     };
+    const onMoveStart = () => {
+      if (userInteractingRef.current) {
+        setTracking(false);
+      }
+    };
+
+    mapContainer.addEventListener("pointerdown", markUserInteraction, { passive: true });
+    mapContainer.addEventListener("wheel", markUserInteraction, { passive: true });
     map.on("dragstart", onDragStart);
+    map.on("movestart", onMoveStart);
     map.on("zoomstart", () => {
-      // Only break tracking if user initiated (not programmatic)
       if (userInteractingRef.current) {
         setTracking(false);
       }
@@ -180,13 +206,20 @@ const NavigationMap = ({
     mapInstance.current = map;
 
     return () => {
+      mapContainer.removeEventListener("pointerdown", markUserInteraction);
+      mapContainer.removeEventListener("wheel", markUserInteraction);
+      window.removeEventListener("resize", invalidateMapSize);
+      resizeObserverRef.current?.disconnect();
       map.off("dragstart", onDragStart);
+      map.off("movestart", onMoveStart);
+      tileLayerRef.current = null;
       map.remove();
       mapInstance.current = null;
       stopMarkersRef.current = [];
       participantMarkersRef.current.clear();
       traveledLineRef.current = null;
       remainingLineRef.current = null;
+      routeToStartGlowRef.current = null;
       routeToStartLineRef.current = null;
     };
   }, [route, stops]);
@@ -227,15 +260,18 @@ const NavigationMap = ({
     if (!mapInstance.current) return;
     const map = mapInstance.current;
 
-    // Remove old line
+    if (routeToStartGlowRef.current) {
+      map.removeLayer(routeToStartGlowRef.current);
+      routeToStartGlowRef.current = null;
+    }
+
     if (routeToStartLineRef.current) {
       map.removeLayer(routeToStartLineRef.current);
       routeToStartLineRef.current = null;
     }
 
     if (routeToStart && routeToStart.length > 1) {
-      // Orange glow
-      L.polyline(routeToStart, {
+      routeToStartGlowRef.current = L.polyline(routeToStart, {
         color: "#FF9500",
         weight: 16,
         opacity: 0.15,
@@ -251,15 +287,26 @@ const NavigationMap = ({
         lineJoin: "round",
         dashArray: "12 8",
       }).addTo(map);
+
+      if (!userPos) {
+        map.fitBounds(routeToStartLineRef.current.getBounds(), { padding: [80, 80] });
+      }
     }
-  }, [routeToStart]);
+  }, [routeToStart, userPos]);
 
   useEffect(() => {
-    if (!mapInstance.current || !userPos) return;
+    if (!mapInstance.current) return;
     const map = mapInstance.current;
+    const mapContainer = map.getContainer();
+
+    if (!userPos) {
+      mapContainer.style.transition = "transform 0.3s ease-out";
+      mapContainer.style.transformOrigin = "50% 50%";
+      mapContainer.style.transform = "rotate(0deg) scale(1)";
+      return;
+    }
 
     if (route.length > 1) {
-      // Don't split traveled/remaining when routeToStart is active (user hasn't reached start)
       if (routeToStart && routeToStart.length > 1) {
         if (traveledLineRef.current) traveledLineRef.current.setLatLngs([]);
         if (remainingLineRef.current) remainingLineRef.current.setLatLngs(route);
@@ -299,40 +346,37 @@ const NavigationMap = ({
     if (arrowIcon) {
       arrowIcon.style.transform = `rotate(${routeBearing}deg)`;
     }
+    if (markerElement) {
+      markerElement.style.opacity = tracking ? "0" : "1";
+    }
 
-    // Only auto-center/rotate when tracking
     if (tracking) {
       userInteractingRef.current = false;
 
-      const mapContainer = map.getContainer();
-      mapContainer.style.transition = "transform 0.45s ease-out";
-      mapContainer.style.transformOrigin = "center 78%";
+      mapContainer.style.transition = "transform 0.3s ease-out";
       const isMobile = map.getSize().x < 500;
-      const mapScale = isMobile ? 1.35 : 1.62;
+      const anchorY = isMobile ? MOBILE_TRACK_ANCHOR_Y : DESKTOP_TRACK_ANCHOR_Y;
+      const mapScale = isMobile ? MOBILE_TRACK_SCALE : DESKTOP_TRACK_SCALE;
+      mapContainer.style.transformOrigin = `50% ${anchorY * 100}%`;
       mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(${mapScale})`;
 
-      const targetZoom = isMobile ? Math.max(map.getZoom(), 17) : Math.max(map.getZoom(), 16.5);
+      const targetZoom = isMobile ? Math.max(map.getZoom(), 17) : Math.max(map.getZoom(), 16);
       map.setView(userPos, targetZoom, { animate: false });
 
       const mapSize = map.getSize();
-      const offsetPx = mapSize.y * (isMobile ? 0.25 : 0.28);
-      const horizontalBiasPx = isMobile ? 10 : 4;
-      const bearingRad = (routeBearing * Math.PI) / 180;
-      const offsetX = offsetPx * Math.sin(bearingRad);
-      const offsetY = offsetPx * Math.cos(bearingRad);
-
+      const targetPoint = L.point(mapSize.x / 2, mapSize.y * anchorY);
       const userPoint = map.latLngToContainerPoint(userPos);
+      const centerPoint = L.point(mapSize.x / 2, mapSize.y / 2);
       const newCenter = map.containerPointToLatLng(
-        L.point(userPoint.x - offsetX - horizontalBiasPx, userPoint.y - offsetY)
+        centerPoint.add(userPoint.subtract(targetPoint))
       );
       map.setView(newCenter, targetZoom, { animate: false });
     } else {
-      // When not tracking, reset map container rotation/scale so user can explore freely
-      const mapContainer = map.getContainer();
-      mapContainer.style.transition = "transform 0.45s ease-out";
+      mapContainer.style.transition = "transform 0.3s ease-out";
+      mapContainer.style.transformOrigin = "50% 50%";
       mapContainer.style.transform = "rotate(0deg) scale(1)";
     }
-  }, [userPos, routeBearing, route, heading, tracking]);
+  }, [userPos, routeBearing, route, tracking, routeToStart]);
 
   useEffect(() => {
     stopMarkersRef.current.forEach((marker, i) => {
@@ -398,6 +442,9 @@ const NavigationMap = ({
         .poi-tooltip-nav::before {
           border-top-color: white !important;
         }
+        .leaflet-container {
+          background: hsl(var(--muted));
+        }
         .nav-map-perspective {
           width: 100%;
           height: 100%;
@@ -426,6 +473,10 @@ const NavigationMap = ({
       `}</style>
       <div className="nav-map-perspective">
         <div ref={mapRef} className="nav-map-tilted" />
+        <FixedUserArrow
+          anchorY={tracking && userPos ? (window.innerWidth < 500 ? MOBILE_TRACK_ANCHOR_Y : DESKTOP_TRACK_ANCHOR_Y) : DESKTOP_TRACK_ANCHOR_Y}
+          visible={tracking && !!userPos}
+        />
         {/* Recenter button — shown when user has panned away */}
         {!tracking && userPos && (
           <button
