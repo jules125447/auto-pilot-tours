@@ -2,6 +2,9 @@ import L from "leaflet";
 
 export type MapLatLng = [number, number];
 
+export const MOBILE_TRACK_ANCHOR_Y = 0.82;
+export const DESKTOP_TRACK_ANCHOR_Y = 0.8;
+
 interface TileSource {
   options: L.TileLayerOptions;
   url: string;
@@ -32,6 +35,33 @@ export const MAP_TILE_SOURCES: TileSource[] = [
 
 export function createBaseTileLayer(source: TileSource) {
   return L.tileLayer(source.url, source.options);
+}
+
+export function getTrackingAnchorY(mapWidth: number) {
+  return mapWidth < 768 ? MOBILE_TRACK_ANCHOR_Y : DESKTOP_TRACK_ANCHOR_Y;
+}
+
+export function getTrackingZoom(mapWidth: number, currentZoom: number) {
+  return mapWidth < 768 ? Math.max(currentZoom, 17) : Math.max(currentZoom, 16);
+}
+
+export function centerMapOnAnchoredPoint(
+  map: L.Map,
+  pos: MapLatLng,
+  anchorY: number,
+  zoom: number
+) {
+  map.setView(pos, zoom, { animate: false });
+
+  const mapSize = map.getSize();
+  const targetPoint = L.point(mapSize.x / 2, mapSize.y * anchorY);
+  const userPoint = map.latLngToContainerPoint(pos);
+  const centerPoint = L.point(mapSize.x / 2, mapSize.y / 2);
+  const anchoredCenter = map.containerPointToLatLng(
+    centerPoint.add(userPoint.subtract(targetPoint))
+  );
+
+  map.setView(anchoredCenter, zoom, { animate: false });
 }
 
 export function findClosestRouteIndex(route: MapLatLng[], pos: MapLatLng): number {
