@@ -450,6 +450,7 @@ const NavigationMap = ({
         <div ref={mapRef} className="nav-map-canvas" />
         <FixedUserArrow
           anchorY={getTrackingAnchorY(typeof window === "undefined" ? 1024 : window.innerWidth)}
+          bearing={routeBearing}
           visible={tracking && !!userPos && mapReady}
         />
         {/* Recenter button — shown when user has panned away */}

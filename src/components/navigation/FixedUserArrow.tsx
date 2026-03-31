@@ -1,9 +1,10 @@
 interface FixedUserArrowProps {
   anchorY: number;
+  bearing: number;
   visible: boolean;
 }
 
-const FixedUserArrow = ({ anchorY, visible }: FixedUserArrowProps) => {
+const FixedUserArrow = ({ anchorY, bearing, visible }: FixedUserArrowProps) => {
   if (!visible) return null;
 
   return (
@@ -14,7 +15,7 @@ const FixedUserArrow = ({ anchorY, visible }: FixedUserArrowProps) => {
     >
       <div className="waze-arrow-shell">
         <div className="waze-arrow-pulse" />
-        <div className="waze-arrow-icon">
+        <div className="waze-arrow-icon" style={{ transform: `rotate(${bearing}deg)` }}>
           <svg viewBox="0 0 40 40" width="40" height="40">
             <polygon
               points="20,4 8,32 20,26 32,32"
