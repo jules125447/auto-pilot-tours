@@ -138,6 +138,7 @@ const NavigationView = () => {
   const [calibrated, setCalibrated] = useState(false);
   const [participants, setParticipants] = useState<{ id: string; display_name: string | null; lat: number; lng: number }[]>([]);
   const watchIdRef = useRef<number | null>(null);
+  const routeToStartAbortRef = useRef<AbortController | null>(null);
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeMusicIdRef = useRef<string | null>(null);
   const activeSoundsRef = useRef<Map<string, any>>(new Map());
@@ -222,7 +223,6 @@ const NavigationView = () => {
 
   // Geolocation
   useEffect(() => {
-    if (!audioUnlocked) return;
     if (!navigator.geolocation) return;
 
     // Smooth heading using shortest-arc interpolation
@@ -246,6 +246,10 @@ const NavigationView = () => {
       const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
       return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     };
+
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -283,17 +287,18 @@ const NavigationView = () => {
         }
       },
       (err) => console.warn("Geo error:", err.message),
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 8000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 }
     );
     return () => {
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (calibrationTimerRef.current) clearTimeout(calibrationTimerRef.current);
     };
-  }, [audioUnlocked]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      routeToStartAbortRef.current?.abort();
       if (musicAudioRef.current) {
         musicAudioRef.current.pause();
         musicAudioRef.current = null;
@@ -572,6 +577,41 @@ const NavigationView = () => {
   }, [circuit]);
 
   useEffect(() => {
+    if (!audioUnlocked || !circuitStartPoint || !rawUserPos || currentStopIndex > 0) return;
+
+    const distanceToStart = haversine(
+      rawUserPos[0],
+      rawUserPos[1],
+      circuitStartPoint[0],
+      circuitStartPoint[1]
+    );
+
+    if (distanceToStart < 45) {
+      setRouteToStart(null);
+      return;
+    }
+
+    routeToStartAbortRef.current?.abort();
+    const abortController = new AbortController();
+    routeToStartAbortRef.current = abortController;
+
+    const timeoutId = window.setTimeout(async () => {
+      const result = await getRoute([rawUserPos, circuitStartPoint], {
+        signal: abortController.signal,
+      });
+
+      if (!abortController.signal.aborted) {
+        setRouteToStart(result?.coordinates ?? null);
+      }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [audioUnlocked, circuitStartPoint, rawUserPos, currentStopIndex]);
+
+  useEffect(() => {
     if (!routeToStart) return;
 
     if (currentStopIndex > 0) {
@@ -654,18 +694,6 @@ const NavigationView = () => {
     const handleStartPreload = () => {
       if (circuit) {
         preload(circuit);
-        // Fetch route to start from user position
-        navigator.geolocation?.getCurrentPosition(
-          async (pos) => {
-            const userCoords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-            if (circuitStartPoint) {
-              const result = await getRoute([userCoords, circuitStartPoint]);
-              if (result) setRouteToStart(result.coordinates);
-            }
-          },
-          () => {},
-          { enableHighAccuracy: false, timeout: 10000 }
-        );
       }
     };
 
