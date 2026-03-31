@@ -3,7 +3,15 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Locate } from "lucide-react";
 import FixedUserArrow from "@/components/navigation/FixedUserArrow";
-import { MAP_TILE_SOURCES, createBaseTileLayer, findClosestRouteIndex, getRouteBearing } from "@/lib/navigationMap";
+import {
+  MAP_TILE_SOURCES,
+  centerMapOnAnchoredPoint,
+  createBaseTileLayer,
+  findClosestRouteIndex,
+  getRouteBearing,
+  getTrackingAnchorY,
+  getTrackingZoom,
+} from "@/lib/navigationMap";
 
 interface Stop {
   id: string;
@@ -29,11 +37,6 @@ interface NavigationMapProps {
   participants?: Participant[];
   routeToStart?: [number, number][] | null;
 }
-
-const MOBILE_TRACK_ANCHOR_Y = 0.78;
-const DESKTOP_TRACK_ANCHOR_Y = 0.76;
-const MOBILE_TRACK_SCALE = 1.35;
-const DESKTOP_TRACK_SCALE = 1.52;
 
 const poiEmoji: Record<string, string> = {
   viewpoint: "👁️",
@@ -63,6 +66,7 @@ const NavigationMap = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [tracking, setTracking] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const userInteractingRef = useRef(false);
   const activeRoute = useMemo(() => {
     if (routeToStart && routeToStart.length > 1) return routeToStart;
@@ -92,6 +96,9 @@ const NavigationMap = ({
       doubleClickZoom: true,
       touchZoom: true,
       preferCanvas: true,
+      fadeAnimation: false,
+      zoomAnimation: false,
+      markerZoomAnimation: false,
     });
 
     const attachTileLayer = (sourceIndex: number) => {
@@ -170,7 +177,10 @@ const NavigationMap = ({
       });
     };
 
-    map.whenReady(invalidateMapSize);
+    map.whenReady(() => {
+      invalidateMapSize();
+      setMapReady(true);
+    });
     window.addEventListener("resize", invalidateMapSize);
 
     if (typeof ResizeObserver !== "undefined") {
@@ -221,6 +231,7 @@ const NavigationMap = ({
       remainingLineRef.current = null;
       routeToStartGlowRef.current = null;
       routeToStartLineRef.current = null;
+      setMapReady(false);
     };
   }, [route, stops]);
 
@@ -297,12 +308,8 @@ const NavigationMap = ({
   useEffect(() => {
     if (!mapInstance.current) return;
     const map = mapInstance.current;
-    const mapContainer = map.getContainer();
 
     if (!userPos) {
-      mapContainer.style.transition = "transform 0.3s ease-out";
-      mapContainer.style.transformOrigin = "50% 50%";
-      mapContainer.style.transform = "rotate(0deg) scale(1)";
       return;
     }
 
@@ -353,28 +360,10 @@ const NavigationMap = ({
     if (tracking) {
       userInteractingRef.current = false;
 
-      mapContainer.style.transition = "transform 0.3s ease-out";
-      const isMobile = map.getSize().x < 500;
-      const anchorY = isMobile ? MOBILE_TRACK_ANCHOR_Y : DESKTOP_TRACK_ANCHOR_Y;
-      const mapScale = isMobile ? MOBILE_TRACK_SCALE : DESKTOP_TRACK_SCALE;
-      mapContainer.style.transformOrigin = `50% ${anchorY * 100}%`;
-      mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(${mapScale})`;
-
-      const targetZoom = isMobile ? Math.max(map.getZoom(), 17) : Math.max(map.getZoom(), 16);
-      map.setView(userPos, targetZoom, { animate: false });
-
-      const mapSize = map.getSize();
-      const targetPoint = L.point(mapSize.x / 2, mapSize.y * anchorY);
-      const userPoint = map.latLngToContainerPoint(userPos);
-      const centerPoint = L.point(mapSize.x / 2, mapSize.y / 2);
-      const newCenter = map.containerPointToLatLng(
-        centerPoint.add(userPoint.subtract(targetPoint))
-      );
-      map.setView(newCenter, targetZoom, { animate: false });
-    } else {
-      mapContainer.style.transition = "transform 0.3s ease-out";
-      mapContainer.style.transformOrigin = "50% 50%";
-      mapContainer.style.transform = "rotate(0deg) scale(1)";
+      const mapWidth = map.getSize().x;
+      const anchorY = getTrackingAnchorY(mapWidth);
+      const targetZoom = getTrackingZoom(mapWidth, map.getZoom());
+      centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom);
     }
   }, [userPos, routeBearing, route, tracking, routeToStart]);
 
@@ -445,37 +434,23 @@ const NavigationMap = ({
         .leaflet-container {
           background: hsl(var(--muted));
         }
-        .nav-map-perspective {
+        .nav-map-shell {
           width: 100%;
           height: 100%;
           overflow: hidden;
-          perspective: 700px;
           background: hsl(var(--muted));
           position: relative;
         }
-        .nav-map-tilted {
+        .nav-map-canvas {
           width: 100%;
           height: 100%;
-          transform: translateY(-10%) scale(1.08) rotateX(43deg);
-          transform-origin: center 78%;
-          will-change: transform;
-        }
-        @media (max-width: 768px) {
-          .nav-map-perspective {
-            perspective: 900px;
-          }
-          .nav-map-tilted {
-            height: 128%;
-            transform: translateY(-18%) scale(1.14) rotateX(52deg);
-            transform-origin: center 84%;
-          }
         }
       `}</style>
-      <div className="nav-map-perspective">
-        <div ref={mapRef} className="nav-map-tilted" />
+      <div className="nav-map-shell">
+        <div ref={mapRef} className="nav-map-canvas" />
         <FixedUserArrow
-          anchorY={tracking && userPos ? (window.innerWidth < 500 ? MOBILE_TRACK_ANCHOR_Y : DESKTOP_TRACK_ANCHOR_Y) : DESKTOP_TRACK_ANCHOR_Y}
-          visible={tracking && !!userPos}
+          anchorY={getTrackingAnchorY(typeof window === "undefined" ? 1024 : window.innerWidth)}
+          visible={tracking && !!userPos && mapReady}
         />
         {/* Recenter button — shown when user has panned away */}
         {!tracking && userPos && (
