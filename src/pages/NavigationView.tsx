@@ -18,6 +18,7 @@ import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
+const START_ARRIVAL_RADIUS_METERS = 45;
 
 interface RouteProjection {
   point: [number, number];
@@ -125,6 +126,7 @@ const NavigationView = () => {
   }, [user, circuit, id]);
 
   const [rawUserPos, setRawUserPos] = useState<[number, number] | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [heading, setHeading] = useState(0);
   const [speed, setSpeed] = useState<number | null>(null);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
@@ -150,10 +152,35 @@ const NavigationView = () => {
   const smoothedHeadingRef = useRef<number>(0);
   const routeProgressRef = useRef<number | null>(null);
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
+  const [hasReachedStart, setHasReachedStart] = useState(false);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
 
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
+
+  const activeSnapRoute = useMemo<[number, number][] | null>(() => {
+    if (!hasReachedStart && currentStopIndex === 0 && routeToStart && routeToStart.length > 1) {
+      return routeToStart;
+    }
+
+    const routeCoords = circuit?.route as [number, number][] | undefined;
+    if (routeCoords && routeCoords.length > 1) {
+      return routeCoords;
+    }
+
+    return null;
+  }, [hasReachedStart, currentStopIndex, routeToStart, circuit?.route]);
+
+  const activeSnapRouteKey = useMemo(() => {
+    if (!activeSnapRoute) return "none";
+    return !hasReachedStart && currentStopIndex === 0 && routeToStart && routeToStart.length > 1
+      ? "route-to-start"
+      : "circuit-route";
+  }, [activeSnapRoute, hasReachedStart, currentStopIndex, routeToStart]);
+
+  useEffect(() => {
+    routeProgressRef.current = null;
+  }, [activeSnapRouteKey, circuit?.id]);
 
   useEffect(() => {
     if (!rawUserPos) {
@@ -162,15 +189,20 @@ const NavigationView = () => {
       return;
     }
 
-    const routeCoords = circuit?.route as [number, number][] | undefined;
-    if (!routeCoords || routeCoords.length < 2) {
+    if (!activeSnapRoute || activeSnapRoute.length < 2) {
       setUserPos(rawUserPos);
       routeProgressRef.current = null;
       return;
     }
 
-    const projected = projectClosestPointOnRoute(rawUserPos[0], rawUserPos[1], routeCoords);
-    if (projected.distance >= 200) {
+    const projected = projectClosestPointOnRoute(rawUserPos[0], rawUserPos[1], activeSnapRoute);
+    const accuracyMeters = gpsAccuracy ?? 30;
+    const isApproachRoute = activeSnapRouteKey === "route-to-start";
+    const maxSnapDistance = isApproachRoute
+      ? Math.min(70, Math.max(20, accuracyMeters * 1.15))
+      : Math.min(45, Math.max(12, accuracyMeters * 0.9));
+
+    if (projected.distance > maxSnapDistance) {
       setUserPos(rawUserPos);
       routeProgressRef.current = null;
       return;
@@ -180,19 +212,32 @@ const NavigationView = () => {
     let nextProgress = projected.cumulative;
 
     if (previousProgress !== null) {
-      const maxBackwardStep = 4;
-      const maxForwardStep = 18;
+      const speedMs = speed ? speed / 3.6 : 0;
+      const maxBackwardStep = isApproachRoute ? 14 : 10;
+      const maxForwardStep = Math.max(isApproachRoute ? 28 : 42, speedMs * 4.5);
       const clampedProgress = Math.max(
         Math.max(0, previousProgress - maxBackwardStep),
         Math.min(projected.total, Math.min(projected.cumulative, previousProgress + maxForwardStep))
       );
 
-      nextProgress = previousProgress + (clampedProgress - previousProgress) * 0.35;
+      nextProgress = previousProgress + (clampedProgress - previousProgress) * (isApproachRoute ? 0.72 : 0.6);
     }
 
     routeProgressRef.current = nextProgress;
-    setUserPos(interpolateRoutePoint(routeCoords, nextProgress));
-  }, [rawUserPos, circuit?.route]);
+    const snappedPoint = interpolateRoutePoint(activeSnapRoute, nextProgress);
+    const blendFactor = isApproachRoute
+      ? 0.9
+      : accuracyMeters <= 12
+        ? 0.8
+        : accuracyMeters <= 25
+          ? 0.65
+          : 0.45;
+
+    setUserPos([
+      rawUserPos[0] + (snappedPoint[0] - rawUserPos[0]) * blendFactor,
+      rawUserPos[1] + (snappedPoint[1] - rawUserPos[1]) * blendFactor,
+    ]);
+  }, [rawUserPos, activeSnapRoute, activeSnapRouteKey, gpsAccuracy, speed]);
 
   const turns = useMemo(() => {
     if (!circuit?.route) return [];
@@ -263,6 +308,7 @@ const NavigationView = () => {
 
         const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
         setRawUserPos(newPos);
+        setGpsAccuracy(Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null);
 
         // Determine heading: prefer device heading, fallback to calculated
         let rawHeading: number | null = null;
@@ -311,6 +357,12 @@ const NavigationView = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    setHasReachedStart(false);
+    setRouteToStart(null);
+    routeProgressRef.current = null;
+  }, [circuit?.id]);
 
   // Realtime presence for community participants
   useEffect(() => {
@@ -577,7 +629,10 @@ const NavigationView = () => {
   }, [circuit]);
 
   useEffect(() => {
-    if (!audioUnlocked || !circuitStartPoint || !rawUserPos || currentStopIndex > 0) return;
+    if (!circuitStartPoint || !rawUserPos || currentStopIndex > 0 || hasReachedStart) {
+      setRouteToStart(null);
+      return;
+    }
 
     const distanceToStart = haversine(
       rawUserPos[0],
@@ -586,7 +641,7 @@ const NavigationView = () => {
       circuitStartPoint[1]
     );
 
-    if (distanceToStart < 45) {
+    if (distanceToStart <= START_ARRIVAL_RADIUS_METERS) {
       setRouteToStart(null);
       return;
     }
@@ -609,29 +664,35 @@ const NavigationView = () => {
       window.clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [audioUnlocked, circuitStartPoint, rawUserPos, currentStopIndex]);
+  }, [circuitStartPoint, rawUserPos, currentStopIndex, hasReachedStart]);
 
   useEffect(() => {
     if (!routeToStart) return;
 
-    if (currentStopIndex > 0) {
+    if (currentStopIndex > 0 || hasReachedStart) {
       setRouteToStart(null);
-      return;
     }
+  }, [routeToStart, currentStopIndex, hasReachedStart]);
 
-    if (!userPos || !circuitStartPoint) return;
+  useEffect(() => {
+    if (!circuitStartPoint || !rawUserPos || currentStopIndex > 0 || hasReachedStart) return;
 
-    const distanceToStart = haversine(
-      userPos[0],
-      userPos[1],
+    const rawDistanceToStart = haversine(
+      rawUserPos[0],
+      rawUserPos[1],
       circuitStartPoint[0],
       circuitStartPoint[1]
     );
+    const snappedDistanceToStart = userPos
+      ? haversine(userPos[0], userPos[1], circuitStartPoint[0], circuitStartPoint[1])
+      : Infinity;
 
-    if (distanceToStart < 45) {
+    if (Math.min(rawDistanceToStart, snappedDistanceToStart) <= START_ARRIVAL_RADIUS_METERS) {
+      routeToStartAbortRef.current?.abort();
       setRouteToStart(null);
+      setHasReachedStart(true);
     }
-  }, [routeToStart, currentStopIndex, userPos, circuitStartPoint]);
+  }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart]);
 
   const handleNextStop = () => {
     if (!circuit) return;

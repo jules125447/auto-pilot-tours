@@ -2,8 +2,10 @@ import L from "leaflet";
 
 export type MapLatLng = [number, number];
 
-export const MOBILE_TRACK_ANCHOR_Y = 0.82;
-export const DESKTOP_TRACK_ANCHOR_Y = 0.8;
+export const MOBILE_TRACK_BOTTOM_OFFSET = 72;
+export const DESKTOP_TRACK_BOTTOM_OFFSET = 84;
+export const MIN_TRACK_ANCHOR_Y = 0.76;
+export const MAX_TRACK_ANCHOR_Y = 0.9;
 
 interface TileSource {
   options: L.TileLayerOptions;
@@ -11,6 +13,16 @@ interface TileSource {
 }
 
 export const MAP_TILE_SOURCES: TileSource[] = [
+  {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    options: {
+      crossOrigin: true,
+      detectRetina: true,
+      keepBuffer: 4,
+      maxZoom: 19,
+      subdomains: "abc",
+    },
+  },
   {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     options: {
@@ -22,13 +34,12 @@ export const MAP_TILE_SOURCES: TileSource[] = [
     },
   },
   {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    url: "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
     options: {
       crossOrigin: true,
       detectRetina: true,
       keepBuffer: 4,
       maxZoom: 19,
-      subdomains: "abc",
     },
   },
 ];
@@ -37,8 +48,15 @@ export function createBaseTileLayer(source: TileSource) {
   return L.tileLayer(source.url, source.options);
 }
 
-export function getTrackingAnchorY(mapWidth: number) {
-  return mapWidth < 768 ? MOBILE_TRACK_ANCHOR_Y : DESKTOP_TRACK_ANCHOR_Y;
+export function getTrackingAnchorY(mapWidth: number, mapHeight: number) {
+  const bottomOffset = mapWidth < 768 ? MOBILE_TRACK_BOTTOM_OFFSET : DESKTOP_TRACK_BOTTOM_OFFSET;
+
+  if (mapHeight <= 0) {
+    return mapWidth < 768 ? 0.86 : 0.84;
+  }
+
+  const anchorY = (mapHeight - bottomOffset) / mapHeight;
+  return Math.min(MAX_TRACK_ANCHOR_Y, Math.max(MIN_TRACK_ANCHOR_Y, anchorY));
 }
 
 export function getTrackingZoom(mapWidth: number, currentZoom: number) {
@@ -51,15 +69,12 @@ export function centerMapOnAnchoredPoint(
   anchorY: number,
   zoom: number
 ) {
-  map.setView(pos, zoom, { animate: false });
-
   const mapSize = map.getSize();
-  const targetPoint = L.point(mapSize.x / 2, mapSize.y * anchorY);
-  const userPoint = map.latLngToContainerPoint(pos);
-  const centerPoint = L.point(mapSize.x / 2, mapSize.y / 2);
-  const anchoredCenter = map.containerPointToLatLng(
-    centerPoint.add(userPoint.subtract(targetPoint))
+  const projectedUserPoint = map.project(L.latLng(pos[0], pos[1]), zoom);
+  const anchoredCenterPoint = projectedUserPoint.add(
+    L.point(0, mapSize.y * (0.5 - anchorY))
   );
+  const anchoredCenter = map.unproject(anchoredCenterPoint, zoom);
 
   map.setView(anchoredCenter, zoom, { animate: false });
 }
