@@ -64,9 +64,11 @@ const NavigationMap = ({
   const routeToStartLineRef = useRef<L.Polyline | null>(null);
   const routeToStartGlowRef = useRef<L.Polyline | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const tileFallbackTimeoutRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [tracking, setTracking] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
   const userInteractingRef = useRef(false);
   const activeRoute = useMemo(() => {
     if (routeToStart && routeToStart.length > 1) return routeToStart;
@@ -79,11 +81,33 @@ const NavigationMap = ({
     return getRouteBearing(activeRoute, userPos) || heading;
   }, [userPos, activeRoute, heading]);
 
+  const syncMapSize = useCallback(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+
+    const size = map.getSize();
+    setMapSize((prev) =>
+      prev.width === size.x && prev.height === size.y
+        ? prev
+        : { width: size.x, height: size.y }
+    );
+  }, []);
+
+  const trackingAnchorY = useMemo(
+    () =>
+      getTrackingAnchorY(
+        mapSize.width || (typeof window === "undefined" ? 1024 : window.innerWidth),
+        mapSize.height || (typeof window === "undefined" ? 768 : window.innerHeight)
+      ),
+    [mapSize]
+  );
+
   const handleRecenter = useCallback(() => {
     userInteractingRef.current = false;
     setTracking(true);
     mapInstance.current?.invalidateSize({ pan: false });
-  }, []);
+    syncMapSize();
+  }, [syncMapSize]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -101,16 +125,41 @@ const NavigationMap = ({
       markerZoomAnimation: false,
     });
 
+    const clearTileFallbackTimeout = () => {
+      if (tileFallbackTimeoutRef.current !== null) {
+        window.clearTimeout(tileFallbackTimeoutRef.current);
+        tileFallbackTimeoutRef.current = null;
+      }
+    };
+
     const attachTileLayer = (sourceIndex: number) => {
       const tileLayer = createBaseTileLayer(MAP_TILE_SOURCES[sourceIndex]);
+      let resolved = false;
       let tileErrors = 0;
+
+      const fallbackToNextSource = () => {
+        if (resolved || sourceIndex >= MAP_TILE_SOURCES.length - 1) return;
+
+        resolved = true;
+        clearTileFallbackTimeout();
+        map.removeLayer(tileLayer);
+        tileLayerRef.current = attachTileLayer(sourceIndex + 1);
+      };
+
+      tileFallbackTimeoutRef.current = window.setTimeout(() => {
+        fallbackToNextSource();
+      }, 4500);
+
+      tileLayer.on("tileload", () => {
+        if (resolved) return;
+        resolved = true;
+        clearTileFallbackTimeout();
+      });
 
       tileLayer.on("tileerror", () => {
         tileErrors += 1;
-        if (tileErrors < 4 || sourceIndex >= MAP_TILE_SOURCES.length - 1) return;
-
-        map.removeLayer(tileLayer);
-        tileLayerRef.current = attachTileLayer(sourceIndex + 1);
+        if (tileErrors < 2) return;
+        fallbackToNextSource();
       });
 
       tileLayer.addTo(map);
@@ -174,11 +223,13 @@ const NavigationMap = ({
     const invalidateMapSize = () => {
       requestAnimationFrame(() => {
         map.invalidateSize({ pan: false });
+        syncMapSize();
       });
     };
 
     map.whenReady(() => {
       invalidateMapSize();
+      syncMapSize();
       setMapReady(true);
     });
     window.addEventListener("resize", invalidateMapSize);
@@ -222,6 +273,7 @@ const NavigationMap = ({
       resizeObserverRef.current?.disconnect();
       map.off("dragstart", onDragStart);
       map.off("movestart", onMoveStart);
+      clearTileFallbackTimeout();
       tileLayerRef.current = null;
       map.remove();
       mapInstance.current = null;
@@ -231,9 +283,10 @@ const NavigationMap = ({
       remainingLineRef.current = null;
       routeToStartGlowRef.current = null;
       routeToStartLineRef.current = null;
+      setMapSize({ width: 0, height: 0 });
       setMapReady(false);
     };
-  }, [route, stops]);
+  }, [route, stops, syncMapSize]);
 
   useEffect(() => {
     if (!mapInstance.current) return;
@@ -360,9 +413,9 @@ const NavigationMap = ({
     if (tracking) {
       userInteractingRef.current = false;
 
-      const mapWidth = map.getSize().x;
-      const anchorY = getTrackingAnchorY(mapWidth);
-      const targetZoom = getTrackingZoom(mapWidth, map.getZoom());
+      const currentMapSize = map.getSize();
+      const anchorY = getTrackingAnchorY(currentMapSize.x, currentMapSize.y);
+      const targetZoom = getTrackingZoom(currentMapSize.x, map.getZoom());
       centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom);
     }
   }, [userPos, routeBearing, route, tracking, routeToStart]);
@@ -449,7 +502,7 @@ const NavigationMap = ({
       <div className="nav-map-shell">
         <div ref={mapRef} className="nav-map-canvas" />
         <FixedUserArrow
-          anchorY={getTrackingAnchorY(typeof window === "undefined" ? 1024 : window.innerWidth)}
+          anchorY={trackingAnchorY}
           bearing={routeBearing}
           visible={tracking && !!userPos && mapReady}
         />
