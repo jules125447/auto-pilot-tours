@@ -13,7 +13,10 @@ export interface RouteResult {
  * Get a driving route between waypoints using OSRM.
  * Returns the full road-snapped polyline.
  */
-export async function getRoute(waypoints: [number, number][]): Promise<RouteResult | null> {
+export async function getRoute(
+  waypoints: [number, number][],
+  options?: { signal?: AbortSignal }
+): Promise<RouteResult | null> {
   if (waypoints.length < 2) return null;
 
   // OSRM expects lng,lat format
@@ -21,7 +24,7 @@ export async function getRoute(waypoints: [number, number][]): Promise<RouteResu
   const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: options?.signal });
     if (!res.ok) return null;
 
     const data = await res.json();
