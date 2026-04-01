@@ -21,7 +21,12 @@ function directionText(dir: TurnDirection, distMeters: number): string {
   }
 }
 
-export function useVoiceGuidance() {
+interface VoiceGuidanceOptions {
+  onSpeakStart?: () => void;
+  onSpeakEnd?: () => void;
+}
+
+export function useVoiceGuidance(options?: VoiceGuidanceOptions) {
   const lastSpoken = useRef<string>("");
   const cooldown = useRef(false);
 
@@ -31,6 +36,8 @@ export function useVoiceGuidance() {
 
     lastSpoken.current = text;
     cooldown.current = true;
+
+    options?.onSpeakStart?.();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "fr-FR";
@@ -44,6 +51,14 @@ export function useVoiceGuidance() {
     if (frVoice) utterance.voice = frVoice;
 
     utterance.onend = () => {
+      options?.onSpeakEnd?.();
+      setTimeout(() => {
+        cooldown.current = false;
+      }, 3000);
+    };
+
+    utterance.onerror = () => {
+      options?.onSpeakEnd?.();
       setTimeout(() => {
         cooldown.current = false;
       }, 3000);
@@ -51,11 +66,10 @@ export function useVoiceGuidance() {
 
     speechSynthesis.cancel();
     speechSynthesis.speak(utterance);
-  }, []);
+  }, [options]);
 
   const announceDirection = useCallback(
     (dir: TurnDirection, distMeters: number) => {
-      // Only announce at key thresholds
       const rounded = Math.round(distMeters);
       if (rounded <= 30) {
         speak(directionText(dir, distMeters));

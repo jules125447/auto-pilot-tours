@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import NavigationMap from "@/components/navigation/NavigationMap";
 import NavigationBar from "@/components/navigation/NavigationBar";
 import DirectionBanner from "@/components/navigation/DirectionBanner";
-import AudioOverlay from "@/components/navigation/AudioOverlay";
+// AudioOverlay removed — TTS plays without popup
 import { AnimatePresence, motion } from "framer-motion";
 import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
@@ -15,6 +15,7 @@ import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/li
 import { useCircuitPreload } from "@/hooks/useCircuitPreload";
 import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
+import SpeedBubble from "@/components/navigation/SpeedBubble";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
@@ -131,7 +132,7 @@ const NavigationView = () => {
   const [speed, setSpeed] = useState<number | null>(null);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioOverlayText, setAudioOverlayText] = useState<string | null>(null);
+  const [audioOverlayText, setAudioOverlayText] = useState<string | null>(null); // kept for state compat
   const [visitedStops, setVisitedStops] = useState<Set<number>>(new Set());
   const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -154,7 +155,49 @@ const NavigationView = () => {
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
-  const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance();
+  // Audio ducking: lower other audio when voice guidance speaks
+  const duckAudio = useCallback(() => {
+    // Duck music
+    if (musicAudioRef.current) {
+      try { musicAudioRef.current.volume = Math.min(musicAudioRef.current.volume, 0.15); } catch {}
+    }
+    // Duck ambient sounds
+    activeSoundsRef.current.forEach((instance) => {
+      if (instance?.gainNode) {
+        try { instance.gainNode.gain.setTargetAtTime(instance.gainNode.gain.value * 0.2, instance.ctx.currentTime, 0.3); } catch {}
+      }
+    });
+  }, []);
+
+  const unduckAudio = useCallback(() => {
+    // Restore music
+    if (musicAudioRef.current) {
+      try {
+        const audio = musicAudioRef.current;
+        const startVol = audio.volume;
+        const targetVol = 0.7;
+        const startTime = performance.now();
+        const restore = () => {
+          const elapsed = performance.now() - startTime;
+          const progress = Math.min(elapsed / 800, 1);
+          try { audio.volume = startVol + (targetVol - startVol) * progress; } catch {}
+          if (progress < 1) requestAnimationFrame(restore);
+        };
+        requestAnimationFrame(restore);
+      } catch {}
+    }
+    // Restore ambient sounds
+    activeSoundsRef.current.forEach((instance) => {
+      if (instance?.gainNode) {
+        try { instance.gainNode.gain.setTargetAtTime(instance._originalVolume ?? 0.5, instance.ctx.currentTime, 0.5); } catch {}
+      }
+    });
+  }, []);
+
+  const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
+    onSpeakStart: duckAudio,
+    onSpeakEnd: unduckAudio,
+  });
 
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
@@ -469,12 +512,10 @@ const NavigationView = () => {
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
           audio.play().catch((e) => console.warn("Audio play failed:", e));
-          setAudioOverlayText("🎙️ Audio en cours...");
           setAudioPlaying(true);
           audio.onended = () => setAudioPlaying(false);
           audio.onerror = () => setAudioPlaying(false);
         } else if (zone.audio_text) {
-          setAudioOverlayText(zone.audio_text);
           setAudioPlaying(true);
           if (voiceEnabled) announceAudioZone(zone.audio_text);
           const words = zone.audio_text.trim().split(/\s+/).length;
@@ -881,9 +922,7 @@ const NavigationView = () => {
             </motion.div>
           )}
         </AnimatePresence>
-        <AnimatePresence>
-          {audioPlaying && audioOverlayText && <AudioOverlay text={audioOverlayText} onDismiss={() => setAudioPlaying(false)} />}
-        </AnimatePresence>
+        <SpeedBubble speed={speed} />
       </div>
       <NavigationBar
         currentStop={currentStop}
