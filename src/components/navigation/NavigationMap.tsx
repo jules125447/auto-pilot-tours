@@ -198,6 +198,21 @@ const NavigationMap = ({
       map.fitBounds(polyline.getBounds(), { padding: [80, 80] });
     }
 
+    // Add flag marker at route start point
+    if (route.length > 0) {
+      const startIcon = L.divIcon({
+        html: `
+          <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#FF9500;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(255,149,0,0.5);">🏁</div>
+          </div>
+        `,
+        className: "poi-marker",
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+      L.marker([route[0][0], route[0][1]], { icon: startIcon, zIndexOffset: 900 }).addTo(map);
+    }
+
     stops.forEach((stop) => {
       const icon = L.divIcon({
         html: `
