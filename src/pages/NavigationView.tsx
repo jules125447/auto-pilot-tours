@@ -512,12 +512,10 @@ const NavigationView = () => {
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
           audio.play().catch((e) => console.warn("Audio play failed:", e));
-          setAudioOverlayText("🎙️ Audio en cours...");
           setAudioPlaying(true);
           audio.onended = () => setAudioPlaying(false);
           audio.onerror = () => setAudioPlaying(false);
         } else if (zone.audio_text) {
-          setAudioOverlayText(zone.audio_text);
           setAudioPlaying(true);
           if (voiceEnabled) announceAudioZone(zone.audio_text);
           const words = zone.audio_text.trim().split(/\s+/).length;
