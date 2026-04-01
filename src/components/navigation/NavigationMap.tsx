@@ -417,21 +417,39 @@ const NavigationMap = ({
     }
 
     const markerElement = userMarkerRef.current.getElement();
-    const arrowIcon = markerElement?.querySelector(".waze-arrow-icon") as HTMLElement | null;
-    if (arrowIcon) {
-      arrowIcon.style.transform = `rotate(${routeBearing}deg)`;
-    }
+    // When tracking, the Leaflet marker is hidden (the fixed overlay arrow is shown instead)
     if (markerElement) {
       markerElement.style.opacity = tracking ? "0" : "1";
     }
+    // When not tracking, rotate the marker arrow to match bearing
+    const arrowIcon = markerElement?.querySelector(".waze-arrow-icon") as HTMLElement | null;
+    if (arrowIcon) {
+      arrowIcon.style.transform = tracking ? "rotate(0deg)" : `rotate(${routeBearing}deg)`;
+    }
 
+    // Rotate the entire map container so the route faces "up" (like Waze/Google Maps)
+    const mapContainer = map.getContainer();
     if (tracking) {
       userInteractingRef.current = false;
+
+      // Apply rotation: negative bearing so the direction of travel points up
+      mapContainer.style.transformOrigin = "center center";
+      mapContainer.style.transition = "transform 0.5s ease-out";
+      mapContainer.style.transform = `rotate(${-routeBearing}deg)`;
+      // Scale up slightly to hide corners during rotation
+      const diagonal = Math.sqrt(mapContainer.offsetWidth ** 2 + mapContainer.offsetHeight ** 2);
+      const maxDim = Math.max(mapContainer.offsetWidth, mapContainer.offsetHeight);
+      const scale = diagonal / maxDim;
+      mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(${scale})`;
 
       const currentMapSize = map.getSize();
       const anchorY = getTrackingAnchorY(currentMapSize.x, currentMapSize.y);
       const targetZoom = getTrackingZoom(currentMapSize.x, map.getZoom());
       centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom);
+    } else {
+      // Reset rotation when user is panning manually
+      mapContainer.style.transform = "none";
+      mapContainer.style.transition = "none";
     }
   }, [userPos, routeBearing, route, tracking, routeToStart]);
 
