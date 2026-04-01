@@ -530,6 +530,7 @@ const NavigationMap = ({
         .nav-map-canvas {
           width: 100%;
           height: 100%;
+          will-change: transform;
         }
       `}</style>
       <div className="nav-map-shell">
