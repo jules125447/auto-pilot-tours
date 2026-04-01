@@ -924,9 +924,7 @@ const NavigationView = () => {
             </motion.div>
           )}
         </AnimatePresence>
-        <AnimatePresence>
-          {audioPlaying && audioOverlayText && <AudioOverlay text={audioOverlayText} onDismiss={() => setAudioPlaying(false)} />}
-        </AnimatePresence>
+        <SpeedBubble speed={speed} />
       </div>
       <NavigationBar
         currentStop={currentStop}
