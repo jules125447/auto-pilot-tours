@@ -620,12 +620,16 @@ const NavigationView = () => {
   const navInfo = getNavInfo();
   const circuitStartPoint = useMemo<[number, number] | null>(() => {
     if (!circuit) return null;
+    // Always use the first point of the route (real start), not the first POI
+    const routeCoords = circuit.route as [number, number][] | undefined;
+    if (routeCoords && routeCoords.length > 0) {
+      return routeCoords[0];
+    }
+    // Fallback to first stop if no route
     if (circuit.stops.length > 0) {
       return [circuit.stops[0].lat, circuit.stops[0].lng];
     }
-
-    const firstRoutePoint = circuit.route?.[0] as [number, number] | undefined;
-    return firstRoutePoint ?? null;
+    return null;
   }, [circuit]);
 
   useEffect(() => {
