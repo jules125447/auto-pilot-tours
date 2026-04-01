@@ -15,6 +15,7 @@ import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/li
 import { useCircuitPreload } from "@/hooks/useCircuitPreload";
 import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
+import SpeedBubble from "@/components/navigation/SpeedBubble";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
