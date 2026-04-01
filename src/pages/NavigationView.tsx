@@ -132,7 +132,7 @@ const NavigationView = () => {
   const [speed, setSpeed] = useState<number | null>(null);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioOverlayText, setAudioOverlayText] = useState<string | null>(null);
+  const [audioOverlayText, setAudioOverlayText] = useState<string | null>(null); // kept for state compat
   const [visitedStops, setVisitedStops] = useState<Set<number>>(new Set());
   const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
