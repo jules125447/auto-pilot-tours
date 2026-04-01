@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import NavigationMap from "@/components/navigation/NavigationMap";
 import NavigationBar from "@/components/navigation/NavigationBar";
 import DirectionBanner from "@/components/navigation/DirectionBanner";
-import AudioOverlay from "@/components/navigation/AudioOverlay";
+// AudioOverlay removed — TTS plays without popup
 import { AnimatePresence, motion } from "framer-motion";
 import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
