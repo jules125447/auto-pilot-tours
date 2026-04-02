@@ -8,7 +8,6 @@ import {
   centerMapOnAnchoredPoint,
   createBaseTileLayer,
   findClosestRouteIndex,
-  getRouteBearing,
   getTrackingAnchorY,
   getTrackingZoom,
 } from "@/lib/navigationMap";
@@ -75,11 +74,10 @@ const NavigationMap = ({
     return route;
   }, [route, routeToStart]);
 
-  const routeBearing = useMemo(() => {
-    if (!userPos) return heading;
-    if (activeRoute.length < 2) return heading;
-    return getRouteBearing(activeRoute, userPos) || heading;
-  }, [userPos, activeRoute, heading]);
+  const mapHeading = useMemo(() => {
+    if (!Number.isFinite(heading)) return 0;
+    return heading;
+  }, [heading]);
 
   const syncMapSize = useCallback(() => {
     const map = mapInstance.current;
@@ -424,34 +422,33 @@ const NavigationMap = ({
     // When not tracking, rotate the marker arrow to match bearing
     const arrowIcon = markerElement?.querySelector(".waze-arrow-icon") as HTMLElement | null;
     if (arrowIcon) {
-      arrowIcon.style.transform = tracking ? "rotate(0deg)" : `rotate(${routeBearing}deg)`;
+      arrowIcon.style.transform = tracking ? "rotate(0deg)" : `rotate(${mapHeading}deg)`;
     }
 
-    // Rotate the entire map container so the route faces "up" (like Waze/Google Maps)
+    // Rotate the entire map container so the real heading faces "up" (like Waze/Google Maps)
     const mapContainer = map.getContainer();
     if (tracking) {
       userInteractingRef.current = false;
 
-      // Apply rotation: negative bearing so the direction of travel points up
+      // Apply rotation: negative heading so the direction of travel points up
       mapContainer.style.transformOrigin = "center center";
-      mapContainer.style.transition = "transform 0.5s ease-out";
-      mapContainer.style.transform = `rotate(${-routeBearing}deg)`;
+      mapContainer.style.transition = "transform 180ms linear";
       // Scale up slightly to hide corners during rotation
       const diagonal = Math.sqrt(mapContainer.offsetWidth ** 2 + mapContainer.offsetHeight ** 2);
       const maxDim = Math.max(mapContainer.offsetWidth, mapContainer.offsetHeight);
       const scale = diagonal / maxDim;
-      mapContainer.style.transform = `rotate(${-routeBearing}deg) scale(${scale})`;
+      mapContainer.style.transform = `rotate(${-mapHeading}deg) scale(${scale})`;
 
       const currentMapSize = map.getSize();
       const anchorY = getTrackingAnchorY(currentMapSize.x, currentMapSize.y);
       const targetZoom = getTrackingZoom(currentMapSize.x, map.getZoom());
-      centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom);
+      centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom, mapHeading);
     } else {
       // Reset rotation when user is panning manually
       mapContainer.style.transform = "none";
       mapContainer.style.transition = "none";
     }
-  }, [userPos, routeBearing, route, tracking, routeToStart]);
+  }, [userPos, mapHeading, route, tracking, routeToStart]);
 
   useEffect(() => {
     stopMarkersRef.current.forEach((marker, i) => {
@@ -537,7 +534,7 @@ const NavigationMap = ({
         <div ref={mapRef} className="nav-map-canvas" />
         <FixedUserArrow
           anchorY={trackingAnchorY}
-          bearing={routeBearing}
+          bearing={mapHeading}
           visible={tracking && !!userPos && mapReady}
         />
         {/* Recenter button — shown when user has panned away */}
