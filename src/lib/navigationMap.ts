@@ -2,10 +2,7 @@ import L from "leaflet";
 
 export type MapLatLng = [number, number];
 
-export const MOBILE_TRACK_BOTTOM_OFFSET = 72;
-export const DESKTOP_TRACK_BOTTOM_OFFSET = 84;
-export const MIN_TRACK_ANCHOR_Y = 0.76;
-export const MAX_TRACK_ANCHOR_Y = 0.9;
+export const TRACKING_ANCHOR_Y = 0.5;
 
 interface TileSource {
   options: L.TileLayerOptions;
@@ -49,14 +46,9 @@ export function createBaseTileLayer(source: TileSource) {
 }
 
 export function getTrackingAnchorY(mapWidth: number, mapHeight: number) {
-  const bottomOffset = mapWidth < 768 ? MOBILE_TRACK_BOTTOM_OFFSET : DESKTOP_TRACK_BOTTOM_OFFSET;
-
-  if (mapHeight <= 0) {
-    return mapWidth < 768 ? 0.86 : 0.84;
-  }
-
-  const anchorY = (mapHeight - bottomOffset) / mapHeight;
-  return Math.min(MAX_TRACK_ANCHOR_Y, Math.max(MIN_TRACK_ANCHOR_Y, anchorY));
+  void mapWidth;
+  void mapHeight;
+  return TRACKING_ANCHOR_Y;
 }
 
 export function getTrackingZoom(mapWidth: number, currentZoom: number) {
@@ -67,12 +59,18 @@ export function centerMapOnAnchoredPoint(
   map: L.Map,
   pos: MapLatLng,
   anchorY: number,
-  zoom: number
+  zoom: number,
+  rotationDeg = 0
 ) {
   const mapSize = map.getSize();
   const projectedUserPoint = map.project(L.latLng(pos[0], pos[1]), zoom);
+  const anchorOffsetY = mapSize.y * (anchorY - 0.5);
+  const rotationRad = (rotationDeg * Math.PI) / 180;
   const anchoredCenterPoint = projectedUserPoint.add(
-    L.point(0, mapSize.y * (0.5 - anchorY))
+    L.point(
+      anchorOffsetY * Math.sin(rotationRad),
+      -anchorOffsetY * Math.cos(rotationRad)
+    )
   );
   const anchoredCenter = map.unproject(anchoredCenterPoint, zoom);
 

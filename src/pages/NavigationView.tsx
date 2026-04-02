@@ -20,12 +20,24 @@ import SpeedBubble from "@/components/navigation/SpeedBubble";
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
 const START_ARRIVAL_RADIUS_METERS = 45;
+const MAX_ACCEPTED_GPS_ACCURACY_METERS = 30;
+const POSITION_HISTORY_LIMIT = 5;
+const MIN_MOVEMENT_FOR_HEADING_METERS = 5;
+const MAX_STATIONARY_DRIFT_METERS = 6;
+const OUTLIER_BASE_ALLOWANCE_METERS = 22;
 
 interface RouteProjection {
   point: [number, number];
   cumulative: number;
   distance: number;
   total: number;
+}
+
+interface AcceptedGpsFix {
+  accuracy: number | null;
+  position: [number, number];
+  speedKmh: number | null;
+  timestamp: number;
 }
 
 function projectClosestPointOnRoute(
@@ -93,6 +105,90 @@ function interpolateRoutePoint(route: [number, number][], targetDistance: number
   return route[route.length - 1];
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function blendLatLng(
+  from: [number, number],
+  to: [number, number],
+  factor: number
+): [number, number] {
+  return [
+    from[0] + (to[0] - from[0]) * factor,
+    from[1] + (to[1] - from[1]) * factor,
+  ];
+}
+
+function calculateHeadingBetweenPoints(from: [number, number], to: [number, number]): number {
+  const dLng = ((to[1] - from[1]) * Math.PI) / 180;
+  const lat1 = (from[0] * Math.PI) / 180;
+  const lat2 = (to[0] * Math.PI) / 180;
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+function getWeightedAveragePosition(samples: AcceptedGpsFix[]): [number, number] {
+  if (samples.length === 0) return [0, 0];
+
+  let weightedLat = 0;
+  let weightedLng = 0;
+  let totalWeight = 0;
+
+  samples.forEach((sample, index) => {
+    const recencyWeight = 1 + index / Math.max(1, samples.length - 1);
+    const accuracyWeight = 1 / Math.max(sample.accuracy ?? 12, 5);
+    const speedWeight = sample.speedKmh && sample.speedKmh > 25 ? 1.2 : 1;
+    const weight = recencyWeight * accuracyWeight * speedWeight;
+
+    weightedLat += sample.position[0] * weight;
+    weightedLng += sample.position[1] * weight;
+    totalWeight += weight;
+  });
+
+  if (totalWeight === 0) return samples[samples.length - 1].position;
+  return [weightedLat / totalWeight, weightedLng / totalWeight];
+}
+
+function getPositionSmoothingFactor(
+  speedKmh: number | null,
+  accuracy: number | null,
+  stationary: boolean
+) {
+  if (stationary) return 0.14;
+  if (speedKmh === null) return accuracy !== null && accuracy <= 10 ? 0.5 : 0.38;
+  if (speedKmh >= 80) return 0.78;
+  if (speedKmh >= 50) return 0.68;
+  if (speedKmh >= 25) return 0.56;
+  return accuracy !== null && accuracy <= 10 ? 0.44 : 0.34;
+}
+
+function getHeadingSmoothingFactor(speedKmh: number | null, stationary: boolean) {
+  if (stationary) return 0.12;
+  if (speedKmh === null) return 0.24;
+  if (speedKmh >= 80) return 0.42;
+  if (speedKmh >= 50) return 0.34;
+  if (speedKmh >= 20) return 0.28;
+  return 0.2;
+}
+
+function isLikelyOutlier(
+  distanceMeters: number,
+  dtSeconds: number,
+  speedKmh: number | null,
+  accuracy: number | null
+) {
+  const expectedTravelMeters = speedKmh !== null ? (speedKmh / 3.6) * dtSeconds : 0;
+  const maxReasonableDistance =
+    expectedTravelMeters + Math.max(OUTLIER_BASE_ALLOWANCE_METERS, (accuracy ?? 15) * 1.6);
+
+  return dtSeconds < 8 && distanceMeters > maxReasonableDistance * 1.8;
+}
+
 const NavigationView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -149,8 +245,10 @@ const NavigationView = () => {
   const firstFixTimeRef = useRef<number | null>(null);
   const calibrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const presenceChannelRef = useRef<any>(null);
-  const prevPosRef = useRef<[number, number] | null>(null);
+  const lastAcceptedFixRef = useRef<AcceptedGpsFix | null>(null);
+  const recentFixesRef = useRef<AcceptedGpsFix[]>([]);
   const smoothedHeadingRef = useRef<number>(0);
+  const lastHeadingUpdateRef = useRef<number>(0);
   const routeProgressRef = useRef<number | null>(null);
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
   const [hasReachedStart, setHasReachedStart] = useState(false);
@@ -314,25 +412,14 @@ const NavigationView = () => {
     if (!navigator.geolocation) return;
 
     // Smooth heading using shortest-arc interpolation
-    const smoothHeading = (raw: number) => {
+    const smoothHeading = (raw: number, factor: number) => {
       const prev = smoothedHeadingRef.current;
       let delta = raw - prev;
-      // Shortest arc
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;
-      const smoothed = (prev + delta * 0.35 + 360) % 360;
+      const smoothed = (prev + delta * factor + 360) % 360;
       smoothedHeadingRef.current = smoothed;
       return smoothed;
-    };
-
-    // Calculate heading from two consecutive positions
-    const calcHeading = (from: [number, number], to: [number, number]): number => {
-      const dLng = (to[1] - from[1]) * Math.PI / 180;
-      const lat1 = from[0] * Math.PI / 180;
-      const lat2 = to[0] * Math.PI / 180;
-      const y = Math.sin(dLng) * Math.cos(lat2);
-      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     };
 
     if (watchIdRef.current !== null) {
@@ -341,48 +428,139 @@ const NavigationView = () => {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        // Track first fix for calibration
+        const timestamp = Number.isFinite(pos.timestamp) ? pos.timestamp : Date.now();
+        const measuredAccuracy = Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null;
+        const measuredSpeedKmh =
+          pos.coords.speed !== null && pos.coords.speed >= 0 ? pos.coords.speed * 3.6 : null;
+        const measuredPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+
+        setGpsAccuracy(measuredAccuracy);
+
+        if (
+          measuredAccuracy !== null &&
+          measuredAccuracy > MAX_ACCEPTED_GPS_ACCURACY_METERS
+        ) {
+          if (!lastAcceptedFixRef.current) {
+            return;
+          }
+
+          if ((measuredSpeedKmh ?? 0) < 1) {
+            setSpeed((prev) => (prev === null ? 0 : Math.round(prev * 0.75)));
+          }
+
+          return;
+        }
+
+        const previousFix = lastAcceptedFixRef.current;
+        let dtSeconds = 1;
+        let distanceFromPrevious = 0;
+        let derivedSpeedKmh = measuredSpeedKmh;
+
+        if (previousFix) {
+          dtSeconds = Math.max(0.15, (timestamp - previousFix.timestamp) / 1000);
+          distanceFromPrevious = haversine(
+            previousFix.position[0],
+            previousFix.position[1],
+            measuredPos[0],
+            measuredPos[1]
+          );
+
+          if (derivedSpeedKmh === null) {
+            derivedSpeedKmh = (distanceFromPrevious / dtSeconds) * 3.6;
+          }
+
+          if (isLikelyOutlier(distanceFromPrevious, dtSeconds, derivedSpeedKmh, measuredAccuracy)) {
+            return;
+          }
+        }
+
+        const measuredFix: AcceptedGpsFix = {
+          accuracy: measuredAccuracy,
+          position: measuredPos,
+          speedKmh: derivedSpeedKmh,
+          timestamp,
+        };
+
+        recentFixesRef.current = [...recentFixesRef.current, measuredFix].slice(-POSITION_HISTORY_LIMIT);
+
+        const stationary =
+          !!previousFix &&
+          (derivedSpeedKmh ?? 0) < 3 &&
+          distanceFromPrevious < Math.max(MAX_STATIONARY_DRIFT_METERS, (measuredAccuracy ?? 12) * 0.25);
+
+        const weightedAverage = getWeightedAveragePosition(recentFixesRef.current);
+        const nextPosition = previousFix
+          ? stationary
+            ? previousFix.position
+            : blendLatLng(
+                previousFix.position,
+                weightedAverage,
+                getPositionSmoothingFactor(derivedSpeedKmh, measuredAccuracy, stationary)
+              )
+          : weightedAverage;
+
+        const acceptedFix: AcceptedGpsFix = {
+          accuracy: measuredAccuracy,
+          position: nextPosition,
+          speedKmh: derivedSpeedKmh,
+          timestamp,
+        };
+
+        lastAcceptedFixRef.current = acceptedFix;
+        setRawUserPos(nextPosition);
+
         if (firstFixTimeRef.current === null) {
-          firstFixTimeRef.current = Date.now();
+          firstFixTimeRef.current = timestamp;
           calibrationTimerRef.current = setTimeout(() => {
             setCalibrated(true);
           }, CALIBRATION_DELAY_MS);
         }
 
-        const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-        setRawUserPos(newPos);
-        setGpsAccuracy(Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null);
-
-        // Determine heading: prefer device heading, fallback to calculated
         let rawHeading: number | null = null;
-        if (pos.coords.heading !== null && pos.coords.heading >= 0 && pos.coords.speed && pos.coords.speed > 0.5) {
+        if (
+          pos.coords.heading !== null &&
+          pos.coords.heading >= 0 &&
+          (derivedSpeedKmh ?? 0) > 4
+        ) {
           rawHeading = pos.coords.heading;
-        } else if (prevPosRef.current) {
-          const dist = haversine(prevPosRef.current[0], prevPosRef.current[1], newPos[0], newPos[1]);
-          if (dist > 3) { // Only calc heading if moved > 3m to avoid jitter
-            rawHeading = calcHeading(prevPosRef.current, newPos);
+        } else if (previousFix && !stationary) {
+          const headingDistance = haversine(
+            previousFix.position[0],
+            previousFix.position[1],
+            nextPosition[0],
+            nextPosition[1]
+          );
+
+          if (headingDistance >= MIN_MOVEMENT_FOR_HEADING_METERS) {
+            rawHeading = calculateHeadingBetweenPoints(previousFix.position, nextPosition);
           }
         }
 
         if (rawHeading !== null) {
-          setHeading(smoothHeading(rawHeading));
+          setHeading(smoothHeading(rawHeading, getHeadingSmoothingFactor(derivedSpeedKmh, stationary)));
+          lastHeadingUpdateRef.current = timestamp;
+        } else if (
+          lastHeadingUpdateRef.current > 0 &&
+          timestamp - lastHeadingUpdateRef.current > 8000
+        ) {
+          smoothedHeadingRef.current = heading;
         }
 
-        prevPosRef.current = newPos;
-
-        // Speed in km/h (coords.speed is m/s)
-        if (pos.coords.speed !== null && pos.coords.speed >= 0) {
-          setSpeed(Math.round(pos.coords.speed * 3.6));
-        }
+        const targetSpeed = stationary ? 0 : Math.max(0, derivedSpeedKmh ?? 0);
+        setSpeed((prev) => {
+          const baseSpeed = prev ?? targetSpeed;
+          const lerpedSpeed = baseSpeed + (targetSpeed - baseSpeed) * (stationary ? 0.45 : 0.35);
+          return Math.round(clamp(lerpedSpeed, 0, 240));
+        });
       },
       (err) => console.warn("Geo error:", err.message),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 }
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
     );
     return () => {
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (calibrationTimerRef.current) clearTimeout(calibrationTimerRef.current);
     };
-  }, []);
+  }, [heading]);
 
   // Cleanup on unmount
   useEffect(() => {
