@@ -25,6 +25,9 @@ const POSITION_HISTORY_LIMIT = 5;
 const MIN_MOVEMENT_FOR_HEADING_METERS = 5;
 const MAX_STATIONARY_DRIFT_METERS = 6;
 const OUTLIER_BASE_ALLOWANCE_METERS = 22;
+const HIGH_ACCURACY_TIMEOUT_MS = 10000;
+const STALE_FIX_THRESHOLD_MS = 1500;
+const RECOVERY_POLL_INTERVAL_MS = 1000;
 
 interface RouteProjection {
   point: [number, number];
@@ -189,6 +192,29 @@ function isLikelyOutlier(
   return dtSeconds < 8 && distanceMeters > maxReasonableDistance * 1.8;
 }
 
+function roundGpsValue(value: number | null, digits = 1) {
+  if (value === null || !Number.isFinite(value)) return null;
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function inferLocationSource(
+  accuracy: number | null,
+  speedKmh: number | null,
+  headingValue: number | null
+) {
+  if (accuracy !== null && accuracy <= 20) return "gps-likely";
+  if ((speedKmh ?? 0) >= 15 && headingValue !== null && accuracy !== null && accuracy <= 35) {
+    return "gps-likely";
+  }
+  if (accuracy !== null && accuracy <= 50) return "wifi-likely";
+  return "network-likely";
+}
+
+function logGps(level: "info" | "warn" | "error", event: string, payload: Record<string, unknown>) {
+  console[level](`[GPS] ${event}`, payload);
+}
+
 const NavigationView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -249,6 +275,9 @@ const NavigationView = () => {
   const recentFixesRef = useRef<AcceptedGpsFix[]>([]);
   const smoothedHeadingRef = useRef<number>(0);
   const lastHeadingUpdateRef = useRef<number>(0);
+  const lastAcceptedFixAtRef = useRef<number>(0);
+  const highAccuracyRequestInFlightRef = useRef(false);
+  const permissionStatusRef = useRef<PermissionStatus | null>(null);
   const routeProgressRef = useRef<number | null>(null);
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
   const [hasReachedStart, setHasReachedStart] = useState(false);
@@ -407,9 +436,58 @@ const NavigationView = () => {
     setAudioUnlocked(true);
   }, []);
 
+  useEffect(() => {
+    if (!navigator.permissions?.query) {
+      logGps("info", "permission_api_unavailable", {
+        note: "Permissions API indisponible, utilisation directe du GPS haute précision.",
+      });
+      return;
+    }
+
+    let active = true;
+
+    navigator.permissions
+      .query({ name: "geolocation" as PermissionName })
+      .then((status) => {
+        if (!active) return;
+
+        permissionStatusRef.current = status;
+
+        const reportPermission = () => {
+          logGps("info", "permission_state", {
+            state: status.state,
+            ios: "Active Localisation précise sur iPhone",
+            android: "Autorise la position précise sur Android",
+          });
+        };
+
+        reportPermission();
+        status.onchange = reportPermission;
+      })
+      .catch((error) => {
+        logGps("warn", "permission_query_failed", {
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+    return () => {
+      active = false;
+      if (permissionStatusRef.current) {
+        permissionStatusRef.current.onchange = null;
+      }
+    };
+  }, []);
+
   // Geolocation
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      logGps("error", "geolocation_unavailable", {
+        message: "Geolocation API non disponible sur cet appareil.",
+      });
+      return;
+    }
+
+    let disposed = false;
 
     // Smooth heading using shortest-arc interpolation
     const smoothHeading = (raw: number, factor: number) => {
@@ -422,145 +500,241 @@ const NavigationView = () => {
       return smoothed;
     };
 
+    const processPosition = (
+      pos: GeolocationPosition,
+      source: "watch" | "initial" | "recovery"
+    ) => {
+      if (disposed) return;
+
+      const timestamp = Number.isFinite(pos.timestamp) ? pos.timestamp : Date.now();
+      const measuredAccuracy = Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null;
+      const measuredSpeedKmh =
+        pos.coords.speed !== null && pos.coords.speed >= 0 ? pos.coords.speed * 3.6 : null;
+      const measuredHeading =
+        pos.coords.heading !== null && pos.coords.heading >= 0 ? pos.coords.heading : null;
+      const measuredPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+      const inferredSource = inferLocationSource(measuredAccuracy, measuredSpeedKmh, measuredHeading);
+
+      setGpsAccuracy(measuredAccuracy);
+
+      logGps("info", "fix_received", {
+        source,
+        lat: roundGpsValue(measuredPos[0], 6),
+        lng: roundGpsValue(measuredPos[1], 6),
+        accuracy: roundGpsValue(measuredAccuracy, 1),
+        speedKmh: roundGpsValue(measuredSpeedKmh, 1),
+        heading: roundGpsValue(measuredHeading, 1),
+        timestamp: new Date(timestamp).toISOString(),
+        provider: inferredSource,
+      });
+
+      if (
+        measuredAccuracy !== null &&
+        measuredAccuracy > MAX_ACCEPTED_GPS_ACCURACY_METERS
+      ) {
+        logGps("warn", "fix_rejected_accuracy", {
+          source,
+          accuracy: roundGpsValue(measuredAccuracy, 1),
+          threshold: MAX_ACCEPTED_GPS_ACCURACY_METERS,
+          provider: inferredSource,
+        });
+
+        if (!lastAcceptedFixRef.current) {
+          return;
+        }
+
+        if ((measuredSpeedKmh ?? 0) < 1) {
+          setSpeed((prev) => (prev === null ? 0 : Math.round(prev * 0.75)));
+        }
+
+        return;
+      }
+
+      const previousFix = lastAcceptedFixRef.current;
+      let dtSeconds = 1;
+      let distanceFromPrevious = 0;
+      let derivedSpeedKmh = measuredSpeedKmh;
+
+      if (previousFix) {
+        dtSeconds = Math.max(0.15, (timestamp - previousFix.timestamp) / 1000);
+        distanceFromPrevious = haversine(
+          previousFix.position[0],
+          previousFix.position[1],
+          measuredPos[0],
+          measuredPos[1]
+        );
+
+        if (derivedSpeedKmh === null) {
+          derivedSpeedKmh = (distanceFromPrevious / dtSeconds) * 3.6;
+        }
+
+        if (isLikelyOutlier(distanceFromPrevious, dtSeconds, derivedSpeedKmh, measuredAccuracy)) {
+          logGps("warn", "fix_rejected_outlier", {
+            source,
+            distanceMeters: roundGpsValue(distanceFromPrevious, 1),
+            dtSeconds: roundGpsValue(dtSeconds, 2),
+            accuracy: roundGpsValue(measuredAccuracy, 1),
+            speedKmh: roundGpsValue(derivedSpeedKmh, 1),
+          });
+          return;
+        }
+      }
+
+      const measuredFix: AcceptedGpsFix = {
+        accuracy: measuredAccuracy,
+        position: measuredPos,
+        speedKmh: derivedSpeedKmh,
+        timestamp,
+      };
+
+      recentFixesRef.current = [...recentFixesRef.current, measuredFix].slice(-POSITION_HISTORY_LIMIT);
+
+      const stationary =
+        !!previousFix &&
+        (derivedSpeedKmh ?? 0) < 3 &&
+        distanceFromPrevious < Math.max(MAX_STATIONARY_DRIFT_METERS, (measuredAccuracy ?? 12) * 0.25);
+
+      const weightedAverage = getWeightedAveragePosition(recentFixesRef.current);
+      const nextPosition = previousFix
+        ? stationary
+          ? previousFix.position
+          : blendLatLng(
+              previousFix.position,
+              weightedAverage,
+              getPositionSmoothingFactor(derivedSpeedKmh, measuredAccuracy, stationary)
+            )
+        : weightedAverage;
+
+      const acceptedFix: AcceptedGpsFix = {
+        accuracy: measuredAccuracy,
+        position: nextPosition,
+        speedKmh: derivedSpeedKmh,
+        timestamp,
+      };
+
+      lastAcceptedFixRef.current = acceptedFix;
+      lastAcceptedFixAtRef.current = Date.now();
+      setRawUserPos(nextPosition);
+
+      if (firstFixTimeRef.current === null) {
+        firstFixTimeRef.current = timestamp;
+        calibrationTimerRef.current = setTimeout(() => {
+          setCalibrated(true);
+        }, CALIBRATION_DELAY_MS);
+      }
+
+      let rawHeading: number | null = null;
+      if (measuredHeading !== null && (derivedSpeedKmh ?? 0) > 4) {
+        rawHeading = measuredHeading;
+      } else if (previousFix && !stationary) {
+        const headingDistance = haversine(
+          previousFix.position[0],
+          previousFix.position[1],
+          nextPosition[0],
+          nextPosition[1]
+        );
+
+        if (headingDistance >= MIN_MOVEMENT_FOR_HEADING_METERS) {
+          rawHeading = calculateHeadingBetweenPoints(previousFix.position, nextPosition);
+        }
+      }
+
+      let smoothedHeading: number | null = null;
+      if (rawHeading !== null) {
+        smoothedHeading = smoothHeading(rawHeading, getHeadingSmoothingFactor(derivedSpeedKmh, stationary));
+        setHeading(smoothedHeading);
+        lastHeadingUpdateRef.current = timestamp;
+      }
+
+      const targetSpeed = stationary ? 0 : Math.max(0, derivedSpeedKmh ?? 0);
+      setSpeed((prev) => {
+        const baseSpeed = prev ?? targetSpeed;
+        const lerpedSpeed = baseSpeed + (targetSpeed - baseSpeed) * (stationary ? 0.45 : 0.35);
+        return Math.round(clamp(lerpedSpeed, 0, 240));
+      });
+
+      logGps("info", "fix_accepted", {
+        source,
+        lat: roundGpsValue(nextPosition[0], 6),
+        lng: roundGpsValue(nextPosition[1], 6),
+        accuracy: roundGpsValue(measuredAccuracy, 1),
+        speedKmh: roundGpsValue(derivedSpeedKmh, 1),
+        heading: roundGpsValue(smoothedHeading ?? measuredHeading, 1),
+        timestamp: new Date(timestamp).toISOString(),
+        provider: inferredSource,
+        stationary,
+      });
+    };
+
+    const requestSingleHighAccuracyFix = (reason: "initial" | "recovery") => {
+      if (disposed || highAccuracyRequestInFlightRef.current) return;
+
+      highAccuracyRequestInFlightRef.current = true;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          highAccuracyRequestInFlightRef.current = false;
+          processPosition(pos, reason);
+        },
+        (err) => {
+          highAccuracyRequestInFlightRef.current = false;
+          logGps("warn", "single_fix_failed", {
+            reason,
+            code: err.code,
+            message: err.message,
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: HIGH_ACCURACY_TIMEOUT_MS,
+        }
+      );
+    };
+
+    logGps("info", "tracking_started", {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeoutMs: HIGH_ACCURACY_TIMEOUT_MS,
+      recoveryPollMs: RECOVERY_POLL_INTERVAL_MS,
+      rejectAccuracyOverMeters: MAX_ACCEPTED_GPS_ACCURACY_METERS,
+    });
+
+    requestSingleHighAccuracyFix("initial");
+
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const timestamp = Number.isFinite(pos.timestamp) ? pos.timestamp : Date.now();
-        const measuredAccuracy = Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null;
-        const measuredSpeedKmh =
-          pos.coords.speed !== null && pos.coords.speed >= 0 ? pos.coords.speed * 3.6 : null;
-        const measuredPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-
-        setGpsAccuracy(measuredAccuracy);
-
-        if (
-          measuredAccuracy !== null &&
-          measuredAccuracy > MAX_ACCEPTED_GPS_ACCURACY_METERS
-        ) {
-          if (!lastAcceptedFixRef.current) {
-            return;
-          }
-
-          if ((measuredSpeedKmh ?? 0) < 1) {
-            setSpeed((prev) => (prev === null ? 0 : Math.round(prev * 0.75)));
-          }
-
-          return;
-        }
-
-        const previousFix = lastAcceptedFixRef.current;
-        let dtSeconds = 1;
-        let distanceFromPrevious = 0;
-        let derivedSpeedKmh = measuredSpeedKmh;
-
-        if (previousFix) {
-          dtSeconds = Math.max(0.15, (timestamp - previousFix.timestamp) / 1000);
-          distanceFromPrevious = haversine(
-            previousFix.position[0],
-            previousFix.position[1],
-            measuredPos[0],
-            measuredPos[1]
-          );
-
-          if (derivedSpeedKmh === null) {
-            derivedSpeedKmh = (distanceFromPrevious / dtSeconds) * 3.6;
-          }
-
-          if (isLikelyOutlier(distanceFromPrevious, dtSeconds, derivedSpeedKmh, measuredAccuracy)) {
-            return;
-          }
-        }
-
-        const measuredFix: AcceptedGpsFix = {
-          accuracy: measuredAccuracy,
-          position: measuredPos,
-          speedKmh: derivedSpeedKmh,
-          timestamp,
-        };
-
-        recentFixesRef.current = [...recentFixesRef.current, measuredFix].slice(-POSITION_HISTORY_LIMIT);
-
-        const stationary =
-          !!previousFix &&
-          (derivedSpeedKmh ?? 0) < 3 &&
-          distanceFromPrevious < Math.max(MAX_STATIONARY_DRIFT_METERS, (measuredAccuracy ?? 12) * 0.25);
-
-        const weightedAverage = getWeightedAveragePosition(recentFixesRef.current);
-        const nextPosition = previousFix
-          ? stationary
-            ? previousFix.position
-            : blendLatLng(
-                previousFix.position,
-                weightedAverage,
-                getPositionSmoothingFactor(derivedSpeedKmh, measuredAccuracy, stationary)
-              )
-          : weightedAverage;
-
-        const acceptedFix: AcceptedGpsFix = {
-          accuracy: measuredAccuracy,
-          position: nextPosition,
-          speedKmh: derivedSpeedKmh,
-          timestamp,
-        };
-
-        lastAcceptedFixRef.current = acceptedFix;
-        setRawUserPos(nextPosition);
-
-        if (firstFixTimeRef.current === null) {
-          firstFixTimeRef.current = timestamp;
-          calibrationTimerRef.current = setTimeout(() => {
-            setCalibrated(true);
-          }, CALIBRATION_DELAY_MS);
-        }
-
-        let rawHeading: number | null = null;
-        if (
-          pos.coords.heading !== null &&
-          pos.coords.heading >= 0 &&
-          (derivedSpeedKmh ?? 0) > 4
-        ) {
-          rawHeading = pos.coords.heading;
-        } else if (previousFix && !stationary) {
-          const headingDistance = haversine(
-            previousFix.position[0],
-            previousFix.position[1],
-            nextPosition[0],
-            nextPosition[1]
-          );
-
-          if (headingDistance >= MIN_MOVEMENT_FOR_HEADING_METERS) {
-            rawHeading = calculateHeadingBetweenPoints(previousFix.position, nextPosition);
-          }
-        }
-
-        if (rawHeading !== null) {
-          setHeading(smoothHeading(rawHeading, getHeadingSmoothingFactor(derivedSpeedKmh, stationary)));
-          lastHeadingUpdateRef.current = timestamp;
-        } else if (
-          lastHeadingUpdateRef.current > 0 &&
-          timestamp - lastHeadingUpdateRef.current > 8000
-        ) {
-          smoothedHeadingRef.current = heading;
-        }
-
-        const targetSpeed = stationary ? 0 : Math.max(0, derivedSpeedKmh ?? 0);
-        setSpeed((prev) => {
-          const baseSpeed = prev ?? targetSpeed;
-          const lerpedSpeed = baseSpeed + (targetSpeed - baseSpeed) * (stationary ? 0.45 : 0.35);
-          return Math.round(clamp(lerpedSpeed, 0, 240));
+      (pos) => processPosition(pos, "watch"),
+      (err) => {
+        logGps("warn", "watch_error", {
+          code: err.code,
+          message: err.message,
         });
       },
-      (err) => console.warn("Geo error:", err.message),
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
     );
+
+    const recoveryInterval = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+
+      const now = Date.now();
+      if (
+        lastAcceptedFixAtRef.current === 0 ||
+        now - lastAcceptedFixAtRef.current >= STALE_FIX_THRESHOLD_MS
+      ) {
+        requestSingleHighAccuracyFix("recovery");
+      }
+    }, RECOVERY_POLL_INTERVAL_MS);
+
     return () => {
+      disposed = true;
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (calibrationTimerRef.current) clearTimeout(calibrationTimerRef.current);
+      window.clearInterval(recoveryInterval);
     };
-  }, [heading]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
