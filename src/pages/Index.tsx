@@ -58,7 +58,7 @@ const Index = () => {
                   La route<br />
                   devient un<br />
                   <span className="relative inline-block">
-                    <span className="relative z-10 bg-gradient-to-br from-primary via-primary to-amber-500 bg-clip-text text-transparent italic">spectacle</span>
+                    <span className="relative z-10 bg-gradient-to-br from-primary via-primary to-secondary bg-clip-text text-transparent italic">spectacle</span>
                     <span className="absolute left-0 right-0 bottom-1 md:bottom-2 h-3 md:h-4 bg-primary/20 -z-0 -skew-x-6" aria-hidden />
                   </span>.
                 </h1>
