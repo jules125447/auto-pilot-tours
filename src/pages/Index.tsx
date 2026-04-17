@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, MapPin, Compass, Car, Loader2, PlusCircle, ArrowRight, Sparkles, Volume2 } from "lucide-react";
+import { Search, MapPin, Compass, Car, Loader2, PlusCircle, ArrowRight, Sparkles, Volume2, Headphones, Navigation2, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import CircuitCard from "@/components/CircuitCard";
 import Header from "@/components/Header";
@@ -31,61 +31,146 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Hero — cinematic fullscreen */}
-      <section className="relative h-screen min-h-[600px] flex items-end overflow-hidden">
-        <img
-          src={heroImage}
-          alt="Route panoramique en France"
-          className="absolute inset-0 w-full h-full object-cover scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+      {/* Hero — editorial split layout */}
+      <section className="relative overflow-hidden bg-background">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.18]" style={{
+          backgroundImage: "radial-gradient(circle at 20% 20%, hsl(var(--primary) / 0.45), transparent 45%), radial-gradient(circle at 85% 80%, hsl(var(--secondary) / 0.35), transparent 50%)"
+        }} />
+        <div className="pointer-events-none absolute inset-0 mix-blend-overlay opacity-[0.04]" style={{
+          backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")"
+        }} />
 
-        <div className="relative z-10 w-full pb-16 px-4">
-          <div className="container max-w-5xl">
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="mb-8"
-            >
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" />
-                Circuits guidés par GPS
-              </span>
-              <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-900 text-foreground leading-[0.95] mb-5 tracking-tight">
-                Roulez.<br />
-                <span className="text-primary">Explorez.</span><br />
-                Écoutez.
-              </h1>
-              <p className="text-muted-foreground text-lg md:text-xl max-w-xl leading-relaxed">
-                Des road trips guidés avec audio géolocalisé. Montez en voiture, l'aventure commence.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="flex flex-col sm:flex-row gap-3"
-            >
-              <div className="relative flex-1 max-w-lg">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Où voulez-vous aller ?"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl bg-card text-foreground shadow-elevated text-base focus:outline-none focus:ring-2 focus:ring-primary/40 border border-border/50"
-                />
-              </div>
-              <Link
-                to="/creator"
-                className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-secondary text-secondary-foreground font-semibold text-base hover:opacity-90 transition-opacity whitespace-nowrap"
+        <div className="container max-w-7xl px-4 pt-12 md:pt-16 pb-14 md:pb-20 relative z-10">
+          <div className="grid lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+            {/* LEFT — copy */}
+            <div className="lg:col-span-7">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut" }}
               >
-                <PlusCircle className="w-5 h-5" />
-                Créer un circuit
-              </Link>
-            </motion.div>
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wide uppercase mb-7 border border-primary/20">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Nouveau · Audio géolocalisé
+                </span>
+
+                <h1 className="font-display font-black text-foreground leading-[0.88] tracking-tight text-[clamp(2.75rem,8vw,6.5rem)] mb-7">
+                  La route<br />
+                  devient un<br />
+                  <span className="relative inline-block">
+                    <span className="relative z-10 bg-gradient-to-br from-primary via-primary to-amber-500 bg-clip-text text-transparent italic">spectacle</span>
+                    <span className="absolute left-0 right-0 bottom-1 md:bottom-2 h-3 md:h-4 bg-primary/20 -z-0 -skew-x-6" aria-hidden />
+                  </span>.
+                </h1>
+
+                <p className="text-muted-foreground text-base md:text-lg max-w-xl leading-relaxed mb-9">
+                  Des circuits scénarisés avec narration audio qui se déclenche
+                  automatiquement aux bons endroits. Vous conduisez, on raconte.
+                </p>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.25 }}
+                  className="flex flex-col sm:flex-row gap-3 mb-10"
+                >
+                  <div className="relative flex-1 max-w-md group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="Une région, une route, une envie…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-card text-foreground shadow-elevated text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-primary/40 border border-border/60"
+                    />
+                  </div>
+                  <Link
+                    to="/creator"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-foreground text-background font-semibold text-sm md:text-base hover:bg-foreground/90 transition-colors whitespace-nowrap shadow-elevated"
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                    Créer un circuit
+                  </Link>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  className="flex flex-wrap items-center gap-x-7 gap-y-3 text-sm"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex -space-x-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
+                      ))}
+                    </div>
+                    <span className="font-semibold text-foreground">4.9/5</span>
+                    <span className="text-muted-foreground">· conducteurs</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Headphones className="w-4 h-4 text-primary" />
+                    <span><span className="font-semibold text-foreground">100%</span> mains libres</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Navigation2 className="w-4 h-4 text-primary" />
+                    <span>Hors-ligne</span>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* RIGHT — visual stack */}
+            <div className="lg:col-span-5 relative">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
+                className="relative aspect-[4/5] max-w-md mx-auto lg:max-w-none"
+              >
+                <div className="relative h-full w-full rounded-[2rem] overflow-hidden shadow-elevated ring-1 ring-border/60">
+                  <img
+                    src={heroImage}
+                    alt="Route panoramique en France"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
+
+                  <div className="absolute bottom-5 left-5 right-5 flex items-center gap-3 p-3 pr-4 rounded-2xl bg-background/85 backdrop-blur-md border border-border/50 shadow-elevated">
+                    <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-display font-bold text-sm text-foreground truncate">Route des Sapins</p>
+                      <p className="text-xs text-muted-foreground truncate">Jura · 42 km · 1h20 d'audio</p>
+                    </div>
+                  </div>
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20, y: -10 }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.7 }}
+                  className="absolute -top-4 -left-4 md:-left-8 px-4 py-3 rounded-2xl bg-card border border-border shadow-elevated flex items-center gap-2.5"
+                >
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">Audio en lecture</span>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20, y: 10 }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.85 }}
+                  className="absolute -bottom-5 -right-3 md:-right-8 px-4 py-3 rounded-2xl bg-foreground text-background shadow-elevated flex items-center gap-2.5"
+                >
+                  <Car className="w-4 h-4" />
+                  <span className="text-xs font-semibold">Mode conduite</span>
+                </motion.div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </section>
