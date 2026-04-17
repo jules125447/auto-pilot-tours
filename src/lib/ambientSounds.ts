@@ -16,11 +16,12 @@ export const AMBIENT_SOUNDS: { type: AmbientSoundType; label: string; emoji: str
   { type: "thunder", label: "Orage", emoji: "⛈️" },
 ];
 
-interface AmbientInstance {
+export interface AmbientInstance {
   ctx: AudioContext;
   gainNode: GainNode;
   nodes: AudioNode[];
   intervalIds: number[];
+  originalVolume: number;
 }
 
 function createWhiteNoise(ctx: AudioContext, bufferSize = 2): AudioBufferSourceNode {
@@ -562,7 +563,7 @@ export function startAmbientSound(type: AmbientSoundType, volume = 0.7): Ambient
   // Fade in
   gainNode.gain.linearRampToValueAtTime(volume, ctx.currentTime + 2);
 
-  return { ctx, gainNode, nodes, intervalIds };
+  return { ctx, gainNode, nodes, intervalIds, originalVolume: volume };
 }
 
 export function stopAmbientSound(instance: AmbientInstance): Promise<void> {

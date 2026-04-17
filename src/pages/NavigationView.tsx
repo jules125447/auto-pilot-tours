@@ -283,43 +283,75 @@ const NavigationView = () => {
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
   // Audio ducking: lower other audio when voice guidance speaks
-  const duckAudio = useCallback(() => {
-    // Duck music
-    if (musicAudioRef.current) {
-      try { musicAudioRef.current.volume = Math.min(musicAudioRef.current.volume, 0.15); } catch {}
+  // Uses ref counting to handle overlapping announcements correctly.
+  const duckCountRef = useRef(0);
+  const musicTargetVolumeRef = useRef(0.7);
+  const musicFadeRafRef = useRef<number | null>(null);
+
+  const fadeMusicTo = useCallback((target: number, durationMs: number) => {
+    const audio = musicAudioRef.current;
+    if (!audio) return;
+    if (musicFadeRafRef.current !== null) {
+      cancelAnimationFrame(musicFadeRafRef.current);
+      musicFadeRafRef.current = null;
     }
-    // Duck ambient sounds
-    activeSoundsRef.current.forEach((instance) => {
-      if (instance?.gainNode) {
-        try { instance.gainNode.gain.setTargetAtTime(instance.gainNode.gain.value * 0.2, instance.ctx.currentTime, 0.3); } catch {}
+    const start = audio.volume;
+    const startTime = performance.now();
+    const step = () => {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(elapsed / durationMs, 1);
+      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      try { audio.volume = Math.max(0, Math.min(1, start + (target - start) * eased)); } catch {}
+      if (t < 1) {
+        musicFadeRafRef.current = requestAnimationFrame(step);
+      } else {
+        musicFadeRafRef.current = null;
       }
-    });
+    };
+    musicFadeRafRef.current = requestAnimationFrame(step);
   }, []);
 
-  const unduckAudio = useCallback(() => {
-    // Restore music
+  const duckAudio = useCallback(() => {
+    duckCountRef.current += 1;
+    if (duckCountRef.current > 1) return;
+
     if (musicAudioRef.current) {
-      try {
-        const audio = musicAudioRef.current;
-        const startVol = audio.volume;
-        const targetVol = 0.7;
-        const startTime = performance.now();
-        const restore = () => {
-          const elapsed = performance.now() - startTime;
-          const progress = Math.min(elapsed / 800, 1);
-          try { audio.volume = startVol + (targetVol - startVol) * progress; } catch {}
-          if (progress < 1) requestAnimationFrame(restore);
-        };
-        requestAnimationFrame(restore);
-      } catch {}
+      const cur = musicAudioRef.current.volume;
+      if (cur > 0.05) musicTargetVolumeRef.current = cur;
+      fadeMusicTo(Math.min(0.15, musicTargetVolumeRef.current * 0.2), 350);
     }
-    // Restore ambient sounds
-    activeSoundsRef.current.forEach((instance) => {
-      if (instance?.gainNode) {
-        try { instance.gainNode.gain.setTargetAtTime(instance._originalVolume ?? 0.5, instance.ctx.currentTime, 0.5); } catch {}
+    activeSoundsRef.current.forEach((instance: any) => {
+      if (instance?.gainNode && instance?.ctx) {
+        try {
+          const target = (instance.originalVolume ?? 0.5) * 0.2;
+          const now = instance.ctx.currentTime;
+          instance.gainNode.gain.cancelScheduledValues(now);
+          instance.gainNode.gain.setValueAtTime(instance.gainNode.gain.value, now);
+          instance.gainNode.gain.linearRampToValueAtTime(target, now + 0.35);
+        } catch {}
       }
     });
-  }, []);
+  }, [fadeMusicTo]);
+
+  const unduckAudio = useCallback(() => {
+    duckCountRef.current = Math.max(0, duckCountRef.current - 1);
+    if (duckCountRef.current > 0) return;
+
+    if (musicAudioRef.current) {
+      fadeMusicTo(musicTargetVolumeRef.current, 700);
+    }
+    activeSoundsRef.current.forEach((instance: any) => {
+      if (instance?.gainNode && instance?.ctx) {
+        try {
+          const target = instance.originalVolume ?? 0.5;
+          const now = instance.ctx.currentTime;
+          instance.gainNode.gain.cancelScheduledValues(now);
+          instance.gainNode.gain.setValueAtTime(instance.gainNode.gain.value, now);
+          instance.gainNode.gain.linearRampToValueAtTime(target, now + 0.7);
+        } catch {}
+      }
+    });
+  }, [fadeMusicTo]);
 
   const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
     onSpeakStart: duckAudio,
