@@ -102,7 +102,7 @@ const Index = () => {
                   <div className="flex items-center gap-1.5">
                     <div className="flex -space-x-0.5">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
+                        <Star key={i} className="w-4 h-4 fill-primary text-primary" />
                       ))}
                     </div>
                     <span className="font-semibold text-foreground">4.9/5</span>
