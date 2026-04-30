@@ -1284,12 +1284,17 @@ const NavigationView = () => {
           routeToStart={routeToStart}
         />
         <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
-        <Link to={`/circuit/${circuit.id}`} className="absolute top-5 left-4 z-[1002] w-11 h-11 rounded-full bg-card/90 backdrop-blur-md border border-border flex items-center justify-center transition-all hover:bg-card active:scale-95 shadow-md">
-          <ArrowLeft className="w-5 h-5 text-foreground" />
-        </Link>
-        <button onClick={() => setVoiceEnabled(!voiceEnabled)} className="absolute top-5 right-4 z-[1002] w-11 h-11 rounded-full bg-card/90 backdrop-blur-md border border-border flex items-center justify-center transition-all hover:bg-card active:scale-95 shadow-md">
-          {voiceEnabled ? <Volume2 className="w-5 h-5 text-primary" /> : <VolumeX className="w-5 h-5 text-muted-foreground" />}
-        </button>
+
+        {/* Floating right-side controls (Waze style stack) */}
+        <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 130px)" }}>
+          <button
+            onClick={() => setVoiceEnabled(!voiceEnabled)}
+            className="w-11 h-11 rounded-full bg-white shadow-[0_3px_10px_rgba(0,0,0,0.18)] flex items-center justify-center active:scale-95 transition-all"
+            aria-label="Voix"
+          >
+            {voiceEnabled ? <Volume2 className="w-5 h-5 text-amber-600" /> : <VolumeX className="w-5 h-5 text-neutral-400" />}
+          </button>
+        </div>
         {/* Calibration indicator */}
         <AnimatePresence>
           {!calibrated && userPos && (
@@ -1321,6 +1326,7 @@ const NavigationView = () => {
         hasGps={!!userPos}
         isLastStopDone={currentStopIndex >= circuit.stops.length - 1 && visitedStops.has(currentStopIndex)}
         speed={speed}
+        onStop={() => navigate(`/circuit/${circuit.id}`)}
       />
     </div>
   );
