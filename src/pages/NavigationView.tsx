@@ -834,10 +834,13 @@ const NavigationView = () => {
     });
   }, [rawUserPos]);
 
-  // Voice announcements
+  // Waze-style tiered voice announcements (far / mid / near / imminent / now)
   useEffect(() => {
     if (!voiceEnabled || !turnInfo) return;
-    announceDirection(turnInfo.turn.direction, turnInfo.distanceToTurn);
+    const t = turnInfo.turn;
+    // Stable per-turn signature so we never re-announce same tier for same turn
+    const sig = `turn-${t.pointIndex}-${t.lat.toFixed(5)}-${t.lng.toFixed(5)}`;
+    announceDirection(t.direction, turnInfo.distanceToTurn, sig);
   }, [turnInfo, voiceEnabled, announceDirection]);
 
   // Fade helper for HTML Audio
