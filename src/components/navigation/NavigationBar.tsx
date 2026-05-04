@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Search, Volume2, X, MapPin, Navigation2 } from "lucide-react";
+import { Search, MapPin, X } from "lucide-react";
 
 interface NavigationBarProps {
   currentStop: {
@@ -60,68 +60,65 @@ const NavigationBar = ({
 
   return (
     <div className="relative z-[1000] pointer-events-none">
-      {/* Next POI mini-pill — small info strip above bottom bar */}
+      {/* Next POI pill — small floating badge above bottom bar */}
       {currentStop && !isLastStopDone && (
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="mx-4 mb-2 pointer-events-auto"
+          className="absolute left-1/2 -translate-x-1/2 pointer-events-auto"
+          style={{ bottom: "calc(100% + 8px)" }}
         >
-          <div className="rounded-full bg-white/95 backdrop-blur-sm shadow-[0_2px_12px_rgba(0,0,0,0.12)] flex items-center gap-2 px-3 py-2">
-            <div className="w-6 h-6 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-3.5 h-3.5 text-amber-600" />
-            </div>
-            <p className="text-xs font-semibold text-neutral-800 truncate flex-1">
+          <div className="rounded-full bg-amber-500 shadow-[0_2px_12px_rgba(0,0,0,0.2)] flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap">
+            <MapPin className="w-3 h-3 text-white flex-shrink-0" />
+            <span className="text-xs font-semibold text-white truncate max-w-[140px]">
               {currentStop.title}
-            </p>
-            <p className="text-xs font-bold text-amber-600 tabular-nums flex-shrink-0">
+            </span>
+            <span className="text-xs font-bold text-white/80 tabular-nums">
               {hasGps ? formatDist(distToNextStop) : "—"}
-            </p>
-            {hasGps && etaNextStop > 0 && (
-              <p className="text-[10px] text-neutral-500 font-medium tabular-nums flex-shrink-0">
-                ~{formatEta(etaNextStop)}
-              </p>
-            )}
+            </span>
           </div>
         </motion.div>
       )}
 
-      {/* Bottom bar — exact Waze layout */}
+      {/* Bottom bar — exact Waze style: white bg, arrival time center, meta below */}
       <div
-        className="bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] pointer-events-auto"
+        className="bg-white pointer-events-auto"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)" }}
       >
-        <div className="flex items-center px-4 py-3 gap-4">
-          {/* Left: Search icon placeholder (Waze has it) */}
-          <button className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center flex-shrink-0 active:bg-neutral-200 transition-colors">
-            <Search className="w-5 h-5 text-neutral-500" />
+        {/* Thin top separator */}
+        <div className="h-px bg-neutral-200" />
+
+        <div className="flex items-center px-4 py-3">
+          {/* Left: search icon */}
+          <button className="w-9 h-9 flex items-center justify-center flex-shrink-0 active:opacity-60 transition-opacity">
+            <Search className="w-5 h-5 text-neutral-400" />
           </button>
 
-          {/* Center: arrival time big + duration/distance below */}
-          <div className="flex-1 flex flex-col items-center justify-center min-w-0">
-            <p className="text-[28px] font-extrabold text-neutral-900 leading-none tabular-nums">
+          {/* Center: arrival time + meta */}
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <p className="text-[32px] font-bold text-neutral-900 leading-none tabular-nums tracking-tight">
               {arrivalTime}
             </p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-semibold text-amber-600 tabular-nums">
+            <p className="text-xs text-neutral-500 mt-1 tabular-nums">
+              <span className="text-amber-600 font-semibold">
                 {hasGps && etaMinutes > 0 ? formatEta(etaMinutes) : "—"}
               </span>
-              <span className="text-neutral-300">·</span>
-              <span className="text-xs font-semibold text-neutral-500 tabular-nums">
-                {hasGps ? formatDist(distanceRemaining) : "—"}
-              </span>
-            </div>
+              {" · "}
+              <span>{hasGps ? formatDist(distanceRemaining) : "—"}</span>
+            </p>
           </div>
 
-          {/* Right: Stop button (red X like Waze) */}
-          {onStop && (
+          {/* Right: stop */}
+          {onStop ? (
             <button
               onClick={onStop}
-              className="w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center flex-shrink-0 shadow-md"
-              aria-label="Arrêter la navigation"
+              className="w-9 h-9 flex items-center justify-center flex-shrink-0 active:opacity-60 transition-opacity"
+              aria-label="Arrêter"
             >
-              <X className="w-5 h-5 text-white" strokeWidth={3} />
+              <X className="w-6 h-6 text-neutral-400" strokeWidth={2.5} />
             </button>
+          ) : (
+            <div className="w-9" />
           )}
         </div>
       </div>
