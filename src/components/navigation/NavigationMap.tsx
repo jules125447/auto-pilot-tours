@@ -53,6 +53,7 @@ const NavigationMap = ({
   currentStopIndex,
   participants = [],
   routeToStart,
+  recalculatedRoute,
 }: NavigationMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
