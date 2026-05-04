@@ -282,6 +282,15 @@ const NavigationView = () => {
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
+  // Off-route recalculation
+  const OFF_ROUTE_THRESHOLD_METERS = 100;
+  const OFF_ROUTE_CONFIRM_COUNT = 3; // consecutive fixes off-route before recalculating
+  const offRouteCountRef = useRef(0);
+  const recalcAbortRef = useRef<AbortController | null>(null);
+  const lastRecalcTimeRef = useRef(0);
+  const [recalculatedRoute, setRecalculatedRoute] = useState<[number, number][] | null>(null);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
   // Audio ducking: lower other audio when voice guidance speaks
   // Uses ref counting to handle overlapping announcements correctly.
   const duckCountRef = useRef(0);
