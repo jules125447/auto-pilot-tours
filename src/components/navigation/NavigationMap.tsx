@@ -35,6 +35,7 @@ interface NavigationMapProps {
   currentStopIndex: number;
   participants?: Participant[];
   routeToStart?: [number, number][] | null;
+  recalculatedRoute?: [number, number][] | null;
 }
 
 const poiEmoji: Record<string, string> = {
