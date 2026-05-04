@@ -1040,6 +1040,73 @@ const NavigationView = () => {
     }
   }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, announceArrival]);
 
+  // Off-route detection & recalculation
+  useEffect(() => {
+    if (!rawUserPos || !circuit || !hasReachedStart || !calibrated) return;
+
+    const routeCoords = circuit.route as [number, number][] | undefined;
+    if (!routeCoords || routeCoords.length < 2) return;
+
+    const projected = projectClosestPointOnRoute(rawUserPos[0], rawUserPos[1], routeCoords);
+
+    if (projected.distance > OFF_ROUTE_THRESHOLD_METERS) {
+      offRouteCountRef.current += 1;
+    } else {
+      // Back on route — clear recalculated route
+      offRouteCountRef.current = 0;
+      if (recalculatedRoute) {
+        setRecalculatedRoute(null);
+      }
+      return;
+    }
+
+    if (offRouteCountRef.current < OFF_ROUTE_CONFIRM_COUNT) return;
+
+    // Throttle recalculations (min 5s apart)
+    const now = Date.now();
+    if (now - lastRecalcTimeRef.current < 5000) return;
+    lastRecalcTimeRef.current = now;
+
+    // Find the nearest upcoming route point to rejoin
+    const nextStop = circuit.stops[currentStopIndex];
+    if (!nextStop) return;
+
+    // Recalculate from user position to next stop via OSRM
+    recalcAbortRef.current?.abort();
+    const controller = new AbortController();
+    recalcAbortRef.current = controller;
+    setIsRecalculating(true);
+
+    getRoute([rawUserPos, [nextStop.lat, nextStop.lng]], { signal: controller.signal })
+      .then((result) => {
+        if (!controller.signal.aborted && result?.coordinates) {
+          setRecalculatedRoute(result.coordinates);
+          logGps("info", "route_recalculated", {
+            distanceOffRoute: Math.round(projected.distance),
+            newRouteLength: result.distance,
+          });
+          // Announce recalculation
+          if (voiceEnabled) {
+            const { speak } = { speak: (t: string) => {
+              if (!("speechSynthesis" in window)) return;
+              const u = new SpeechSynthesisUtterance(t);
+              u.lang = "fr-FR";
+              u.rate = 1.05;
+              speechSynthesis.cancel();
+              speechSynthesis.speak(u);
+            }};
+            speak("Recalcul de l'itinéraire");
+          }
+        }
+        setIsRecalculating(false);
+      })
+      .catch(() => {
+        setIsRecalculating(false);
+      });
+
+    return () => { controller.abort(); };
+  }, [rawUserPos, circuit, hasReachedStart, calibrated, currentStopIndex, voiceEnabled, recalculatedRoute]);
+
   const getNavInfo = useCallback(() => {
     if (!circuit || !userPos) return { distanceRemaining: 0, etaMinutes: 0, distToNextStop: 0, etaNextStop: 0 };
     const [lat, lng] = userPos;
