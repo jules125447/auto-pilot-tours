@@ -17,11 +17,11 @@ import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 export type AnnouncementTier = "far" | "mid" | "near" | "imminent" | "now";
 
 const TIERS: { tier: AnnouncementTier; min: number; max: number }[] = [
-  { tier: "far", min: 700, max: 900 },
-  { tier: "mid", min: 350, max: 500 },
-  { tier: "near", min: 170, max: 240 },
-  { tier: "imminent", min: 65, max: 110 },
-  { tier: "now", min: 0, max: 35 },
+  { tier: "far", min: 800, max: 1100 },
+  { tier: "mid", min: 400, max: 600 },
+  { tier: "near", min: 200, max: 320 },
+  { tier: "imminent", min: 80, max: 150 },
+  { tier: "now", min: 0, max: 50 },
 ];
 
 function shortDir(dir: TurnDirection): string {
