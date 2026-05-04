@@ -71,9 +71,9 @@ function formatDist(m: number): string {
 
 /** Waze-style urgency: distance buckets drive color intensity. */
 function urgencyFromDistance(m: number): "calm" | "approach" | "soon" | "now" {
-  if (m <= 40) return "now";
-  if (m <= 120) return "soon";
-  if (m <= 350) return "approach";
+  if (m <= 50) return "now";
+  if (m <= 150) return "soon";
+  if (m <= 400) return "approach";
   return "calm";
 }
 
