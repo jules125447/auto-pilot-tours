@@ -1361,31 +1361,48 @@ const NavigationView = () => {
           currentStopIndex={currentStopIndex}
           participants={participants}
           routeToStart={routeToStart}
+          recalculatedRoute={recalculatedRoute}
         />
         <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
 
-        {/* Floating right-side controls (Waze style stack) */}
-        <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 130px)" }}>
+        {/* Right-side floating controls — Waze purple bubble style */}
+        <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>
           <button
             onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className="w-11 h-11 rounded-full bg-white shadow-[0_3px_10px_rgba(0,0,0,0.18)] flex items-center justify-center active:scale-95 transition-all"
+            className="w-12 h-12 rounded-full bg-amber-500 shadow-[0_3px_12px_rgba(0,0,0,0.25)] flex items-center justify-center active:scale-95 transition-all"
             aria-label="Voix"
           >
-            {voiceEnabled ? <Volume2 className="w-5 h-5 text-amber-600" /> : <VolumeX className="w-5 h-5 text-neutral-400" />}
+            {voiceEnabled ? <Volume2 className="w-5 h-5 text-white" /> : <VolumeX className="w-5 h-5 text-white/60" />}
           </button>
         </div>
-        {/* Calibration indicator */}
+
+        {/* Calibration / Recalculating indicator */}
         <AnimatePresence>
-          {!calibrated && userPos && (
+          {(!calibrated && userPos) && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute top-20 left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-card/95 backdrop-blur-md border border-border shadow-md"
+              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-[#2d2d3a]/90 backdrop-blur-md shadow-md"
+              style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
             >
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span className="text-xs font-medium text-muted-foreground">Calibration GPS…</span>
+                <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                <span className="text-xs font-medium text-white/80">Calibration GPS…</span>
+              </div>
+            </motion.div>
+          )}
+          {isRecalculating && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-amber-500/90 backdrop-blur-md shadow-md"
+              style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span className="text-xs font-semibold text-white">Recalcul…</span>
               </div>
             </motion.div>
           )}
