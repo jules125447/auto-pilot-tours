@@ -373,6 +373,37 @@ const NavigationMap = ({
     }
   }, [routeToStart, userPos]);
 
+  // Recalculated route (off-route recovery)
+  const recalcLineRef = useRef<L.Polyline | null>(null);
+  const recalcGlowRef = useRef<L.Polyline | null>(null);
+
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const map = mapInstance.current;
+
+    if (recalcGlowRef.current) { map.removeLayer(recalcGlowRef.current); recalcGlowRef.current = null; }
+    if (recalcLineRef.current) { map.removeLayer(recalcLineRef.current); recalcLineRef.current = null; }
+
+    if (recalculatedRoute && recalculatedRoute.length > 1) {
+      recalcGlowRef.current = L.polyline(recalculatedRoute, {
+        color: "#FF6B35",
+        weight: 14,
+        opacity: 0.2,
+        smoothFactor: 1,
+      }).addTo(map);
+
+      recalcLineRef.current = L.polyline(recalculatedRoute, {
+        color: "#FF6B35",
+        weight: 5,
+        opacity: 0.9,
+        smoothFactor: 1,
+        lineCap: "round",
+        lineJoin: "round",
+        dashArray: "10 6",
+      }).addTo(map);
+    }
+  }, [recalculatedRoute]);
+
   useEffect(() => {
     if (!mapInstance.current) return;
     const map = mapInstance.current;
