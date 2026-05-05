@@ -287,6 +287,42 @@ export type Database = {
           },
         ]
       }
+      map_annotations: {
+        Row: {
+          caption: string | null
+          circuit_id: string
+          created_at: string
+          id: string
+          image_url: string | null
+          lat: number
+          lng: number
+          size: string
+          sort_order: number | null
+        }
+        Insert: {
+          caption?: string | null
+          circuit_id: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          lat: number
+          lng: number
+          size?: string
+          sort_order?: number | null
+        }
+        Update: {
+          caption?: string | null
+          circuit_id?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          lat?: number
+          lng?: number
+          size?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       music_segments: {
         Row: {
           artist_name: string | null
