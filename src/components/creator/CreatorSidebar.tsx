@@ -33,6 +33,7 @@ interface CreatorSidebarProps {
   audioZones: AudioZoneData[];
   musicSegments: MusicSegmentData[];
   soundSegments: SoundSegmentData[];
+  annotations: MapAnnotationData[];
   selectedStopId: string | null;
   setSelectedStopId: (id: string | null) => void;
   selectedAudioId: string | null;
@@ -41,6 +42,8 @@ interface CreatorSidebarProps {
   setSelectedMusicId: (id: string | null) => void;
   selectedSoundId: string | null;
   setSelectedSoundId: (id: string | null) => void;
+  selectedAnnotationId: string | null;
+  setSelectedAnnotationId: (id: string | null) => void;
   onUpdateStop: (id: string, data: Partial<StopData>) => void;
   onDeleteStop: (id: string) => void;
   onUpdateAudio: (id: string, data: Partial<AudioZoneData>) => void;
@@ -49,6 +52,8 @@ interface CreatorSidebarProps {
   onDeleteMusic: (id: string) => void;
   onUpdateSound: (id: string, data: Partial<SoundSegmentData>) => void;
   onDeleteSound: (id: string) => void;
+  onUpdateAnnotation: (id: string, data: Partial<MapAnnotationData>) => void;
+  onDeleteAnnotation: (id: string) => void;
   onSave: () => void;
   onPublish: () => void;
   saving: boolean;
