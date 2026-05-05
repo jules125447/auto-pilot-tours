@@ -431,7 +431,20 @@ const CircuitCreator = () => {
     setSoundSegments((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
   };
 
-  const handleSave = async (publish: boolean) => {
+  const handleDeleteAnnotation = (id: string) => {
+    setAnnotations((prev) => prev.filter((a) => a.id !== id));
+    if (selectedAnnotationId === id) setSelectedAnnotationId(null);
+  };
+
+  const handleUpdateAnnotation = (id: string, data: Partial<MapAnnotationData>) => {
+    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+  };
+
+  const handleAnnotationDrag = useCallback((id: string, lat: number, lng: number) => {
+    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, lat, lng } : a)));
+  }, []);
+
+
     if (!user) return;
     setSaving(true);
     try {
