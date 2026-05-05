@@ -159,12 +159,13 @@ const CircuitCreator = () => {
     const load = async () => {
       setLoadingEdit(true);
       try {
-        const [circuitRes, stopsRes, audioRes, musicRes, soundRes] = await Promise.all([
+        const [circuitRes, stopsRes, audioRes, musicRes, soundRes, annotationsRes] = await Promise.all([
           supabase.from("circuits").select("*").eq("id", editId).eq("creator_id", user.id).single(),
           supabase.from("circuit_stops").select("*").eq("circuit_id", editId).order("sort_order"),
           supabase.from("audio_zones").select("*").eq("circuit_id", editId).order("sort_order"),
           supabase.from("music_segments").select("*").eq("circuit_id", editId),
           supabase.from("sound_segments").select("*").eq("circuit_id", editId),
+          supabase.from("map_annotations").select("*").eq("circuit_id", editId).order("sort_order"),
         ]);
         if (circuitRes.error) throw circuitRes.error;
         const c = circuitRes.data;
