@@ -139,6 +139,7 @@ const CircuitCreator = () => {
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
   const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
   const [soundSegments, setSoundSegments] = useState<SoundSegmentData[]>([]);
+  const [annotations, setAnnotations] = useState<MapAnnotationData[]>([]);
   const [musicPlacingStart] = useState<{ lat: number; lng: number } | null>(null); // kept for map prop compatibility
   const [soundPlacingStart, setSoundPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
@@ -150,6 +151,7 @@ const CircuitCreator = () => {
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const [selectedMusicId, setSelectedMusicId] = useState<string | null>(null);
   const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
   // Load existing circuit when editing
   useEffect(() => {
