@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Navigation } from "lucide-react";
 
 interface NavigationBarProps {
   currentStop: {
@@ -20,6 +20,9 @@ interface NavigationBarProps {
   isLastStopDone?: boolean;
   speed?: number | null;
   onStop?: () => void;
+  approachingStart?: boolean;
+  distToStart?: number | null;
+  etaToStartSeconds?: number | null;
 }
 
 function formatDist(meters: number): string {
@@ -41,6 +44,15 @@ function formatEta(minutes: number): string {
   return m > 0 ? `${h} h ${m}` : `${h} h`;
 }
 
+function formatSeconds(seconds: number): string {
+  if (!seconds || seconds <= 0) return "—";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return m > 0 ? `${h} h ${m}` : `${h} h`;
+}
+
 const NavigationBar = ({
   currentStop,
   currentStopIndex,
@@ -55,13 +67,44 @@ const NavigationBar = ({
   isLastStopDone = false,
   speed,
   onStop,
+  approachingStart = false,
+  distToStart = null,
+  etaToStartSeconds = null,
 }: NavigationBarProps) => {
   const arrivalTime = formatArrivalTime(etaMinutes);
 
   return (
     <div className="relative z-[1000] pointer-events-none">
-      {/* Next POI floating card */}
-      {currentStop && !isLastStopDone && (
+      {/* Approaching start — show distance/time to departure point */}
+      {approachingStart && distToStart !== null && (
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="absolute left-3 right-3 pointer-events-auto"
+          style={{ bottom: "calc(100% + 8px)" }}
+        >
+          <div className="rounded-2xl bg-card/95 backdrop-blur-xl shadow-elevated flex items-center gap-3 px-4 py-3 border border-primary/20">
+            <div className="w-9 h-9 rounded-full bg-gradient-hero flex items-center justify-center flex-shrink-0 shadow-glow">
+              <Navigation className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-primary/70 font-semibold uppercase tracking-wider">Vers le départ</p>
+              <p className="text-sm font-bold text-foreground">Rejoindre le point de départ</p>
+            </div>
+            <div className="flex flex-col items-end flex-shrink-0">
+              <span className="text-sm font-extrabold text-primary tabular-nums">
+                {formatDist(distToStart)}
+              </span>
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                ~{etaToStartSeconds !== null ? formatSeconds(etaToStartSeconds) : "—"}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Next POI floating card — only when not approaching start */}
+      {!approachingStart && currentStop && !isLastStopDone && (
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -110,29 +153,53 @@ const NavigationBar = ({
         </div>
 
         <div className="flex items-center px-4 pb-3">
-          {/* Left: ETA info */}
+          {/* Left: ETA / approaching start info */}
           <div className="flex-1">
-            <p className="text-[11px] text-primary/60 uppercase tracking-wider font-semibold">Arrivée</p>
-            <p className="text-2xl font-bold text-foreground leading-none tabular-nums tracking-tight mt-0.5">
-              {arrivalTime}
-            </p>
+            {approachingStart && distToStart !== null ? (
+              <>
+                <p className="text-[11px] text-primary/60 uppercase tracking-wider font-semibold">Jusqu'au départ</p>
+                <p className="text-2xl font-bold text-foreground leading-none tabular-nums tracking-tight mt-0.5">
+                  {formatDist(distToStart)}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] text-primary/60 uppercase tracking-wider font-semibold">Arrivée</p>
+                <p className="text-2xl font-bold text-foreground leading-none tabular-nums tracking-tight mt-0.5">
+                  {arrivalTime}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Center: distance + time remaining */}
           <div className="flex items-center gap-4">
-            <div className="text-center">
-              <p className="text-lg font-bold text-foreground tabular-nums leading-none">
-                {hasGps ? formatDist(distanceRemaining) : "—"}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">restant</p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div className="text-center">
-              <p className="text-lg font-bold text-primary tabular-nums leading-none">
-                {hasGps && etaMinutes > 0 ? formatEta(etaMinutes) : "—"}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">durée</p>
-            </div>
+            {approachingStart && etaToStartSeconds !== null ? (
+              <>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-primary tabular-nums leading-none">
+                    {formatSeconds(etaToStartSeconds)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">au départ</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <p className="text-lg font-bold text-foreground tabular-nums leading-none">
+                    {hasGps ? formatDist(distanceRemaining) : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">restant</p>
+                </div>
+                <div className="w-px h-8 bg-border" />
+                <div className="text-center">
+                  <p className="text-lg font-bold text-primary tabular-nums leading-none">
+                    {hasGps && etaMinutes > 0 ? formatEta(etaMinutes) : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">durée</p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right: stop button */}

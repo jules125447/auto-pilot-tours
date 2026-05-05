@@ -280,6 +280,7 @@ const NavigationView = () => {
   const permissionStatusRef = useRef<PermissionStatus | null>(null);
   const routeProgressRef = useRef<number | null>(null);
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
+  const [routeToStartInfo, setRouteToStartInfo] = useState<{ distance: number; duration: number } | null>(null);
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
   // Off-route recalculation
@@ -1165,6 +1166,7 @@ const NavigationView = () => {
 
       if (!abortController.signal.aborted) {
         setRouteToStart(result?.coordinates ?? null);
+        setRouteToStartInfo(result ? { distance: result.distance, duration: result.duration } : null);
       }
     }, 300);
 
@@ -1428,6 +1430,9 @@ const NavigationView = () => {
         isLastStopDone={currentStopIndex >= circuit.stops.length - 1 && visitedStops.has(currentStopIndex)}
         speed={speed}
         onStop={() => navigate(`/circuit/${circuit.id}`)}
+        approachingStart={!!routeToStart && !hasReachedStart}
+        distToStart={routeToStartInfo?.distance ?? null}
+        etaToStartSeconds={routeToStartInfo?.duration ?? null}
       />
     </div>
   );
