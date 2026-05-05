@@ -465,7 +465,7 @@ const NavigationMap = ({
 
       // Apply rotation: negative heading so the direction of travel points up
       mapContainer.style.transformOrigin = "center center";
-      mapContainer.style.transition = "transform 180ms linear";
+      mapContainer.style.transition = "transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1)";
       // Scale up slightly to hide corners during rotation
       const diagonal = Math.sqrt(mapContainer.offsetWidth ** 2 + mapContainer.offsetHeight ** 2);
       const maxDim = Math.max(mapContainer.offsetWidth, mapContainer.offsetHeight);
@@ -479,7 +479,7 @@ const NavigationMap = ({
     } else {
       // Reset rotation when user is panning manually
       mapContainer.style.transform = "none";
-      mapContainer.style.transition = "none";
+      mapContainer.style.transition = "transform 300ms ease-out";
     }
   }, [userPos, mapHeading, route, tracking, routeToStart]);
 
