@@ -482,6 +482,7 @@ const CreatorSidebar = ({
             <span className="px-2 py-1 rounded-md bg-muted">{audioZones.length} audio</span>
             <span className="px-2 py-1 rounded-md bg-muted">{musicSegments.length} musiques</span>
             <span className="px-2 py-1 rounded-md bg-muted">{soundSegments.length} ambiances</span>
+            <span className="px-2 py-1 rounded-md bg-muted">{annotations.length} annotations</span>
           </div>
 
           {/* Stops */}
