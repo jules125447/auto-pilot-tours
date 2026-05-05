@@ -511,6 +511,39 @@ const NavigationMap = ({
     });
   }, [currentStopIndex]);
 
+  // Annotation markers
+  const annotationMarkersRef = useRef<L.Marker[]>([]);
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const map = mapInstance.current;
+    annotationMarkersRef.current.forEach((m) => map.removeLayer(m));
+    annotationMarkersRef.current = [];
+
+    annotations.forEach((ann) => {
+      const sizeMap: Record<string, number> = { small: 36, medium: 52, large: 72 };
+      const px = sizeMap[ann.size] || 52;
+      const hasImage = !!ann.image_url;
+
+      const icon = L.divIcon({
+        html: `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;">
+          <div style="width:${px}px;height:${px}px;border-radius:10px;border:2.5px solid hsl(15,85%,55%);overflow:hidden;background:white;box-shadow:0 2px 12px rgba(234,88,12,0.3);display:flex;align-items:center;justify-content:center;">
+            ${hasImage ? `<img src="${ann.image_url}" style="width:100%;height:100%;object-fit:cover;" />` : `<span style="font-size:${px * 0.4}px;">🖼</span>`}
+          </div>
+          ${ann.caption ? `<div style="max-width:${px + 50}px;background:white;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 4px rgba(0,0,0,0.15);color:#333;">${ann.caption}</div>` : ""}
+        </div>`,
+        className: "poi-marker",
+        iconSize: [px + 10, px + (ann.caption ? 20 : 0)],
+        iconAnchor: [(px + 10) / 2, (px + (ann.caption ? 20 : 0)) / 2],
+      });
+
+      const marker = L.marker([ann.lat, ann.lng], { icon, zIndexOffset: 800 }).addTo(map);
+      if (ann.caption) {
+        marker.bindTooltip(ann.caption, { permanent: false, direction: "top", offset: [0, -px / 2 - 4], className: "poi-tooltip-nav" });
+      }
+      annotationMarkersRef.current.push(marker);
+    });
+  }, [annotations]);
+
   return (
     <>
       <style>{`
