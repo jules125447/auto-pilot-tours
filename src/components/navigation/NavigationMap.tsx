@@ -443,6 +443,9 @@ const NavigationMap = ({
         iconAnchor: [28, 28],
       });
       userMarkerRef.current = L.marker(userPos, { icon, zIndexOffset: 1000 }).addTo(map);
+      // Enable smooth CSS transitions on marker element
+      const el = userMarkerRef.current.getElement();
+      if (el) el.style.transition = "transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1)";
     } else {
       userMarkerRef.current.setLatLng(userPos);
     }
@@ -465,7 +468,7 @@ const NavigationMap = ({
 
       // Apply rotation: negative heading so the direction of travel points up
       mapContainer.style.transformOrigin = "center center";
-      mapContainer.style.transition = "transform 180ms linear";
+      mapContainer.style.transition = "transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1)";
       // Scale up slightly to hide corners during rotation
       const diagonal = Math.sqrt(mapContainer.offsetWidth ** 2 + mapContainer.offsetHeight ** 2);
       const maxDim = Math.max(mapContainer.offsetWidth, mapContainer.offsetHeight);
@@ -479,7 +482,7 @@ const NavigationMap = ({
     } else {
       // Reset rotation when user is panning manually
       mapContainer.style.transform = "none";
-      mapContainer.style.transition = "none";
+      mapContainer.style.transition = "transform 300ms ease-out";
     }
   }, [userPos, mapHeading, route, tracking, routeToStart]);
 
@@ -532,7 +535,10 @@ const NavigationMap = ({
           position: relative;
           z-index: 2;
           transform-origin: center center;
-          transition: transform 0.45s ease-out;
+          transition: transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .waze-user-marker {
+          transition: transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1) !important;
         }
         .poi-tooltip-nav {
           background: white !important;
