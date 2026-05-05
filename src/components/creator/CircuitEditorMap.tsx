@@ -12,6 +12,7 @@ interface CircuitEditorMapProps {
   audioZones: AudioZoneData[];
   musicSegments: MusicSegmentData[];
   soundSegments: SoundSegmentData[];
+  annotations: MapAnnotationData[];
   musicPlacingStart: { lat: number; lng: number } | null;
   soundPlacingStart: { lat: number; lng: number } | null;
   mode: EditorMode;
@@ -20,10 +21,12 @@ interface CircuitEditorMapProps {
   onStopDrag?: (id: string, lat: number, lng: number) => void;
   onAudioDrag?: (id: string, lat: number, lng: number) => void;
   onMusicDrag?: (id: string, point: "start" | "end", lat: number, lng: number) => void;
+  onAnnotationDrag?: (id: string, lat: number, lng: number) => void;
   selectedStopId: string | null;
   selectedAudioId: string | null;
   selectedMusicId: string | null;
   selectedSoundId: string | null;
+  selectedAnnotationId: string | null;
   routeLoading: boolean;
   onMapReady?: (map: L.Map) => void;
 }
