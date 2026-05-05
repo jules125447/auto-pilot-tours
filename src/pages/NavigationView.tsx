@@ -1282,6 +1282,7 @@ const NavigationView = () => {
             heading={0}
             currentStopIndex={0}
             routeToStart={routeToStart}
+            annotations={circuit.map_annotations}
           />
           <div className="absolute inset-0 z-[1100] flex items-center justify-center" style={{
               background: "linear-gradient(180deg, hsl(30 25% 97% / 0.85) 0%, hsl(30 25% 97% / 0.65) 50%, hsl(30 25% 97% / 0.85) 100%)",
@@ -1369,6 +1370,7 @@ const NavigationView = () => {
           participants={participants}
           routeToStart={routeToStart}
           recalculatedRoute={recalculatedRoute}
+          annotations={circuit.map_annotations}
         />
         <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
 

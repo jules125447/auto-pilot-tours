@@ -58,7 +58,16 @@ export interface SoundSegmentData {
   volume: number;
 }
 
-export type EditorMode = "route" | "stop" | "audio" | "music" | "sound" | "select";
+export interface MapAnnotationData {
+  id: string;
+  lat: number;
+  lng: number;
+  imageUrl: string;
+  caption: string;
+  size: "small" | "medium" | "large";
+}
+
+export type EditorMode = "route" | "stop" | "audio" | "music" | "sound" | "annotation" | "select";
 
 /** Given a route, find a point ~distanceMeters along it from the closest point to `origin`. */
 function findPointAlongRoute(
@@ -130,6 +139,7 @@ const CircuitCreator = () => {
   const [audioZones, setAudioZones] = useState<AudioZoneData[]>([]);
   const [musicSegments, setMusicSegments] = useState<MusicSegmentData[]>([]);
   const [soundSegments, setSoundSegments] = useState<SoundSegmentData[]>([]);
+  const [annotations, setAnnotations] = useState<MapAnnotationData[]>([]);
   const [musicPlacingStart] = useState<{ lat: number; lng: number } | null>(null); // kept for map prop compatibility
   const [soundPlacingStart, setSoundPlacingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [mode, setMode] = useState<EditorMode>("route");
@@ -141,6 +151,7 @@ const CircuitCreator = () => {
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(null);
   const [selectedMusicId, setSelectedMusicId] = useState<string | null>(null);
   const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
 
   // Load existing circuit when editing
   useEffect(() => {
@@ -148,12 +159,13 @@ const CircuitCreator = () => {
     const load = async () => {
       setLoadingEdit(true);
       try {
-        const [circuitRes, stopsRes, audioRes, musicRes, soundRes] = await Promise.all([
+        const [circuitRes, stopsRes, audioRes, musicRes, soundRes, annotationsRes] = await Promise.all([
           supabase.from("circuits").select("*").eq("id", editId).eq("creator_id", user.id).single(),
           supabase.from("circuit_stops").select("*").eq("circuit_id", editId).order("sort_order"),
           supabase.from("audio_zones").select("*").eq("circuit_id", editId).order("sort_order"),
           supabase.from("music_segments").select("*").eq("circuit_id", editId),
           supabase.from("sound_segments").select("*").eq("circuit_id", editId),
+          supabase.from("map_annotations").select("*").eq("circuit_id", editId).order("sort_order"),
         ]);
         if (circuitRes.error) throw circuitRes.error;
         const c = circuitRes.data;
@@ -206,6 +218,12 @@ const CircuitCreator = () => {
           setSoundSegments(soundRes.data.map(s => ({
             id: s.id, startLat: s.start_lat, startLng: s.start_lng,
             endLat: s.end_lat, endLng: s.end_lng, soundType: s.sound_type, volume: s.volume,
+          })));
+        }
+        if (annotationsRes.data) {
+          setAnnotations(annotationsRes.data.map((a: any) => ({
+            id: a.id, lat: a.lat, lng: a.lng, imageUrl: a.image_url || "",
+            caption: a.caption || "", size: a.size || "medium",
           })));
         }
       } catch (err: any) {
@@ -325,6 +343,17 @@ const CircuitCreator = () => {
           setSelectedSoundId(newSegment.id);
           setSoundPlacingStart(null);
         }
+      } else if (mode === "annotation") {
+        const newAnnotation: MapAnnotationData = {
+          id: crypto.randomUUID(),
+          lat,
+          lng,
+          imageUrl: "",
+          caption: "",
+          size: "medium",
+        };
+        setAnnotations((prev) => [...prev, newAnnotation]);
+        setSelectedAnnotationId(newAnnotation.id);
       }
     },
     [mode, stops.length, waypoints, rebuildRoute, route, soundPlacingStart, toast]
@@ -402,6 +431,19 @@ const CircuitCreator = () => {
     setSoundSegments((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)));
   };
 
+  const handleDeleteAnnotation = (id: string) => {
+    setAnnotations((prev) => prev.filter((a) => a.id !== id));
+    if (selectedAnnotationId === id) setSelectedAnnotationId(null);
+  };
+
+  const handleUpdateAnnotation = (id: string, data: Partial<MapAnnotationData>) => {
+    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+  };
+
+  const handleAnnotationDrag = useCallback((id: string, lat: number, lng: number) => {
+    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, lat, lng } : a)));
+  }, []);
+
   const handleSave = async (publish: boolean) => {
     if (!user) return;
     setSaving(true);
@@ -437,6 +479,7 @@ const CircuitCreator = () => {
           supabase.from("audio_zones").delete().eq("circuit_id", circuitId),
           supabase.from("music_segments").delete().eq("circuit_id", circuitId),
           supabase.from("sound_segments").delete().eq("circuit_id", circuitId),
+          supabase.from("map_annotations").delete().eq("circuit_id", circuitId),
         ]);
       } else {
         // Create new circuit
@@ -531,6 +574,21 @@ const CircuitCreator = () => {
         if (soundErr) throw soundErr;
       }
 
+      if (annotations.length > 0) {
+        const { error: annErr } = await supabase.from("map_annotations").insert(
+          annotations.map((a, i) => ({
+            circuit_id: circuitId,
+            lat: a.lat,
+            lng: a.lng,
+            image_url: a.imageUrl || null,
+            caption: a.caption || "",
+            size: a.size,
+            sort_order: i,
+          })) as any
+        );
+        if (annErr) throw annErr;
+      }
+
       toast({
         title: isEditing
           ? (publish ? "Circuit modifié et publié !" : "Circuit modifié !")
@@ -602,6 +660,7 @@ const CircuitCreator = () => {
           audioZones={audioZones}
           musicSegments={musicSegments}
           soundSegments={soundSegments}
+          annotations={annotations}
           selectedStopId={selectedStopId}
           setSelectedStopId={setSelectedStopId}
           selectedAudioId={selectedAudioId}
@@ -610,6 +669,8 @@ const CircuitCreator = () => {
           setSelectedMusicId={setSelectedMusicId}
           selectedSoundId={selectedSoundId}
           setSelectedSoundId={setSelectedSoundId}
+          selectedAnnotationId={selectedAnnotationId}
+          setSelectedAnnotationId={setSelectedAnnotationId}
           onUpdateStop={handleUpdateStop}
           onDeleteStop={handleDeleteStop}
           onUpdateAudio={handleUpdateAudio}
@@ -618,6 +679,8 @@ const CircuitCreator = () => {
           onDeleteMusic={handleDeleteMusic}
           onUpdateSound={handleUpdateSound}
           onDeleteSound={handleDeleteSound}
+          onUpdateAnnotation={handleUpdateAnnotation}
+          onDeleteAnnotation={handleDeleteAnnotation}
           onSave={() => handleSave(false)}
           onPublish={() => handleSave(true)}
           saving={saving}
@@ -648,6 +711,7 @@ const CircuitCreator = () => {
             audioZones={audioZones}
             musicSegments={musicSegments}
             soundSegments={soundSegments}
+            annotations={annotations}
             musicPlacingStart={musicPlacingStart}
             soundPlacingStart={soundPlacingStart}
             mode={mode}
@@ -656,10 +720,12 @@ const CircuitCreator = () => {
             onStopDrag={handleStopDrag}
             onAudioDrag={handleAudioDrag}
             onMusicDrag={handleMusicDrag}
+            onAnnotationDrag={handleAnnotationDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
             selectedSoundId={selectedSoundId}
+            selectedAnnotationId={selectedAnnotationId}
             routeLoading={routeLoading}
             onMapReady={(map) => { mapInstanceRef.current = map; }}
           />

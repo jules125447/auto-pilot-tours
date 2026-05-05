@@ -3,9 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search, Waves, Mic, Upload, FileAudio } from "lucide-react";
+import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search, Waves, Mic, Upload, FileAudio, ImagePlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, EditorMode } from "@/pages/CircuitCreator";
+import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, MapAnnotationData, EditorMode } from "@/pages/CircuitCreator";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AMBIENT_SOUNDS, startAmbientSound, stopAmbientSound } from "@/lib/ambientSounds";
@@ -33,6 +33,7 @@ interface CreatorSidebarProps {
   audioZones: AudioZoneData[];
   musicSegments: MusicSegmentData[];
   soundSegments: SoundSegmentData[];
+  annotations: MapAnnotationData[];
   selectedStopId: string | null;
   setSelectedStopId: (id: string | null) => void;
   selectedAudioId: string | null;
@@ -41,6 +42,8 @@ interface CreatorSidebarProps {
   setSelectedMusicId: (id: string | null) => void;
   selectedSoundId: string | null;
   setSelectedSoundId: (id: string | null) => void;
+  selectedAnnotationId: string | null;
+  setSelectedAnnotationId: (id: string | null) => void;
   onUpdateStop: (id: string, data: Partial<StopData>) => void;
   onDeleteStop: (id: string) => void;
   onUpdateAudio: (id: string, data: Partial<AudioZoneData>) => void;
@@ -49,6 +52,8 @@ interface CreatorSidebarProps {
   onDeleteMusic: (id: string) => void;
   onUpdateSound: (id: string, data: Partial<SoundSegmentData>) => void;
   onDeleteSound: (id: string) => void;
+  onUpdateAnnotation: (id: string, data: Partial<MapAnnotationData>) => void;
+  onDeleteAnnotation: (id: string) => void;
   onSave: () => void;
   onPublish: () => void;
   saving: boolean;
@@ -332,11 +337,13 @@ const CreatorSidebar = ({
   title, setTitle, description, setDescription, region, setRegion,
   difficulty, setDifficulty, duration, setDuration, distance, setDistance,
   circuitType, setCircuitType, price, setPrice,
-  stops, audioZones, musicSegments, soundSegments,
+  stops, audioZones, musicSegments, soundSegments, annotations,
   selectedStopId, setSelectedStopId, selectedAudioId, setSelectedAudioId,
   selectedMusicId, setSelectedMusicId, selectedSoundId, setSelectedSoundId,
+  selectedAnnotationId, setSelectedAnnotationId,
   onUpdateStop, onDeleteStop, onUpdateAudio, onDeleteAudio,
   onUpdateMusic, onDeleteMusic, onUpdateSound, onDeleteSound,
+  onUpdateAnnotation, onDeleteAnnotation,
   onSave, onPublish, saving, routePointsCount, mode, isEditing,
   coverImageUrl, onCoverImageChange,
 }: CreatorSidebarProps) => {
@@ -475,6 +482,7 @@ const CreatorSidebar = ({
             <span className="px-2 py-1 rounded-md bg-muted">{audioZones.length} audio</span>
             <span className="px-2 py-1 rounded-md bg-muted">{musicSegments.length} musiques</span>
             <span className="px-2 py-1 rounded-md bg-muted">{soundSegments.length} ambiances</span>
+            <span className="px-2 py-1 rounded-md bg-muted">{annotations.length} annotations</span>
           </div>
 
           {/* Stops */}
@@ -803,6 +811,83 @@ const CreatorSidebar = ({
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Annotations */}
+          {(mode === "annotation" || mode === "select") && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><ImagePlus className="w-4 h-4" /> Annotations visuelles</h3>
+              <p className="text-xs text-muted-foreground">Cliquez sur la carte en mode "Annotation" pour placer une image avec un commentaire visible par les visiteurs.</p>
+              {annotations.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Aucune annotation. Cliquez sur la carte pour en placer une.</p>}
+              {annotations.map((ann) => (
+                <div key={ann.id} onClick={() => setSelectedAnnotationId(ann.id)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedAnnotationId === ann.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                  {selectedAnnotationId === ann.id ? (
+                    <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                      {/* Image upload */}
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Image</label>
+                        {ann.imageUrl ? (
+                          <div className="relative rounded-lg overflow-hidden">
+                            <img src={ann.imageUrl} alt="" className="w-full h-28 object-cover rounded-lg" />
+                            <button type="button" onClick={() => onUpdateAnnotation(ann.id, { imageUrl: "" })}
+                              className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center gap-2 px-3 py-3 rounded-lg border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors text-sm text-muted-foreground">
+                            <Upload className="w-4 h-4" />
+                            <span>Choisir une image</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const filename = `annotation_${ann.id}_${Date.now()}.${file.name.split('.').pop()}`;
+                              const { data, error } = await supabase.storage.from("circuit-images").upload(filename, file, { upsert: true });
+                              if (!error && data) {
+                                const { data: urlData } = supabase.storage.from("circuit-images").getPublicUrl(data.path);
+                                onUpdateAnnotation(ann.id, { imageUrl: urlData.publicUrl });
+                              }
+                            }} />
+                          </label>
+                        )}
+                      </div>
+                      {/* Caption */}
+                      <Input value={ann.caption} onChange={(e) => onUpdateAnnotation(ann.id, { caption: e.target.value })} placeholder="Commentaire..." className="text-sm" />
+                      {/* Size */}
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Taille sur la carte</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(["small", "medium", "large"] as const).map((s) => (
+                            <button key={s} type="button"
+                              onClick={() => onUpdateAnnotation(ann.id, { size: s })}
+                              className={`px-2 py-1.5 rounded-md text-xs transition-colors ${
+                                ann.size === s ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                              }`}>
+                              {s === "small" ? "Petit" : s === "medium" ? "Moyen" : "Grand"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="default" size="sm" onClick={() => setSelectedAnnotationId(null)} className="flex-1 gap-1"><Check className="w-3.5 h-3.5" /> OK</Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDeleteAnnotation(ann.id)} className="flex-1 gap-1"><Trash2 className="w-3.5 h-3.5" /> Supprimer</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {ann.imageUrl ? (
+                        <img src={ann.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <span className="text-lg">🖼️</span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{ann.caption || "Annotation sans texte"}</p>
+                        <p className="text-xs text-muted-foreground">{ann.size === "small" ? "Petit" : ann.size === "large" ? "Grand" : "Moyen"}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
