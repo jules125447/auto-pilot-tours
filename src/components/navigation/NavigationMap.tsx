@@ -432,21 +432,21 @@ const NavigationMap = ({
           <div class="waze-arrow-shell">
             <div class="waze-arrow-pulse"></div>
             <div class="waze-arrow-icon">
-              <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
                 <defs>
                   <linearGradient id="arrowGradMap" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="hsl(15,85%,55%)" />
                     <stop offset="100%" stop-color="hsl(42,95%,55%)" />
                   </linearGradient>
                 </defs>
-                <polygon points="20,4 8,32 20,26 32,32" fill="url(#arrowGradMap)" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+                <polygon points="24,4 9,40 24,32 39,40" fill="url(#arrowGradMap)" stroke="white" stroke-width="3" stroke-linejoin="round"/>
               </svg>
             </div>
           </div>
         `,
         className: "waze-user-marker",
-        iconSize: [56, 56],
-        iconAnchor: [28, 28],
+        iconSize: [64, 64],
+        iconAnchor: [32, 32],
       });
       userMarkerRef.current = L.marker(userPos, { icon, zIndexOffset: 1000 }).addTo(map);
       // Enable smooth CSS transitions on marker element
