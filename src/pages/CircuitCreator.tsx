@@ -589,6 +589,7 @@ const CircuitCreator = () => {
         if (annErr) throw annErr;
       }
 
+      toast({
         title: isEditing
           ? (publish ? "Circuit modifié et publié !" : "Circuit modifié !")
           : (publish ? "Circuit publié !" : "Brouillon sauvegardé"),
