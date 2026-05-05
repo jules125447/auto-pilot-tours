@@ -55,6 +55,7 @@ const NavigationMap = ({
   participants = [],
   routeToStart,
   recalculatedRoute,
+  annotations = [],
 }: NavigationMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
