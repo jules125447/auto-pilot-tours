@@ -148,7 +148,7 @@ const CircuitEditorMap = ({
     soundMarkers: L.Marker[];
     soundLines: L.Polyline[];
     soundPlacingMarker: L.Marker | null;
-  }>({ polyline: null, waypointMarkers: [], stopMarkers: [], audioMarkers: [], musicMarkers: [], musicLines: [], musicPlacingMarker: null, soundMarkers: [], soundLines: [], soundPlacingMarker: null });
+  }>({ polyline: null, waypointMarkers: [], stopMarkers: [], audioMarkers: [], musicMarkers: [], musicLines: [], musicPlacingMarker: null, soundMarkers: [], soundLines: [], soundPlacingMarker: null, annotationMarkers: [] as L.Marker[] });
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
