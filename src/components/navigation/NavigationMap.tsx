@@ -525,15 +525,15 @@ const NavigationMap = ({
       const hasImage = !!ann.image_url;
 
       const icon = L.divIcon({
-        html: `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;">
-          <div style="width:${px}px;height:${px}px;border-radius:10px;border:2.5px solid hsl(15,85%,55%);overflow:hidden;background:white;box-shadow:0 2px 12px rgba(234,88,12,0.3);display:flex;align-items:center;justify-content:center;">
+        html: `<div class="annotation-counter-rotate" style="display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;transition:transform 600ms cubic-bezier(0.25,0.1,0.25,1);">
+          <div style="width:${px}px;height:${px}px;border-radius:12px;border:2.5px solid hsl(15,85%,55%);overflow:hidden;background:white;box-shadow:0 3px 16px rgba(234,88,12,0.3);display:flex;align-items:center;justify-content:center;">
             ${hasImage ? `<img src="${ann.image_url}" style="width:100%;height:100%;object-fit:cover;" />` : `<span style="font-size:${px * 0.4}px;">🖼</span>`}
           </div>
-          ${ann.caption ? `<div style="max-width:${px + 50}px;background:white;border-radius:6px;padding:2px 6px;font-size:11px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 4px rgba(0,0,0,0.15);color:#333;">${ann.caption}</div>` : ""}
+          ${ann.caption ? `<div style="max-width:${px + 60}px;background:white;border-radius:8px;padding:3px 8px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.01em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,0.12);color:#1a1a1a;">${ann.caption}</div>` : ""}
         </div>`,
         className: "poi-marker",
-        iconSize: [px + 10, px + (ann.caption ? 20 : 0)],
-        iconAnchor: [(px + 10) / 2, (px + (ann.caption ? 20 : 0)) / 2],
+        iconSize: [px + 20, px + (ann.caption ? 26 : 0)],
+        iconAnchor: [(px + 20) / 2, (px + (ann.caption ? 26 : 0)) / 2],
       });
 
       const marker = L.marker([ann.lat, ann.lng], { icon, zIndexOffset: 800 }).addTo(map);
