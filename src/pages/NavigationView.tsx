@@ -280,6 +280,7 @@ const NavigationView = () => {
   const permissionStatusRef = useRef<PermissionStatus | null>(null);
   const routeProgressRef = useRef<number | null>(null);
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
+  const [routeToStartInfo, setRouteToStartInfo] = useState<{ distance: number; duration: number } | null>(null);
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
   // Off-route recalculation
