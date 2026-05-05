@@ -535,7 +535,10 @@ const NavigationMap = ({
           position: relative;
           z-index: 2;
           transform-origin: center center;
-          transition: transform 0.45s ease-out;
+          transition: transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .waze-user-marker {
+          transition: transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1) !important;
         }
         .poi-tooltip-nav {
           background: white !important;
