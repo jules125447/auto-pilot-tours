@@ -90,10 +90,10 @@ function getPointAtDistance(route: [number, number][], startIdx: number, distanc
 }
 
 const CircuitEditorMap = ({
-  route, waypoints, stops, audioZones, musicSegments, soundSegments,
+  route, waypoints, stops, audioZones, musicSegments, soundSegments, annotations,
   musicPlacingStart, soundPlacingStart, mode, onMapClick, onWaypointDrag,
-  onStopDrag, onAudioDrag, onMusicDrag,
-  selectedStopId, selectedAudioId, selectedMusicId, selectedSoundId,
+  onStopDrag, onAudioDrag, onMusicDrag, onAnnotationDrag,
+  selectedStopId, selectedAudioId, selectedMusicId, selectedSoundId, selectedAnnotationId,
   routeLoading, onMapReady,
 }: CircuitEditorMapProps) => {
   const [searchQuery, setSearchQuery] = useState("");
