@@ -36,6 +36,7 @@ interface NavigationMapProps {
   participants?: Participant[];
   routeToStart?: [number, number][] | null;
   recalculatedRoute?: [number, number][] | null;
+  annotations?: { id: string; lat: number; lng: number; image_url: string | null; caption: string | null; size: string }[];
 }
 
 const poiEmoji: Record<string, string> = {
