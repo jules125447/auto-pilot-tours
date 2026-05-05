@@ -1166,6 +1166,7 @@ const NavigationView = () => {
 
       if (!abortController.signal.aborted) {
         setRouteToStart(result?.coordinates ?? null);
+        setRouteToStartInfo(result ? { distance: result.distance, duration: result.duration } : null);
       }
     }, 300);
 
