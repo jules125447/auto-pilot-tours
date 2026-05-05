@@ -1281,7 +1281,10 @@ const NavigationView = () => {
             currentStopIndex={0}
             routeToStart={routeToStart}
           />
-          <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[1100] flex items-center justify-center" style={{
+              background: "linear-gradient(180deg, hsl(30 25% 97% / 0.85) 0%, hsl(30 25% 97% / 0.65) 50%, hsl(30 25% 97% / 0.85) 100%)",
+              backdropFilter: "blur(6px)",
+            }}>
             {!preloading && !preloadDone && (
               <motion.button
                 initial={{ scale: 0.8, opacity: 0 }}
