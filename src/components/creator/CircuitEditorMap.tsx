@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Search, X } from "lucide-react";
-import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, EditorMode } from "@/pages/CircuitCreator";
+import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, MapAnnotationData, EditorMode } from "@/pages/CircuitCreator";
 import { AMBIENT_SOUNDS } from "@/lib/ambientSounds";
 
 interface CircuitEditorMapProps {
