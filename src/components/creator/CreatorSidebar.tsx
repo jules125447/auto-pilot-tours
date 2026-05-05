@@ -814,6 +814,83 @@ const CreatorSidebar = ({
             </div>
           )}
 
+          {/* Annotations */}
+          {(mode === "annotation" || mode === "select") && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><ImagePlus className="w-4 h-4" /> Annotations visuelles</h3>
+              <p className="text-xs text-muted-foreground">Cliquez sur la carte en mode "Annotation" pour placer une image avec un commentaire visible par les visiteurs.</p>
+              {annotations.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Aucune annotation. Cliquez sur la carte pour en placer une.</p>}
+              {annotations.map((ann) => (
+                <div key={ann.id} onClick={() => setSelectedAnnotationId(ann.id)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedAnnotationId === ann.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                  {selectedAnnotationId === ann.id ? (
+                    <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                      {/* Image upload */}
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Image</label>
+                        {ann.imageUrl ? (
+                          <div className="relative rounded-lg overflow-hidden">
+                            <img src={ann.imageUrl} alt="" className="w-full h-28 object-cover rounded-lg" />
+                            <button type="button" onClick={() => onUpdateAnnotation(ann.id, { imageUrl: "" })}
+                              className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center gap-2 px-3 py-3 rounded-lg border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors text-sm text-muted-foreground">
+                            <Upload className="w-4 h-4" />
+                            <span>Choisir une image</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const filename = `annotation_${ann.id}_${Date.now()}.${file.name.split('.').pop()}`;
+                              const { data, error } = await supabase.storage.from("circuit-images").upload(filename, file, { upsert: true });
+                              if (!error && data) {
+                                const { data: urlData } = supabase.storage.from("circuit-images").getPublicUrl(data.path);
+                                onUpdateAnnotation(ann.id, { imageUrl: urlData.publicUrl });
+                              }
+                            }} />
+                          </label>
+                        )}
+                      </div>
+                      {/* Caption */}
+                      <Input value={ann.caption} onChange={(e) => onUpdateAnnotation(ann.id, { caption: e.target.value })} placeholder="Commentaire..." className="text-sm" />
+                      {/* Size */}
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Taille sur la carte</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(["small", "medium", "large"] as const).map((s) => (
+                            <button key={s} type="button"
+                              onClick={() => onUpdateAnnotation(ann.id, { size: s })}
+                              className={`px-2 py-1.5 rounded-md text-xs transition-colors ${
+                                ann.size === s ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                              }`}>
+                              {s === "small" ? "Petit" : s === "medium" ? "Moyen" : "Grand"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="default" size="sm" onClick={() => setSelectedAnnotationId(null)} className="flex-1 gap-1"><Check className="w-3.5 h-3.5" /> OK</Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDeleteAnnotation(ann.id)} className="flex-1 gap-1"><Trash2 className="w-3.5 h-3.5" /> Supprimer</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {ann.imageUrl ? (
+                        <img src={ann.imageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <span className="text-lg">🖼️</span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{ann.caption || "Annotation sans texte"}</p>
+                        <p className="text-xs text-muted-foreground">{ann.size === "small" ? "Petit" : ann.size === "large" ? "Grand" : "Moyen"}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {mode === "route" && (
             <div className="text-sm text-muted-foreground text-center py-4">
               <MapPin className="w-5 h-5 mx-auto mb-2 opacity-50" />
