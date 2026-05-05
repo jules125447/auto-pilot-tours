@@ -62,6 +62,14 @@ export interface CircuitWithStops {
     sound_type: string;
     volume: number;
   }[];
+  map_annotations: {
+    id: string;
+    lat: number;
+    lng: number;
+    image_url: string | null;
+    caption: string | null;
+    size: string;
+  }[];
 }
 
 function mapCircuit(
