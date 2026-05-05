@@ -444,7 +444,7 @@ const CircuitCreator = () => {
     setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, lat, lng } : a)));
   }, []);
 
-
+  const handleSave = async (publish: boolean) => {
     if (!user) return;
     setSaving(true);
     try {
