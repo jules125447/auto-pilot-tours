@@ -534,7 +534,7 @@ const NavigationMap = ({
           position: absolute;
           inset: 0;
           border-radius: 9999px;
-          background: rgba(74, 102, 244, 0.2);
+          background: rgba(234, 88, 12, 0.18);
           animation: waze-pulse 2s ease-out infinite;
         }
         .waze-arrow-icon {
