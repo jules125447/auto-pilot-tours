@@ -608,7 +608,7 @@ const NavigationMap = ({
         {!tracking && userPos && (
           <button
             onClick={handleRecenter}
-            className="absolute bottom-6 right-4 z-[1100] flex items-center gap-2 px-4 py-3 rounded-full bg-card/95 backdrop-blur-md border border-border shadow-elevated transition-all active:scale-95 hover:bg-card"
+            className="absolute bottom-6 right-4 z-[1100] flex items-center gap-2 px-4 py-3 rounded-full bg-card/95 backdrop-blur-xl border border-primary/15 shadow-elevated transition-all active:scale-95 hover:shadow-glow"
           >
             <Locate className="w-5 h-5 text-primary" />
             <span className="text-sm font-semibold text-foreground">Recentrer</span>
