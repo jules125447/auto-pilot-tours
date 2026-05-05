@@ -2,7 +2,7 @@ import L from "leaflet";
 
 export type MapLatLng = [number, number];
 
-export const TRACKING_ANCHOR_Y = 0.5;
+export const TRACKING_ANCHOR_Y = 0.72;
 
 interface TileSource {
   options: L.TileLayerOptions;
@@ -11,13 +11,13 @@ interface TileSource {
 
 export const MAP_TILE_SOURCES: TileSource[] = [
   {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     options: {
       crossOrigin: true,
       detectRetina: true,
-      keepBuffer: 4,
-      maxZoom: 19,
-      subdomains: "abc",
+      keepBuffer: 6,
+      maxZoom: 20,
+      subdomains: "abcd",
     },
   },
   {
@@ -25,18 +25,19 @@ export const MAP_TILE_SOURCES: TileSource[] = [
     options: {
       crossOrigin: true,
       detectRetina: true,
-      keepBuffer: 4,
+      keepBuffer: 6,
       maxZoom: 19,
       subdomains: "abcd",
     },
   },
   {
-    url: "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     options: {
       crossOrigin: true,
       detectRetina: true,
       keepBuffer: 4,
       maxZoom: 19,
+      subdomains: "abc",
     },
   },
 ];
