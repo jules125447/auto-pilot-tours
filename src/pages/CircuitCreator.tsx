@@ -711,6 +711,7 @@ const CircuitCreator = () => {
             audioZones={audioZones}
             musicSegments={musicSegments}
             soundSegments={soundSegments}
+            annotations={annotations}
             musicPlacingStart={musicPlacingStart}
             soundPlacingStart={soundPlacingStart}
             mode={mode}
@@ -719,10 +720,12 @@ const CircuitCreator = () => {
             onStopDrag={handleStopDrag}
             onAudioDrag={handleAudioDrag}
             onMusicDrag={handleMusicDrag}
+            onAnnotationDrag={handleAnnotationDrag}
             selectedStopId={selectedStopId}
             selectedAudioId={selectedAudioId}
             selectedMusicId={selectedMusicId}
             selectedSoundId={selectedSoundId}
+            selectedAnnotationId={selectedAnnotationId}
             routeLoading={routeLoading}
             onMapReady={(map) => { mapInstanceRef.current = map; }}
           />
