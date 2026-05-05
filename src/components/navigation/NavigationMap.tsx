@@ -432,21 +432,21 @@ const NavigationMap = ({
           <div class="waze-arrow-shell">
             <div class="waze-arrow-pulse"></div>
             <div class="waze-arrow-icon">
-              <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
                 <defs>
                   <linearGradient id="arrowGradMap" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="hsl(15,85%,55%)" />
                     <stop offset="100%" stop-color="hsl(42,95%,55%)" />
                   </linearGradient>
                 </defs>
-                <polygon points="20,4 8,32 20,26 32,32" fill="url(#arrowGradMap)" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+                <polygon points="24,4 9,40 24,32 39,40" fill="url(#arrowGradMap)" stroke="white" stroke-width="3" stroke-linejoin="round"/>
               </svg>
             </div>
           </div>
         `,
         className: "waze-user-marker",
-        iconSize: [56, 56],
-        iconAnchor: [28, 28],
+        iconSize: [64, 64],
+        iconAnchor: [32, 32],
       });
       userMarkerRef.current = L.marker(userPos, { icon, zIndexOffset: 1000 }).addTo(map);
       // Enable smooth CSS transitions on marker element
@@ -514,7 +514,7 @@ const NavigationMap = ({
       <style>{`
         @keyframes waze-pulse {
           0% { transform: scale(0.8); opacity: 0.6; }
-          100% { transform: scale(2.5); opacity: 0; }
+          100% { transform: scale(2.8); opacity: 0; }
         }
         .waze-user-marker,
         .poi-marker,
@@ -523,8 +523,8 @@ const NavigationMap = ({
           border: none !important;
         }
         .waze-arrow-shell {
-          width: 56px;
-          height: 56px;
+          width: 64px;
+          height: 64px;
           position: relative;
           display: flex;
           align-items: center;
@@ -534,7 +534,7 @@ const NavigationMap = ({
           position: absolute;
           inset: 0;
           border-radius: 9999px;
-          background: rgba(234, 88, 12, 0.18);
+          background: radial-gradient(circle, hsl(15 85% 55% / 0.25) 0%, transparent 70%);
           animation: waze-pulse 2s ease-out infinite;
         }
         .waze-arrow-icon {
@@ -546,27 +546,49 @@ const NavigationMap = ({
         .waze-user-marker {
           transition: transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1) !important;
         }
+        /* Large fixed overlay arrow */
+        .waze-arrow-shell-lg {
+          width: 72px;
+          height: 72px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .waze-arrow-pulse-lg {
+          position: absolute;
+          inset: -4px;
+          border-radius: 9999px;
+          background: radial-gradient(circle, hsl(15 85% 55% / 0.2) 0%, hsl(42 95% 55% / 0.08) 50%, transparent 70%);
+          animation: waze-pulse 2.2s ease-out infinite;
+        }
+        .waze-arrow-icon-lg {
+          position: relative;
+          z-index: 2;
+          transform-origin: center center;
+          filter: drop-shadow(0 3px 8px hsl(15 85% 55% / 0.35));
+        }
         .poi-tooltip-nav {
-          background: white !important;
-          color: #333 !important;
-          border: 1px solid #ddd !important;
-          border-radius: 8px !important;
-          padding: 4px 10px !important;
+          background: hsl(var(--card)) !important;
+          color: hsl(var(--foreground)) !important;
+          border: 1px solid hsl(var(--border)) !important;
+          border-radius: 12px !important;
+          padding: 5px 12px !important;
           font-size: 12px !important;
           font-weight: 600 !important;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+          box-shadow: 0 4px 16px hsl(var(--foreground) / 0.08) !important;
         }
         .poi-tooltip-nav::before {
-          border-top-color: white !important;
+          border-top-color: hsl(var(--card)) !important;
         }
         .leaflet-container {
-          background: hsl(var(--muted));
+          background: hsl(var(--background));
         }
         .nav-map-shell {
           width: 100%;
           height: 100%;
           overflow: hidden;
-          background: hsl(var(--muted));
+          background: hsl(var(--background));
           position: relative;
         }
         .nav-map-canvas {
@@ -586,7 +608,7 @@ const NavigationMap = ({
         {!tracking && userPos && (
           <button
             onClick={handleRecenter}
-            className="absolute bottom-6 right-4 z-[1100] flex items-center gap-2 px-4 py-3 rounded-full bg-card/95 backdrop-blur-md border border-border shadow-elevated transition-all active:scale-95 hover:bg-card"
+            className="absolute bottom-6 right-4 z-[1100] flex items-center gap-2 px-4 py-3 rounded-full bg-card/95 backdrop-blur-xl border border-primary/15 shadow-elevated transition-all active:scale-95 hover:shadow-glow"
           >
             <Locate className="w-5 h-5 text-primary" />
             <span className="text-sm font-semibold text-foreground">Recentrer</span>

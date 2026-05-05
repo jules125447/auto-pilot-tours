@@ -1281,20 +1281,23 @@ const NavigationView = () => {
             currentStopIndex={0}
             routeToStart={routeToStart}
           />
-          <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="absolute inset-0 z-[1100] flex items-center justify-center" style={{
+              background: "linear-gradient(180deg, hsl(30 25% 97% / 0.85) 0%, hsl(30 25% 97% / 0.65) 50%, hsl(30 25% 97% / 0.85) 100%)",
+              backdropFilter: "blur(6px)",
+            }}>
             {!preloading && !preloadDone && (
               <motion.button
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 onClick={handleStartPreload}
-                className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card/95 border border-border shadow-elevated"
+                className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated group hover:shadow-glow transition-all"
               >
-                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
-                  <Download className="w-10 h-10 text-primary-foreground" />
+                <div className="w-24 h-24 rounded-full bg-gradient-hero flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform">
+                  <Download className="w-12 h-12 text-primary-foreground" />
                 </div>
                 <div className="text-center">
-                  <h2 className="font-display text-xl font-bold text-foreground">Préparer le circuit</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <h2 className="font-display text-2xl font-bold text-foreground">Préparer le circuit</h2>
+                  <p className="text-sm text-muted-foreground mt-2 max-w-[240px]">
                     Télécharge les données pour fonctionner hors-ligne
                   </p>
                 </div>
@@ -1305,15 +1308,17 @@ const NavigationView = () => {
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="flex flex-col items-center gap-5 p-8 rounded-2xl bg-card/95 border border-border shadow-elevated w-[320px]"
+                className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated w-[320px]"
               >
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                <div className="w-16 h-16 rounded-full bg-gradient-hero flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary-foreground" />
+                </div>
                 <div className="text-center w-full">
                   <h2 className="font-display text-lg font-bold text-foreground mb-1">Téléchargement…</h2>
                   <p className="text-xs text-muted-foreground mb-3">{preloadProgress.label}</p>
-                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
                     <motion.div
-                      className="h-full bg-primary rounded-full"
+                      className="h-full bg-gradient-hero rounded-full"
                       initial={{ width: "0%" }}
                       animate={{ width: `${preloadProgress.percent}%` }}
                       transition={{ duration: 0.3 }}
@@ -1329,14 +1334,14 @@ const NavigationView = () => {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 onClick={handleLaunch}
-                className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card/95 border border-border shadow-elevated"
+                className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated group hover:shadow-glow transition-all"
               >
-                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
-                  <Play className="w-10 h-10 text-primary-foreground ml-1" />
+                <div className="w-24 h-24 rounded-full bg-gradient-hero flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform">
+                  <Play className="w-12 h-12 text-primary-foreground ml-1" />
                 </div>
                 <div className="text-center">
-                  <h2 className="font-display text-xl font-bold text-foreground">Lancer la navigation</h2>
-                  <p className="text-sm text-muted-foreground mt-1">Toutes les données sont prêtes ✅</p>
+                  <h2 className="font-display text-2xl font-bold text-foreground">Lancer la navigation</h2>
+                  <p className="text-sm text-muted-foreground mt-2">Toutes les données sont prêtes ✅</p>
                 </div>
               </motion.button>
             )}

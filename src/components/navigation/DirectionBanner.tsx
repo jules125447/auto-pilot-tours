@@ -96,8 +96,8 @@ function urgencyStyles(urgency: string) {
       };
     default:
       return {
-        bg: "linear-gradient(135deg, hsl(30 25% 97%) 0%, hsl(30 20% 92%) 100%)",
-        iconBg: "hsl(15 85% 55% / 0.12)",
+        bg: "linear-gradient(135deg, hsl(30 25% 97%) 0%, hsl(30 20% 94%) 100%)",
+        iconBg: "linear-gradient(135deg, hsl(15 85% 55% / 0.15), hsl(42 95% 55% / 0.1))",
       };
   }
 }
