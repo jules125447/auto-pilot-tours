@@ -343,6 +343,17 @@ const CircuitCreator = () => {
           setSelectedSoundId(newSegment.id);
           setSoundPlacingStart(null);
         }
+      } else if (mode === "annotation") {
+        const newAnnotation: MapAnnotationData = {
+          id: crypto.randomUUID(),
+          lat,
+          lng,
+          imageUrl: "",
+          caption: "",
+          size: "medium",
+        };
+        setAnnotations((prev) => [...prev, newAnnotation]);
+        setSelectedAnnotationId(newAnnotation.id);
       }
     },
     [mode, stops.length, waypoints, rebuildRoute, route, soundPlacingStart, toast]
