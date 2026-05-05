@@ -77,7 +77,8 @@ function mapCircuit(
   stops: Tables<"circuit_stops">[],
   audioZones: Tables<"audio_zones">[],
   musicSegments: Tables<"music_segments">[] = [],
-  soundSegments: any[] = []
+  soundSegments: any[] = [],
+  mapAnnotations: any[] = []
 ): CircuitWithStops {
   const route = Array.isArray(circuit.route) ? (circuit.route as [number, number][]) : [];
   return {
