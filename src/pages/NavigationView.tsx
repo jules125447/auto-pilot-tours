@@ -1370,6 +1370,7 @@ const NavigationView = () => {
           participants={participants}
           routeToStart={routeToStart}
           recalculatedRoute={recalculatedRoute}
+          annotations={circuit.map_annotations}
         />
         <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
 
