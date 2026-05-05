@@ -443,6 +443,9 @@ const NavigationMap = ({
         iconAnchor: [28, 28],
       });
       userMarkerRef.current = L.marker(userPos, { icon, zIndexOffset: 1000 }).addTo(map);
+      // Enable smooth CSS transitions on marker element
+      const el = userMarkerRef.current.getElement();
+      if (el) el.style.transition = "transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1)";
     } else {
       userMarkerRef.current.setLatLng(userPos);
     }
