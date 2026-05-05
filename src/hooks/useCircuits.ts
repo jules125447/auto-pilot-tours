@@ -156,12 +156,13 @@ export function useCircuits() {
   return useQuery({
     queryKey: ["circuits"],
     queryFn: async () => {
-      const [circuitsRes, stopsRes, audioRes, musicRes, soundRes] = await Promise.all([
+      const [circuitsRes, stopsRes, audioRes, musicRes, soundRes, annotationsRes] = await Promise.all([
         supabase.from("circuits").select("*").eq("published", true),
         supabase.from("circuit_stops").select("*"),
         supabase.from("audio_zones").select("*"),
         supabase.from("music_segments").select("*"),
         supabase.from("sound_segments").select("*"),
+        supabase.from("map_annotations").select("*"),
       ]);
 
       if (circuitsRes.error) throw circuitsRes.error;
@@ -169,8 +170,9 @@ export function useCircuits() {
       const audio = audioRes.data || [];
       const music = musicRes.data || [];
       const sounds = soundRes.data || [];
+      const anns = annotationsRes.data || [];
 
-      return circuitsRes.data.map((c) => mapCircuit(c, stops, audio, music, sounds));
+      return circuitsRes.data.map((c) => mapCircuit(c, stops, audio, music, sounds, anns));
     },
   });
 }
@@ -180,16 +182,17 @@ export function useCircuit(id: string | undefined) {
     queryKey: ["circuit", id],
     enabled: !!id,
     queryFn: async () => {
-      const [circuitRes, stopsRes, audioRes, musicRes, soundRes] = await Promise.all([
+      const [circuitRes, stopsRes, audioRes, musicRes, soundRes, annotationsRes] = await Promise.all([
         supabase.from("circuits").select("*").eq("id", id!).single(),
         supabase.from("circuit_stops").select("*").eq("circuit_id", id!),
         supabase.from("audio_zones").select("*").eq("circuit_id", id!),
         supabase.from("music_segments").select("*").eq("circuit_id", id!),
         supabase.from("sound_segments").select("*").eq("circuit_id", id!),
+        supabase.from("map_annotations").select("*").eq("circuit_id", id!),
       ]);
 
       if (circuitRes.error) throw circuitRes.error;
-      return mapCircuit(circuitRes.data, stopsRes.data || [], audioRes.data || [], musicRes.data || [], soundRes.data || []);
+      return mapCircuit(circuitRes.data, stopsRes.data || [], audioRes.data || [], musicRes.data || [], soundRes.data || [], annotationsRes.data || []);
     },
   });
 }
