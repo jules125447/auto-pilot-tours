@@ -19,22 +19,26 @@ const SpeedBubble = ({ speed, speedLimit = null }: SpeedBubbleProps) => {
     >
       <div className="relative">
         {speedLimit !== null && (
-          <div className="absolute -top-2 -right-2 w-9 h-9 rounded-full bg-white border-[2.5px] border-red-500 flex items-center justify-center shadow-lg z-10">
-            <span className="text-black text-xs font-extrabold leading-none">{speedLimit}</span>
+          <div className="absolute -top-2 -right-2 w-9 h-9 rounded-full bg-card border-[2.5px] border-destructive flex items-center justify-center shadow-card z-10">
+            <span className="text-foreground text-xs font-extrabold leading-none">{speedLimit}</span>
           </div>
         )}
 
         <div
-          className={`w-[60px] h-[60px] rounded-full flex flex-col items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.35)] border-2 ${
+          className={`w-[60px] h-[60px] rounded-full flex flex-col items-center justify-center shadow-elevated border-2 ${
             over
-              ? "bg-red-500 border-red-300"
-              : "bg-[#1e1e2a]/95 border-white/15 backdrop-blur-xl"
+              ? "bg-destructive border-destructive/60"
+              : "bg-card/95 border-primary/20 backdrop-blur-xl"
           }`}
         >
-          <span className="text-[20px] font-extrabold leading-none tabular-nums text-white">
+          <span className={`text-[20px] font-extrabold leading-none tabular-nums ${
+            over ? "text-white" : "text-foreground"
+          }`}>
             {displaySpeed}
           </span>
-          <span className="text-[7px] font-bold leading-none mt-0.5 uppercase tracking-widest text-white/50">
+          <span className={`text-[7px] font-bold leading-none mt-0.5 uppercase tracking-widest ${
+            over ? "text-white/70" : "text-muted-foreground"
+          }`}>
             km/h
           </span>
         </div>

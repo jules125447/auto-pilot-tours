@@ -1365,14 +1365,14 @@ const NavigationView = () => {
         />
         <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
 
-        {/* Right-side floating controls — Waze purple bubble style */}
+        {/* Right-side floating controls */}
         <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>
           <button
             onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className="w-12 h-12 rounded-full bg-amber-500 shadow-[0_3px_12px_rgba(0,0,0,0.25)] flex items-center justify-center active:scale-95 transition-all"
+            className="w-12 h-12 rounded-full bg-card shadow-elevated border border-border flex items-center justify-center active:scale-95 transition-all"
             aria-label="Voix"
           >
-            {voiceEnabled ? <Volume2 className="w-5 h-5 text-white" /> : <VolumeX className="w-5 h-5 text-white/60" />}
+            {voiceEnabled ? <Volume2 className="w-5 h-5 text-primary" /> : <VolumeX className="w-5 h-5 text-muted-foreground" />}
           </button>
         </div>
 
@@ -1383,12 +1383,12 @@ const NavigationView = () => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-[#2d2d3a]/90 backdrop-blur-md shadow-md"
+              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-card/95 backdrop-blur-md shadow-elevated border border-border"
               style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
             >
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
-                <span className="text-xs font-medium text-white/80">Calibration GPS…</span>
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-xs font-medium text-foreground">Calibration GPS…</span>
               </div>
             </motion.div>
           )}
@@ -1397,7 +1397,7 @@ const NavigationView = () => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-amber-500/90 backdrop-blur-md shadow-md"
+              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-gradient-hero shadow-glow"
               style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
             >
               <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MapPin, X, Navigation } from "lucide-react";
+import { MapPin, X } from "lucide-react";
 
 interface NavigationBarProps {
   currentStop: {
@@ -65,22 +65,22 @@ const NavigationBar = ({
         <motion.div
           initial={{ y: 10, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="absolute left-4 right-4 pointer-events-auto"
-          style={{ bottom: "calc(100% + 10px)" }}
+          className="absolute left-3 right-3 pointer-events-auto"
+          style={{ bottom: "calc(100% + 8px)" }}
         >
-          <div className="rounded-2xl bg-[#1e1e2a]/95 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)] flex items-center gap-3 px-4 py-3 border border-white/5">
-            <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-amber-400" />
+          <div className="rounded-2xl bg-card/95 backdrop-blur-xl shadow-elevated flex items-center gap-3 px-4 py-3 border border-border">
+            <div className="w-9 h-9 rounded-full bg-gradient-hero flex items-center justify-center flex-shrink-0 shadow-glow">
+              <MapPin className="w-4 h-4 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-white/50 font-medium uppercase tracking-wider">Prochain arrêt</p>
-              <p className="text-sm font-semibold text-white truncate">{currentStop.title}</p>
+              <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Prochain arrêt</p>
+              <p className="text-sm font-bold text-foreground truncate">{currentStop.title}</p>
             </div>
             <div className="flex flex-col items-end flex-shrink-0">
-              <span className="text-sm font-bold text-amber-400 tabular-nums">
+              <span className="text-sm font-extrabold text-primary tabular-nums">
                 {hasGps ? formatDist(distToNextStop) : "—"}
               </span>
-              <span className="text-[10px] text-white/40 tabular-nums">
+              <span className="text-[10px] text-muted-foreground tabular-nums">
                 ~{hasGps && etaNextStop > 0 ? formatEta(etaNextStop) : "—"}
               </span>
             </div>
@@ -90,7 +90,7 @@ const NavigationBar = ({
 
       {/* Main bottom bar */}
       <div
-        className="pointer-events-auto bg-[#1a1a26]"
+        className="pointer-events-auto bg-card border-t border-border"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)" }}
       >
         {/* Progress dots */}
@@ -100,10 +100,10 @@ const NavigationBar = ({
               key={i}
               className={`rounded-full transition-all duration-500 ${
                 i < currentStopIndex
-                  ? "w-2 h-2 bg-amber-500"
+                  ? "w-2 h-2 bg-primary"
                   : i === currentStopIndex
-                  ? "w-6 h-2 bg-amber-400 rounded-full"
-                  : "w-2 h-2 bg-white/15"
+                  ? "w-6 h-2 bg-accent rounded-full"
+                  : "w-2 h-2 bg-muted"
               }`}
             />
           ))}
@@ -112,8 +112,8 @@ const NavigationBar = ({
         <div className="flex items-center px-4 pb-3">
           {/* Left: ETA info */}
           <div className="flex-1">
-            <p className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Arrivée</p>
-            <p className="text-2xl font-bold text-white leading-none tabular-nums tracking-tight mt-0.5">
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Arrivée</p>
+            <p className="text-2xl font-bold text-foreground leading-none tabular-nums tracking-tight mt-0.5">
               {arrivalTime}
             </p>
           </div>
@@ -121,17 +121,17 @@ const NavigationBar = ({
           {/* Center: distance + time remaining */}
           <div className="flex items-center gap-4">
             <div className="text-center">
-              <p className="text-lg font-bold text-white tabular-nums leading-none">
+              <p className="text-lg font-bold text-foreground tabular-nums leading-none">
                 {hasGps ? formatDist(distanceRemaining) : "—"}
               </p>
-              <p className="text-[10px] text-white/40 mt-0.5">restant</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">restant</p>
             </div>
-            <div className="w-px h-8 bg-white/10" />
+            <div className="w-px h-8 bg-border" />
             <div className="text-center">
-              <p className="text-lg font-bold text-amber-400 tabular-nums leading-none">
+              <p className="text-lg font-bold text-primary tabular-nums leading-none">
                 {hasGps && etaMinutes > 0 ? formatEta(etaMinutes) : "—"}
               </p>
-              <p className="text-[10px] text-white/40 mt-0.5">durée</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">durée</p>
             </div>
           </div>
 
@@ -140,10 +140,10 @@ const NavigationBar = ({
             {onStop ? (
               <button
                 onClick={onStop}
-                className="w-11 h-11 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center active:scale-90 transition-all"
+                className="w-11 h-11 rounded-full bg-destructive/10 border border-destructive/25 flex items-center justify-center active:scale-90 transition-all"
                 aria-label="Arrêter"
               >
-                <X className="w-5 h-5 text-red-400" strokeWidth={2.5} />
+                <X className="w-5 h-5 text-destructive" strokeWidth={2.5} />
               </button>
             ) : (
               <div className="w-11" />
