@@ -479,6 +479,7 @@ const CircuitCreator = () => {
           supabase.from("audio_zones").delete().eq("circuit_id", circuitId),
           supabase.from("music_segments").delete().eq("circuit_id", circuitId),
           supabase.from("sound_segments").delete().eq("circuit_id", circuitId),
+          supabase.from("map_annotations").delete().eq("circuit_id", circuitId),
         ]);
       } else {
         // Create new circuit
