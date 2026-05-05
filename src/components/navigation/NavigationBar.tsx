@@ -68,12 +68,12 @@ const NavigationBar = ({
           className="absolute left-3 right-3 pointer-events-auto"
           style={{ bottom: "calc(100% + 8px)" }}
         >
-          <div className="rounded-2xl bg-card/95 backdrop-blur-xl shadow-elevated flex items-center gap-3 px-4 py-3 border border-border">
+          <div className="rounded-2xl bg-card/95 backdrop-blur-xl shadow-elevated flex items-center gap-3 px-4 py-3 border border-primary/15">
             <div className="w-9 h-9 rounded-full bg-gradient-hero flex items-center justify-center flex-shrink-0 shadow-glow">
               <MapPin className="w-4 h-4 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Prochain arrêt</p>
+              <p className="text-[11px] text-primary/70 font-semibold uppercase tracking-wider">Prochain arrêt</p>
               <p className="text-sm font-bold text-foreground truncate">{currentStop.title}</p>
             </div>
             <div className="flex flex-col items-end flex-shrink-0">
@@ -90,7 +90,7 @@ const NavigationBar = ({
 
       {/* Main bottom bar */}
       <div
-        className="pointer-events-auto bg-card/95 backdrop-blur-xl border-t border-primary/10"
+        className="pointer-events-auto bg-card/95 backdrop-blur-xl border-t-2 border-primary/20"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)" }}
       >
         {/* Progress dots */}
@@ -112,7 +112,7 @@ const NavigationBar = ({
         <div className="flex items-center px-4 pb-3">
           {/* Left: ETA info */}
           <div className="flex-1">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Arrivée</p>
+            <p className="text-[11px] text-primary/60 uppercase tracking-wider font-semibold">Arrivée</p>
             <p className="text-2xl font-bold text-foreground leading-none tabular-nums tracking-tight mt-0.5">
               {arrivalTime}
             </p>

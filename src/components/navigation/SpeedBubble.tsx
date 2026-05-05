@@ -28,7 +28,7 @@ const SpeedBubble = ({ speed, speedLimit = null }: SpeedBubbleProps) => {
           className={`w-[60px] h-[60px] rounded-full flex flex-col items-center justify-center shadow-elevated border-2 ${
             over
               ? "bg-destructive border-destructive/60"
-              : "bg-card/95 border-primary/20 backdrop-blur-xl"
+              : "bg-card/95 border-primary/25 backdrop-blur-xl"
           }`}
         >
           <span className={`text-[20px] font-extrabold leading-none tabular-nums ${
