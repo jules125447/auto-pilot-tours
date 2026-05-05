@@ -389,6 +389,41 @@ const CircuitEditorMap = ({
     }
   }, [soundPlacingStart]);
 
+  // Annotations
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    const layers = layersRef.current;
+    layers.annotationMarkers.forEach((m) => map.removeLayer(m));
+    layers.annotationMarkers = [];
+
+    annotations.forEach((ann) => {
+      const isSelected = ann.id === selectedAnnotationId;
+      const sizeMap = { small: 32, medium: 48, large: 64 };
+      const px = sizeMap[ann.size] || 48;
+      const hasImage = !!ann.imageUrl;
+
+      const icon = L.divIcon({
+        html: `<div style="width:${px + 8}px;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <div style="width:${px}px;height:${px}px;border-radius:8px;border:2.5px solid ${isSelected ? "hsl(35,85%,55%)" : "hsl(15,85%,55%)"};overflow:hidden;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;cursor:grab;">
+            ${hasImage ? `<img src="${ann.imageUrl}" style="width:100%;height:100%;object-fit:cover;" />` : `<span style="font-size:${px * 0.5}px;">🖼️</span>`}
+          </div>
+          ${ann.caption ? `<div style="max-width:${px + 40}px;background:white;border-radius:4px;padding:1px 4px;font-size:10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.15);">${ann.caption}</div>` : ""}
+        </div>`,
+        className: "custom-marker",
+        iconSize: [px + 8, px + (ann.caption ? 18 : 0)],
+        iconAnchor: [(px + 8) / 2, (px + (ann.caption ? 18 : 0)) / 2],
+      });
+
+      const marker = L.marker([ann.lat, ann.lng], { icon, draggable: true }).addTo(map);
+      marker.on("dragend", () => {
+        const pos = marker.getLatLng();
+        onAnnotationDrag?.(ann.id, pos.lat, pos.lng);
+      });
+      layers.annotationMarkers.push(marker);
+    });
+  }, [annotations, selectedAnnotationId, onAnnotationDrag]);
+
   return (
     <div className="absolute inset-0">
       <div ref={mapRef} className="absolute inset-0" />
