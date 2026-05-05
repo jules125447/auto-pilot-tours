@@ -220,6 +220,12 @@ const CircuitCreator = () => {
             endLat: s.end_lat, endLng: s.end_lng, soundType: s.sound_type, volume: s.volume,
           })));
         }
+        if (annotationsRes.data) {
+          setAnnotations(annotationsRes.data.map((a: any) => ({
+            id: a.id, lat: a.lat, lng: a.lng, imageUrl: a.image_url || "",
+            caption: a.caption || "", size: a.size || "medium",
+          })));
+        }
       } catch (err: any) {
         toast({ title: "Erreur", description: "Impossible de charger le circuit.", variant: "destructive" });
         navigate("/my-circuits");
