@@ -58,7 +58,16 @@ export interface SoundSegmentData {
   volume: number;
 }
 
-export type EditorMode = "route" | "stop" | "audio" | "music" | "sound" | "select";
+export interface MapAnnotationData {
+  id: string;
+  lat: number;
+  lng: number;
+  imageUrl: string;
+  caption: string;
+  size: "small" | "medium" | "large";
+}
+
+export type EditorMode = "route" | "stop" | "audio" | "music" | "sound" | "annotation" | "select";
 
 /** Given a route, find a point ~distanceMeters along it from the closest point to `origin`. */
 function findPointAlongRoute(
