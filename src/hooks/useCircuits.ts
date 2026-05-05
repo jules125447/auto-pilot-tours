@@ -138,6 +138,17 @@ function mapCircuit(
         sound_type: s.sound_type,
         volume: s.volume,
       })),
+    map_annotations: mapAnnotations
+      .filter((a: any) => a.circuit_id === circuit.id)
+      .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((a: any) => ({
+        id: a.id,
+        lat: a.lat,
+        lng: a.lng,
+        image_url: a.image_url,
+        caption: a.caption,
+        size: a.size || "medium",
+      })),
   };
 }
 
