@@ -1374,7 +1374,7 @@ const NavigationView = () => {
         <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>
           <button
             onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className="w-12 h-12 rounded-full bg-card shadow-elevated border border-border flex items-center justify-center active:scale-95 transition-all"
+            className="w-12 h-12 rounded-full bg-card/95 shadow-elevated border border-primary/20 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-all"
             aria-label="Voix"
           >
             {voiceEnabled ? <Volume2 className="w-5 h-5 text-primary" /> : <VolumeX className="w-5 h-5 text-muted-foreground" />}
