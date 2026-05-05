@@ -1430,6 +1430,9 @@ const NavigationView = () => {
         isLastStopDone={currentStopIndex >= circuit.stops.length - 1 && visitedStops.has(currentStopIndex)}
         speed={speed}
         onStop={() => navigate(`/circuit/${circuit.id}`)}
+        approachingStart={!!routeToStart && !hasReachedStart}
+        distToStart={routeToStartInfo?.distance ?? null}
+        etaToStartSeconds={routeToStartInfo?.duration ?? null}
       />
     </div>
   );
