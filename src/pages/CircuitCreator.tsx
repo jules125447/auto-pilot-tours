@@ -574,7 +574,21 @@ const CircuitCreator = () => {
         if (soundErr) throw soundErr;
       }
 
-      toast({
+      if (annotations.length > 0) {
+        const { error: annErr } = await supabase.from("map_annotations").insert(
+          annotations.map((a, i) => ({
+            circuit_id: circuitId,
+            lat: a.lat,
+            lng: a.lng,
+            image_url: a.imageUrl || null,
+            caption: a.caption || "",
+            size: a.size,
+            sort_order: i,
+          })) as any
+        );
+        if (annErr) throw annErr;
+      }
+
         title: isEditing
           ? (publish ? "Circuit modifié et publié !" : "Circuit modifié !")
           : (publish ? "Circuit publié !" : "Brouillon sauvegardé"),
