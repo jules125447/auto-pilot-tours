@@ -170,25 +170,25 @@ const NavigationMap = ({
 
     if (route.length > 0) {
       L.polyline(route, {
-        color: "#4A66F4",
+        color: "hsl(15, 85%, 55%)",
         weight: 18,
-        opacity: 0.18,
+        opacity: 0.15,
         smoothFactor: 1,
       }).addTo(map);
 
       remainingLineRef.current = L.polyline(route, {
-        color: "#4A66F4",
-        weight: 8,
-        opacity: 0.92,
+        color: "hsl(15, 85%, 55%)",
+        weight: 7,
+        opacity: 0.85,
         smoothFactor: 1,
         lineCap: "round",
         lineJoin: "round",
       }).addTo(map);
 
       traveledLineRef.current = L.polyline([], {
-        color: "#8FA3D9",
-        weight: 8,
-        opacity: 0.55,
+        color: "hsl(42, 95%, 55%)",
+        weight: 7,
+        opacity: 0.5,
         smoothFactor: 1,
         lineCap: "round",
         lineJoin: "round",
@@ -217,7 +217,7 @@ const NavigationMap = ({
       const icon = L.divIcon({
         html: `
           <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-            <div style="width:32px;height:32px;border-radius:50%;background:white;border:2px solid #4A66F4;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">${poiEmoji[stop.type] || "📍"}</div>
+            <div style="width:32px;height:32px;border-radius:50%;background:white;border:2.5px solid hsl(15,85%,55%);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 12px rgba(234,88,12,0.25);">${poiEmoji[stop.type] || "📍"}</div>
           </div>
         `,
         className: "poi-marker",
@@ -433,7 +433,13 @@ const NavigationMap = ({
             <div class="waze-arrow-pulse"></div>
             <div class="waze-arrow-icon">
               <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
-                <polygon points="20,4 8,32 20,26 32,32" fill="#4A66F4" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+                <defs>
+                  <linearGradient id="arrowGradMap" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="hsl(15,85%,55%)" />
+                    <stop offset="100%" stop-color="hsl(42,95%,55%)" />
+                  </linearGradient>
+                </defs>
+                <polygon points="20,4 8,32 20,26 32,32" fill="url(#arrowGradMap)" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
               </svg>
             </div>
           </div>
@@ -494,11 +500,11 @@ const NavigationMap = ({
       if (!inner) return;
 
       if (i === currentStopIndex) {
-        inner.style.borderColor = "#FF9500";
-        inner.style.boxShadow = "0 2px 12px rgba(255,149,0,0.5)";
+        inner.style.borderColor = "hsl(15,85%,55%)";
+        inner.style.boxShadow = "0 2px 12px rgba(234,88,12,0.4)";
       } else {
-        inner.style.borderColor = "#4A66F4";
-        inner.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+        inner.style.borderColor = "hsl(15,85%,55%)";
+        inner.style.boxShadow = "0 2px 8px rgba(234,88,12,0.15)";
       }
     });
   }, [currentStopIndex]);
