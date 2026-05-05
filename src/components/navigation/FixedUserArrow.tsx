@@ -15,12 +15,17 @@ const FixedUserArrow = ({ anchorY, visible }: FixedUserArrowProps) => {
     >
       <div className="waze-arrow-shell">
         <div className="waze-arrow-pulse" />
-        {/* Arrow always points UP — the map rotates instead */}
         <div className="waze-arrow-icon">
           <svg viewBox="0 0 40 40" width="40" height="40">
+            <defs>
+              <linearGradient id="arrowGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(15, 85%, 55%)" />
+                <stop offset="100%" stopColor="hsl(42, 95%, 55%)" />
+              </linearGradient>
+            </defs>
             <polygon
               points="20,4 8,32 20,26 32,32"
-              fill="hsl(var(--primary))"
+              fill="url(#arrowGrad)"
               stroke="white"
               strokeWidth="2.5"
               strokeLinejoin="round"
