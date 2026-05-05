@@ -2,7 +2,7 @@ import L from "leaflet";
 
 export type MapLatLng = [number, number];
 
-export const TRACKING_ANCHOR_Y = 0.72;
+export const TRACKING_ANCHOR_Y = 0.78;
 
 interface TileSource {
   options: L.TileLayerOptions;
