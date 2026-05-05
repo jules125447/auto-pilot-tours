@@ -15,32 +15,26 @@ const SpeedBubble = ({ speed, speedLimit = null }: SpeedBubbleProps) => {
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", damping: 18, stiffness: 260 }}
       className="absolute left-3 z-[1002]"
-      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 100px)" }}
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 120px)" }}
     >
       <div className="relative">
-        {/* Speed limit ring (red circle) — Waze style */}
         {speedLimit !== null && (
-          <div className="absolute -top-2 -right-2 w-9 h-9 rounded-full bg-white border-[2.5px] border-red-500 flex items-center justify-center shadow-md z-10">
-            <span className="text-black text-xs font-extrabold leading-none">
-              {speedLimit}
-            </span>
+          <div className="absolute -top-2 -right-2 w-9 h-9 rounded-full bg-white border-[2.5px] border-red-500 flex items-center justify-center shadow-lg z-10">
+            <span className="text-black text-xs font-extrabold leading-none">{speedLimit}</span>
           </div>
         )}
 
-        {/* Dark speed bubble — like Waze */}
         <div
-          className={`w-16 h-16 rounded-full flex flex-col items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.3)] border-[2.5px] ${
-            over ? "bg-red-500 border-red-300" : "bg-[#2d2d3a] border-white/20"
+          className={`w-[60px] h-[60px] rounded-full flex flex-col items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.35)] border-2 ${
+            over
+              ? "bg-red-500 border-red-300"
+              : "bg-[#1e1e2a]/95 border-white/15 backdrop-blur-xl"
           }`}
         >
-          <span
-            className={`text-[22px] font-extrabold leading-none tabular-nums ${
-              over ? "text-white" : "text-white"
-            }`}
-          >
+          <span className="text-[20px] font-extrabold leading-none tabular-nums text-white">
             {displaySpeed}
           </span>
-          <span className="text-[8px] font-semibold leading-none mt-0.5 uppercase tracking-wider text-white/60">
+          <span className="text-[7px] font-bold leading-none mt-0.5 uppercase tracking-widest text-white/50">
             km/h
           </span>
         </div>
