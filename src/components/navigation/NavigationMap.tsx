@@ -514,7 +514,7 @@ const NavigationMap = ({
       <style>{`
         @keyframes waze-pulse {
           0% { transform: scale(0.8); opacity: 0.6; }
-          100% { transform: scale(2.5); opacity: 0; }
+          100% { transform: scale(2.8); opacity: 0; }
         }
         .waze-user-marker,
         .poi-marker,
@@ -523,8 +523,8 @@ const NavigationMap = ({
           border: none !important;
         }
         .waze-arrow-shell {
-          width: 56px;
-          height: 56px;
+          width: 64px;
+          height: 64px;
           position: relative;
           display: flex;
           align-items: center;
@@ -534,7 +534,7 @@ const NavigationMap = ({
           position: absolute;
           inset: 0;
           border-radius: 9999px;
-          background: rgba(234, 88, 12, 0.18);
+          background: radial-gradient(circle, hsl(15 85% 55% / 0.25) 0%, transparent 70%);
           animation: waze-pulse 2s ease-out infinite;
         }
         .waze-arrow-icon {
@@ -546,27 +546,49 @@ const NavigationMap = ({
         .waze-user-marker {
           transition: transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1) !important;
         }
+        /* Large fixed overlay arrow */
+        .waze-arrow-shell-lg {
+          width: 72px;
+          height: 72px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .waze-arrow-pulse-lg {
+          position: absolute;
+          inset: -4px;
+          border-radius: 9999px;
+          background: radial-gradient(circle, hsl(15 85% 55% / 0.2) 0%, hsl(42 95% 55% / 0.08) 50%, transparent 70%);
+          animation: waze-pulse 2.2s ease-out infinite;
+        }
+        .waze-arrow-icon-lg {
+          position: relative;
+          z-index: 2;
+          transform-origin: center center;
+          filter: drop-shadow(0 3px 8px hsl(15 85% 55% / 0.35));
+        }
         .poi-tooltip-nav {
-          background: white !important;
-          color: #333 !important;
-          border: 1px solid #ddd !important;
-          border-radius: 8px !important;
-          padding: 4px 10px !important;
+          background: hsl(var(--card)) !important;
+          color: hsl(var(--foreground)) !important;
+          border: 1px solid hsl(var(--border)) !important;
+          border-radius: 12px !important;
+          padding: 5px 12px !important;
           font-size: 12px !important;
           font-weight: 600 !important;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+          box-shadow: 0 4px 16px hsl(var(--foreground) / 0.08) !important;
         }
         .poi-tooltip-nav::before {
-          border-top-color: white !important;
+          border-top-color: hsl(var(--card)) !important;
         }
         .leaflet-container {
-          background: hsl(var(--muted));
+          background: hsl(var(--background));
         }
         .nav-map-shell {
           width: 100%;
           height: 100%;
           overflow: hidden;
-          background: hsl(var(--muted));
+          background: hsl(var(--background));
           position: relative;
         }
         .nav-map-canvas {
