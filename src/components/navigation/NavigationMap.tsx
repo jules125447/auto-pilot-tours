@@ -544,6 +544,19 @@ const NavigationMap = ({
     });
   }, [annotations]);
 
+  // Counter-rotate annotations to keep them horizontal when map rotates
+  useEffect(() => {
+    const rotation = tracking ? mapHeading : 0;
+    annotationMarkersRef.current.forEach((m) => {
+      const el = m.getElement();
+      if (!el) return;
+      const inner = el.querySelector(".annotation-counter-rotate") as HTMLElement;
+      if (inner) {
+        inner.style.transform = `rotate(${rotation}deg)`;
+      }
+    });
+  }, [mapHeading, tracking]);
+
   return (
     <>
       <style>{`
