@@ -660,6 +660,7 @@ const CircuitCreator = () => {
           audioZones={audioZones}
           musicSegments={musicSegments}
           soundSegments={soundSegments}
+          annotations={annotations}
           selectedStopId={selectedStopId}
           setSelectedStopId={setSelectedStopId}
           selectedAudioId={selectedAudioId}
@@ -668,6 +669,8 @@ const CircuitCreator = () => {
           setSelectedMusicId={setSelectedMusicId}
           selectedSoundId={selectedSoundId}
           setSelectedSoundId={setSelectedSoundId}
+          selectedAnnotationId={selectedAnnotationId}
+          setSelectedAnnotationId={setSelectedAnnotationId}
           onUpdateStop={handleUpdateStop}
           onDeleteStop={handleDeleteStop}
           onUpdateAudio={handleUpdateAudio}
@@ -676,6 +679,8 @@ const CircuitCreator = () => {
           onDeleteMusic={handleDeleteMusic}
           onUpdateSound={handleUpdateSound}
           onDeleteSound={handleDeleteSound}
+          onUpdateAnnotation={handleUpdateAnnotation}
+          onDeleteAnnotation={handleDeleteAnnotation}
           onSave={() => handleSave(false)}
           onPublish={() => handleSave(true)}
           saving={saving}
