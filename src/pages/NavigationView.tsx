@@ -1159,6 +1159,7 @@ const NavigationView = () => {
 
     if (distanceToStart <= START_ARRIVAL_RADIUS_METERS) {
       setRouteToStart(null);
+      setRouteToStartInfo(null);
       return;
     }
 
