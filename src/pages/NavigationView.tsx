@@ -1189,6 +1189,7 @@ const NavigationView = () => {
 
     if (currentStopIndex > 0 || hasReachedStart) {
       setRouteToStart(null);
+      setRouteToStartInfo(null);
     }
   }, [routeToStart, currentStopIndex, hasReachedStart]);
 
