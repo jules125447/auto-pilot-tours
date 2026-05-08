@@ -30,6 +30,8 @@ function directionIcon(dir: TurnDirection, size: "lg" | "sm" = "lg") {
       return <RotateCcw className={`${cls} ${color}`} strokeWidth={2.5} />;
     case "arrive":
       return <Flag className={`${cls} ${color}`} strokeWidth={2.5} />;
+    case "roundabout":
+      return <Circle className={`${cls} ${color}`} strokeWidth={2.5} />;
     default:
       return <ArrowUp className={`${cls} ${color}`} strokeWidth={2.5} />;
   }
@@ -45,6 +47,8 @@ function directionLabel(dir: TurnDirection): string {
       return "Faites demi-tour";
     case "arrive":
       return "Vous êtes arrivé";
+    case "roundabout":
+      return "Rond-point";
     default:
       return "Continuez tout droit";
   }
@@ -60,6 +64,8 @@ function shortLabel(dir: TurnDirection): string {
       return "demi-tour";
     case "arrive":
       return "à destination";
+    case "roundabout":
+      return "rond-point";
     default:
       return "tout droit";
   }
