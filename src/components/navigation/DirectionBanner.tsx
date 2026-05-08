@@ -16,6 +16,7 @@ interface DirectionBannerProps {
   streetName?: string;
   nextDirection?: TurnDirection;
   nextDistanceMeters?: number;
+  roundaboutExit?: number;
 }
 
 function directionIcon(dir: TurnDirection, size: "lg" | "sm" = "lg") {
