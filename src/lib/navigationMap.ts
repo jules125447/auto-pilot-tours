@@ -61,7 +61,8 @@ export function centerMapOnAnchoredPoint(
   pos: MapLatLng,
   anchorY: number,
   zoom: number,
-  rotationDeg = 0
+  rotationDeg = 0,
+  animate = false
 ) {
   const mapSize = map.getSize();
   const projectedUserPoint = map.project(L.latLng(pos[0], pos[1]), zoom);
@@ -75,7 +76,7 @@ export function centerMapOnAnchoredPoint(
   );
   const anchoredCenter = map.unproject(anchoredCenterPoint, zoom);
 
-  map.setView(anchoredCenter, zoom, { animate: false });
+  map.setView(anchoredCenter, zoom, { animate, duration: animate ? 1.0 : 0 });
 }
 
 export function findClosestRouteIndex(route: MapLatLng[], pos: MapLatLng): number {
