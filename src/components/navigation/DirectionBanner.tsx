@@ -167,7 +167,9 @@ const DirectionBanner = ({
               {isNow && direction !== "straight" ? "Maintenant" : formatDist(distanceMeters)}
             </p>
             <p className={`text-sm mt-1 truncate font-medium ${isCalm ? "text-muted-foreground" : "text-white/80"}`}>
-              {streetName || directionLabel(direction)}
+              {direction === "roundabout" && roundaboutExit
+                ? `Rond-point, ${roundaboutExit}${roundaboutExit === 1 ? "ère" : "ème"} sortie`
+                : streetName || directionLabel(direction)}
             </p>
           </div>
         </div>
