@@ -1038,6 +1038,12 @@ const NavigationView = () => {
     if (dist < 50 && !visitedStops.has(currentStopIndex)) {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
       if (voiceEnabled) announceArrival(stop.title);
+      // Auto-advance to next stop after arrival
+      if (currentStopIndex < circuit.stops.length - 1) {
+        setTimeout(() => {
+          setCurrentStopIndex((i) => Math.min(circuit.stops.length - 1, i + 1));
+        }, 2000);
+      }
     }
   }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, announceArrival]);
 
@@ -1355,8 +1361,9 @@ const NavigationView = () => {
   }
 
   const currentStop = circuit.stops[currentStopIndex];
-  const currentDirection: TurnDirection = turnInfo?.turn.direction ?? "straight";
-  const currentDistToTurn = turnInfo?.distanceToTurn ?? (navInfo.distToNextStop || 500);
+  const isArrivingAtStop = navInfo.distToNextStop > 0 && navInfo.distToNextStop < 80;
+  const currentDirection: TurnDirection = isArrivingAtStop ? "arrive" : (turnInfo?.turn.direction ?? "straight");
+  const currentDistToTurn = isArrivingAtStop ? navInfo.distToNextStop : (turnInfo?.distanceToTurn ?? (navInfo.distToNextStop || 500));
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden bg-background">
@@ -1372,7 +1379,7 @@ const NavigationView = () => {
           recalculatedRoute={recalculatedRoute}
           annotations={circuit.map_annotations}
         />
-        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
+        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={isArrivingAtStop ? currentStop?.title : undefined} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
 
         {/* Right-side floating controls */}
         <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>
