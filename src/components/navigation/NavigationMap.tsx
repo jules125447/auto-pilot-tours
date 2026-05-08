@@ -508,7 +508,7 @@ const NavigationMap = ({
       mapContainer.style.transform = "none";
       mapContainer.style.transition = "transform 300ms ease-out";
     }
-  }, [userPos, mapHeading, route, tracking, routeToStart]);
+  }, [userPos, mapHeading, route, tracking, routeToStart, annotations]);
 
   useEffect(() => {
     stopMarkersRef.current.forEach((marker, i) => {
