@@ -494,6 +494,32 @@ const NavigationView = () => {
     setAudioUnlocked(true);
   }, []);
 
+  // Welcome greeting with AI-generated personalized message
+  useEffect(() => {
+    if (!audioUnlocked || welcomeSpoken || !circuit || !voiceEnabled) return;
+    setWelcomeSpoken(true);
+
+    const userName = user?.email?.split("@")[0] || "Voyageur";
+    const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
+    const fallback = `Bienvenue ${displayName} sur le circuit ${circuit.title}. Bonne route !`;
+
+    supabase.functions.invoke("welcome-greeting", {
+      body: {
+        userName: displayName,
+        circuitName: circuit.title,
+        circuitDescription: circuit.description || "",
+      },
+    }).then(({ data, error }) => {
+      if (error || !data?.greeting) {
+        speak(fallback);
+      } else {
+        speak(data.greeting);
+      }
+    }).catch(() => {
+      speak(fallback);
+    });
+  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user, speak]);
+
   useEffect(() => {
     if (!navigator.permissions?.query) {
       logGps("info", "permission_api_unavailable", {
