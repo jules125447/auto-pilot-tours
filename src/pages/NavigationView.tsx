@@ -1208,6 +1208,7 @@ const NavigationView = () => {
     if (Math.min(rawDistanceToStart, snappedDistanceToStart) <= START_ARRIVAL_RADIUS_METERS) {
       routeToStartAbortRef.current?.abort();
       setRouteToStart(null);
+      setRouteToStartInfo(null);
       setHasReachedStart(true);
     }
   }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart]);
