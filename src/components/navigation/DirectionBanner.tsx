@@ -116,6 +116,7 @@ const DirectionBanner = ({
   streetName,
   nextDirection,
   nextDistanceMeters,
+  roundaboutExit,
 }: DirectionBannerProps) => {
   const urgency = urgencyFromDistance(distanceMeters);
   const isNow = urgency === "now";
