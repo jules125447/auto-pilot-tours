@@ -365,7 +365,7 @@ const NavigationView = () => {
     });
   }, [fadeMusicTo]);
 
-  const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
+  const { speak, announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
     onSpeakStart: duckAudio,
     onSpeakEnd: unduckAudio,
   });
