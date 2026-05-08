@@ -1146,6 +1146,7 @@ const NavigationView = () => {
   useEffect(() => {
     if (!circuitStartPoint || !rawUserPos || currentStopIndex > 0 || hasReachedStart) {
       setRouteToStart(null);
+      setRouteToStartInfo(null);
       return;
     }
 
