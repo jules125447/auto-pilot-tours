@@ -291,6 +291,8 @@ const NavigationView = () => {
   const lastRecalcTimeRef = useRef(0);
   const [recalculatedRoute, setRecalculatedRoute] = useState<[number, number][] | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [osrmSteps, setOsrmSteps] = useState<import("@/lib/routing").RouteStep[]>([]);
+  const [welcomeSpoken, setWelcomeSpoken] = useState(false);
 
   // Audio ducking: lower other audio when voice guidance speaks
   // Uses ref counting to handle overlapping announcements correctly.
