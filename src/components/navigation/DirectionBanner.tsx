@@ -5,9 +5,10 @@ import {
   CornerUpRight,
   RotateCcw,
   Flag,
+  Circle,
 } from "lucide-react";
 
-export type TurnDirection = "straight" | "left" | "right" | "u-turn" | "arrive";
+export type TurnDirection = "straight" | "left" | "right" | "u-turn" | "arrive" | "roundabout";
 
 interface DirectionBannerProps {
   direction: TurnDirection;
