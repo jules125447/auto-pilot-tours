@@ -453,10 +453,24 @@ const NavigationView = () => {
     ]);
   }, [rawUserPos, activeSnapRoute, activeSnapRouteKey, gpsAccuracy, speed]);
 
+  // Fetch OSRM steps for roundabout detection
+  useEffect(() => {
+    if (!circuit?.route) return;
+    const routeCoords = circuit.route as [number, number][];
+    if (routeCoords.length < 2) return;
+    
+    const start = routeCoords[0];
+    const end = routeCoords[routeCoords.length - 1];
+    // Fetch route with steps to get maneuver types
+    getRoute([start, end]).then((result) => {
+      if (result?.steps) setOsrmSteps(result.steps);
+    }).catch(() => {});
+  }, [circuit?.route]);
+
   const turns = useMemo(() => {
     if (!circuit?.route) return [];
-    return extractTurns(circuit.route as [number, number][]);
-  }, [circuit?.route]);
+    return extractTurns(circuit.route as [number, number][], osrmSteps.length > 0 ? osrmSteps : undefined);
+  }, [circuit?.route, osrmSteps]);
 
   const turnInfo = useMemo(() => {
     if (!userPos || !circuit?.route || turns.length === 0) return null;
