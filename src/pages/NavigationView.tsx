@@ -866,7 +866,7 @@ const NavigationView = () => {
     const t = turnInfo.turn;
     // Stable per-turn signature so we never re-announce same tier for same turn
     const sig = `turn-${t.pointIndex}-${t.lat.toFixed(5)}-${t.lng.toFixed(5)}`;
-    announceDirection(t.direction, turnInfo.distanceToTurn, sig);
+    announceDirection(t.direction, turnInfo.distanceToTurn, sig, t.roundaboutExit);
   }, [turnInfo, voiceEnabled, announceDirection]);
 
   // Fade helper for HTML Audio
