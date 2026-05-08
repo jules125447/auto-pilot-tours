@@ -34,7 +34,7 @@ export async function getRoute(
 
   // OSRM expects lng,lat format
   const coords = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(";");
-  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=true`;
 
   try {
     const res = await fetch(url, { signal: options?.signal });
@@ -49,10 +49,24 @@ export async function getRoute(
       ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
     );
 
+    // Extract steps from all legs
+    const steps: RouteStep[] = [];
+    for (const leg of route.legs || []) {
+      for (const step of leg.steps || []) {
+        steps.push({
+          maneuver: step.maneuver,
+          distance: step.distance,
+          duration: step.duration,
+          name: step.name || "",
+        });
+      }
+    }
+
     return {
       coordinates,
       distance: route.distance,
       duration: route.duration,
+      steps,
     };
   } catch {
     return null;
