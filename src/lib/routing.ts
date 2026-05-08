@@ -7,6 +7,19 @@ export interface RouteResult {
   coordinates: [number, number][]; // [lat, lng][]
   distance: number; // meters
   duration: number; // seconds
+  steps?: RouteStep[]; // OSRM step-by-step maneuvers
+}
+
+export interface RouteStep {
+  maneuver: {
+    type: string; // "turn", "roundabout turn", "rotary", "exit roundabout", etc.
+    modifier?: string; // "left", "right", "straight", etc.
+    location: [number, number]; // [lng, lat]
+    exit?: number; // roundabout exit number
+  };
+  distance: number;
+  duration: number;
+  name: string;
 }
 
 /**
