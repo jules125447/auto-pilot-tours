@@ -156,14 +156,12 @@ export function useVoiceGuidance(options?: VoiceGuidanceOptions) {
   );
 
   const announceDirection = useCallback(
-    (dir: TurnDirection, distMeters: number, turnSignature?: string) => {
+    (dir: TurnDirection, distMeters: number, turnSignature?: string, roundaboutExit?: number) => {
       if (dir === "straight") return;
 
       // Reset tiers if we moved on to a new turn
       const sig = turnSignature ?? `${dir}@${Math.round(distMeters / 25) * 25}`;
       if (sig !== lastTurnSig.current) {
-        // when the turn signature changes, we can clear stale tiers tied to the old turn
-        // (we keep ours scoped to current sig only)
         lastTurnSig.current = sig;
       }
 
@@ -176,7 +174,7 @@ export function useVoiceGuidance(options?: VoiceGuidanceOptions) {
       if (announced.current.has(key)) return;
       announced.current.add(key);
 
-      speak(phraseFor(tierMatch.tier, dir, distMeters));
+      speak(phraseFor(tierMatch.tier, dir, distMeters, roundaboutExit));
     },
     [speak]
   );
