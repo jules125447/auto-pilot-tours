@@ -485,14 +485,26 @@ const NavigationMap = ({
 
       const currentMapSize = map.getSize();
       const anchorY = getTrackingAnchorY(currentMapSize.x, currentMapSize.y);
-      const targetZoom = getTrackingZoom(currentMapSize.x, map.getZoom());
-      centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom, mapHeading);
+      
+      // Check if user is near any annotation — zoom out gently to show it
+      const ANNOTATION_PROXIMITY = 150; // meters
+      const nearAnnotation = annotations.length > 0 && annotations.some((ann) => {
+        const dLat = (ann.lat - userPos[0]) * 111320;
+        const dLng = (ann.lng - userPos[1]) * 111320 * Math.cos(userPos[0] * Math.PI / 180);
+        return Math.sqrt(dLat * dLat + dLng * dLng) < ANNOTATION_PROXIMITY;
+      });
+      
+      const baseZoom = getTrackingZoom(currentMapSize.x, map.getZoom());
+      const targetZoom = nearAnnotation ? Math.min(baseZoom, 15.5) : baseZoom;
+      const zoomChanging = Math.abs(map.getZoom() - targetZoom) > 0.3;
+      
+      centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom, mapHeading, zoomChanging);
     } else {
       // Reset rotation when user is panning manually
       mapContainer.style.transform = "none";
       mapContainer.style.transition = "transform 300ms ease-out";
     }
-  }, [userPos, mapHeading, route, tracking, routeToStart]);
+  }, [userPos, mapHeading, route, tracking, routeToStart, annotations]);
 
   useEffect(() => {
     stopMarkersRef.current.forEach((marker, i) => {
