@@ -1038,6 +1038,12 @@ const NavigationView = () => {
     if (dist < 50 && !visitedStops.has(currentStopIndex)) {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
       if (voiceEnabled) announceArrival(stop.title);
+      // Auto-advance to next stop after arrival
+      if (currentStopIndex < circuit.stops.length - 1) {
+        setTimeout(() => {
+          setCurrentStopIndex((i) => Math.min(circuit.stops.length - 1, i + 1));
+        }, 2000);
+      }
     }
   }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, announceArrival]);
 
