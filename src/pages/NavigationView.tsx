@@ -1361,8 +1361,9 @@ const NavigationView = () => {
   }
 
   const currentStop = circuit.stops[currentStopIndex];
-  const currentDirection: TurnDirection = turnInfo?.turn.direction ?? "straight";
-  const currentDistToTurn = turnInfo?.distanceToTurn ?? (navInfo.distToNextStop || 500);
+  const isArrivingAtStop = navInfo.distToNextStop > 0 && navInfo.distToNextStop < 80;
+  const currentDirection: TurnDirection = isArrivingAtStop ? "arrive" : (turnInfo?.turn.direction ?? "straight");
+  const currentDistToTurn = isArrivingAtStop ? navInfo.distToNextStop : (turnInfo?.distanceToTurn ?? (navInfo.distToNextStop || 500));
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden bg-background">
