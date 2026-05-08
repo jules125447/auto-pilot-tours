@@ -291,6 +291,8 @@ const NavigationView = () => {
   const lastRecalcTimeRef = useRef(0);
   const [recalculatedRoute, setRecalculatedRoute] = useState<[number, number][] | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [osrmSteps, setOsrmSteps] = useState<import("@/lib/routing").RouteStep[]>([]);
+  const [welcomeSpoken, setWelcomeSpoken] = useState(false);
 
   // Audio ducking: lower other audio when voice guidance speaks
   // Uses ref counting to handle overlapping announcements correctly.
@@ -363,7 +365,7 @@ const NavigationView = () => {
     });
   }, [fadeMusicTo]);
 
-  const { announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
+  const { speak, announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
     onSpeakStart: duckAudio,
     onSpeakEnd: unduckAudio,
   });
@@ -451,10 +453,24 @@ const NavigationView = () => {
     ]);
   }, [rawUserPos, activeSnapRoute, activeSnapRouteKey, gpsAccuracy, speed]);
 
+  // Fetch OSRM steps for roundabout detection
+  useEffect(() => {
+    if (!circuit?.route) return;
+    const routeCoords = circuit.route as [number, number][];
+    if (routeCoords.length < 2) return;
+    
+    const start = routeCoords[0];
+    const end = routeCoords[routeCoords.length - 1];
+    // Fetch route with steps to get maneuver types
+    getRoute([start, end]).then((result) => {
+      if (result?.steps) setOsrmSteps(result.steps);
+    }).catch(() => {});
+  }, [circuit?.route]);
+
   const turns = useMemo(() => {
     if (!circuit?.route) return [];
-    return extractTurns(circuit.route as [number, number][]);
-  }, [circuit?.route]);
+    return extractTurns(circuit.route as [number, number][], osrmSteps.length > 0 ? osrmSteps : undefined);
+  }, [circuit?.route, osrmSteps]);
 
   const turnInfo = useMemo(() => {
     if (!userPos || !circuit?.route || turns.length === 0) return null;
@@ -477,6 +493,32 @@ const NavigationView = () => {
     setTimeout(() => ctx.close().catch(() => {}), 100);
     setAudioUnlocked(true);
   }, []);
+
+  // Welcome greeting with AI-generated personalized message
+  useEffect(() => {
+    if (!audioUnlocked || welcomeSpoken || !circuit || !voiceEnabled) return;
+    setWelcomeSpoken(true);
+
+    const userName = user?.email?.split("@")[0] || "Voyageur";
+    const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
+    const fallback = `Bienvenue ${displayName} sur le circuit ${circuit.title}. Bonne route !`;
+
+    supabase.functions.invoke("welcome-greeting", {
+      body: {
+        userName: displayName,
+        circuitName: circuit.title,
+        circuitDescription: circuit.description || "",
+      },
+    }).then(({ data, error }) => {
+      if (error || !data?.greeting) {
+        speak(fallback);
+      } else {
+        speak(data.greeting);
+      }
+    }).catch(() => {
+      speak(fallback);
+    });
+  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user, speak]);
 
   useEffect(() => {
     if (!navigator.permissions?.query) {
@@ -850,7 +892,7 @@ const NavigationView = () => {
     const t = turnInfo.turn;
     // Stable per-turn signature so we never re-announce same tier for same turn
     const sig = `turn-${t.pointIndex}-${t.lat.toFixed(5)}-${t.lng.toFixed(5)}`;
-    announceDirection(t.direction, turnInfo.distanceToTurn, sig);
+    announceDirection(t.direction, turnInfo.distanceToTurn, sig, t.roundaboutExit);
   }, [turnInfo, voiceEnabled, announceDirection]);
 
   // Fade helper for HTML Audio
@@ -1383,7 +1425,7 @@ const NavigationView = () => {
           recalculatedRoute={recalculatedRoute}
           annotations={circuit.map_annotations}
         />
-        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={isArrivingAtStop ? currentStop?.title : undefined} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} />
+        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={isArrivingAtStop ? currentStop?.title : undefined} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} roundaboutExit={turnInfo?.turn.roundaboutExit} />
 
         {/* Right-side floating controls */}
         <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>

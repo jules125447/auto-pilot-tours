@@ -1,4 +1,5 @@
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
+import type { RouteStep } from "@/lib/routing";
 
 function bearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -28,11 +29,37 @@ export interface TurnInstruction {
   pointIndex: number;
   lat: number;
   lng: number;
+  roundaboutExit?: number; // exit number for roundabouts
 }
 
-/** Analyze a route polyline and extract turn points */
-export function extractTurns(route: [number, number][]): TurnInstruction[] {
+/** Find closest route point index to a given lat/lng */
+function closestRouteIndex(route: [number, number][], lat: number, lng: number): number {
+  let minD = Infinity;
+  let idx = 0;
+  for (let i = 0; i < route.length; i++) {
+    const d = (route[i][0] - lat) ** 2 + (route[i][1] - lng) ** 2;
+    if (d < minD) { minD = d; idx = i; }
+  }
+  return idx;
+}
+
+/** Analyze a route polyline and extract turn points, enriched with OSRM step data */
+export function extractTurns(route: [number, number][], steps?: RouteStep[]): TurnInstruction[] {
   if (route.length < 3) return [];
+
+  // Build roundabout lookup from OSRM steps
+  const roundabouts = new Map<number, number>(); // routePointIndex -> exit number
+  if (steps) {
+    for (const step of steps) {
+      const mt = step.maneuver.type;
+      if ((mt === "roundabout turn" || mt === "rotary" || mt === "exit roundabout" || mt === "roundabout") && step.maneuver.exit) {
+        // OSRM location is [lng, lat]
+        const [lng, lat] = step.maneuver.location;
+        const idx = closestRouteIndex(route, lat, lng);
+        roundabouts.set(idx, step.maneuver.exit);
+      }
+    }
+  }
 
   const turns: TurnInstruction[] = [];
   let cumDist = 0;
@@ -40,6 +67,23 @@ export function extractTurns(route: [number, number][]): TurnInstruction[] {
   for (let i = 1; i < route.length - 1; i++) {
     const segDist = haversine(route[i - 1][0], route[i - 1][1], route[i][0], route[i][1]);
     cumDist += segDist;
+
+    // Check if this point is a roundabout from OSRM data
+    const roundaboutExit = roundabouts.get(i);
+    if (roundaboutExit !== undefined) {
+      const lastTurn = turns[turns.length - 1];
+      if (lastTurn && cumDist - lastTurn.distanceFromStart < 30) continue;
+
+      turns.push({
+        direction: "roundabout",
+        distanceFromStart: cumDist,
+        pointIndex: i,
+        lat: route[i][0],
+        lng: route[i][1],
+        roundaboutExit,
+      });
+      continue;
+    }
 
     const b1 = bearing(route[i - 1][0], route[i - 1][1], route[i][0], route[i][1]);
     const b2 = bearing(route[i][0], route[i][1], route[i + 1][0], route[i + 1][1]);
@@ -54,7 +98,6 @@ export function extractTurns(route: [number, number][]): TurnInstruction[] {
     else if (Math.abs(angleDiff) > 150) dir = "u-turn";
 
     if (dir !== "straight") {
-      // Skip if too close to previous turn (< 30m)
       const lastTurn = turns[turns.length - 1];
       if (lastTurn && cumDist - lastTurn.distanceFromStart < 30) continue;
 

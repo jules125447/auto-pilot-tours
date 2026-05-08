@@ -5,9 +5,10 @@ import {
   CornerUpRight,
   RotateCcw,
   Flag,
+  Circle,
 } from "lucide-react";
 
-export type TurnDirection = "straight" | "left" | "right" | "u-turn" | "arrive";
+export type TurnDirection = "straight" | "left" | "right" | "u-turn" | "arrive" | "roundabout";
 
 interface DirectionBannerProps {
   direction: TurnDirection;
@@ -15,6 +16,7 @@ interface DirectionBannerProps {
   streetName?: string;
   nextDirection?: TurnDirection;
   nextDistanceMeters?: number;
+  roundaboutExit?: number;
 }
 
 function directionIcon(dir: TurnDirection, size: "lg" | "sm" = "lg") {
@@ -29,6 +31,8 @@ function directionIcon(dir: TurnDirection, size: "lg" | "sm" = "lg") {
       return <RotateCcw className={`${cls} ${color}`} strokeWidth={2.5} />;
     case "arrive":
       return <Flag className={`${cls} ${color}`} strokeWidth={2.5} />;
+    case "roundabout":
+      return <Circle className={`${cls} ${color}`} strokeWidth={2.5} />;
     default:
       return <ArrowUp className={`${cls} ${color}`} strokeWidth={2.5} />;
   }
@@ -44,6 +48,8 @@ function directionLabel(dir: TurnDirection): string {
       return "Faites demi-tour";
     case "arrive":
       return "Vous êtes arrivé";
+    case "roundabout":
+      return "Rond-point";
     default:
       return "Continuez tout droit";
   }
@@ -59,6 +65,8 @@ function shortLabel(dir: TurnDirection): string {
       return "demi-tour";
     case "arrive":
       return "à destination";
+    case "roundabout":
+      return "rond-point";
     default:
       return "tout droit";
   }
@@ -108,6 +116,7 @@ const DirectionBanner = ({
   streetName,
   nextDirection,
   nextDistanceMeters,
+  roundaboutExit,
 }: DirectionBannerProps) => {
   const urgency = urgencyFromDistance(distanceMeters);
   const isNow = urgency === "now";
@@ -158,7 +167,9 @@ const DirectionBanner = ({
               {isNow && direction !== "straight" ? "Maintenant" : formatDist(distanceMeters)}
             </p>
             <p className={`text-sm mt-1 truncate font-medium ${isCalm ? "text-muted-foreground" : "text-white/80"}`}>
-              {streetName || directionLabel(direction)}
+              {direction === "roundabout" && roundaboutExit
+                ? `Rond-point, ${roundaboutExit}${roundaboutExit === 1 ? "ère" : "ème"} sortie`
+                : streetName || directionLabel(direction)}
             </p>
           </div>
         </div>

@@ -34,9 +34,20 @@ function shortDir(dir: TurnDirection): string {
       return "demi-tour";
     case "arrive":
       return "à destination";
+    case "roundabout":
+      return "au rond-point";
     default:
       return "tout droit";
   }
+}
+
+function ordinalFR(n: number): string {
+  if (n === 1) return "première";
+  if (n === 2) return "deuxième";
+  if (n === 3) return "troisième";
+  if (n === 4) return "quatrième";
+  if (n === 5) return "cinquième";
+  return `${n}ème`;
 }
 
 function formatDistanceFR(distMeters: number): string {
@@ -49,11 +60,26 @@ function formatDistanceFR(distMeters: number): string {
   return `${Math.max(50, rounded)} mètres`;
 }
 
-function phraseFor(tier: AnnouncementTier, dir: TurnDirection, distMeters: number): string {
+function phraseFor(tier: AnnouncementTier, dir: TurnDirection, distMeters: number, roundaboutExit?: number): string {
   if (dir === "arrive") {
     if (tier === "now" || tier === "imminent") return "Vous êtes arrivé à destination";
     return `Dans ${formatDistanceFR(distMeters)}, vous serez arrivé`;
   }
+  
+  if (dir === "roundabout" && roundaboutExit) {
+    const exitPhrase = `au rond-point, prenez la ${ordinalFR(roundaboutExit)} sortie`;
+    switch (tier) {
+      case "far":
+      case "mid":
+      case "near":
+        return `Dans ${formatDistanceFR(distMeters)}, ${exitPhrase}`;
+      case "imminent":
+        return `Rond-point, ${ordinalFR(roundaboutExit)} sortie`;
+      case "now":
+        return `Maintenant, ${ordinalFR(roundaboutExit)} sortie au rond-point`;
+    }
+  }
+
   switch (tier) {
     case "far":
     case "mid":
@@ -130,14 +156,12 @@ export function useVoiceGuidance(options?: VoiceGuidanceOptions) {
   );
 
   const announceDirection = useCallback(
-    (dir: TurnDirection, distMeters: number, turnSignature?: string) => {
+    (dir: TurnDirection, distMeters: number, turnSignature?: string, roundaboutExit?: number) => {
       if (dir === "straight") return;
 
       // Reset tiers if we moved on to a new turn
       const sig = turnSignature ?? `${dir}@${Math.round(distMeters / 25) * 25}`;
       if (sig !== lastTurnSig.current) {
-        // when the turn signature changes, we can clear stale tiers tied to the old turn
-        // (we keep ours scoped to current sig only)
         lastTurnSig.current = sig;
       }
 
@@ -150,7 +174,7 @@ export function useVoiceGuidance(options?: VoiceGuidanceOptions) {
       if (announced.current.has(key)) return;
       announced.current.add(key);
 
-      speak(phraseFor(tierMatch.tier, dir, distMeters));
+      speak(phraseFor(tierMatch.tier, dir, distMeters, roundaboutExit));
     },
     [speak]
   );
