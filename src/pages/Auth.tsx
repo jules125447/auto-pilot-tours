@@ -30,6 +30,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const redirectTo = new URLSearchParams(window.location.search).get("redirect") || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +40,7 @@ const Auth = () => {
     if (isLogin) {
       const { error } = await signIn(email, password);
       if (error) setError(error.message);
-      else navigate("/");
+      else navigate(redirectTo);
     } else {
       const { error } = await signUp(email, password, displayName);
       if (error) {
