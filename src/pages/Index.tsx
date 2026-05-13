@@ -224,8 +224,12 @@ const Index = () => {
       </section>
 
       <footer className="border-t border-border py-8 bg-background">
-        <div className="container text-center text-sm text-muted-foreground">
+        <div className="container text-center text-sm text-muted-foreground space-y-2">
           <p>© 2026 RoadTrip — Circuits touristiques guidés en France</p>
+          <p className="text-xs opacity-60">Données de navigation anonymisées à des fins d'amélioration du service.</p>
+          <Link to="/admin" className="inline-block text-[10px] uppercase tracking-widest opacity-30 hover:opacity-100 transition-opacity">
+            Admin
+          </Link>
         </div>
       </footer>
     </div>
