@@ -12,6 +12,7 @@ import MyCircuits from "./pages/MyCircuits";
 import CircuitCreator from "./pages/CircuitCreator";
 import ProDashboard from "./pages/ProDashboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/creator" element={<CircuitCreator />} />
             <Route path="/pro" element={<ProDashboard />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

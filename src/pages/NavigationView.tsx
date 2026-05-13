@@ -16,6 +16,7 @@ import { useCircuitPreload } from "@/hooks/useCircuitPreload";
 import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 import SpeedBubble from "@/components/navigation/SpeedBubble";
+import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
@@ -842,6 +843,30 @@ const NavigationView = () => {
     setRouteToStart(null);
     routeProgressRef.current = null;
   }, [circuit?.id]);
+
+  // Analytics: start session when navigation starts, end on unmount
+  useEffect(() => {
+    if (!circuit?.id || !audioUnlocked) return;
+    if (!hasAnalyticsConsent()) return;
+    startSession(circuit.id, user?.id || null);
+    return () => {
+      endSession(false);
+    };
+  }, [circuit?.id, audioUnlocked]);
+
+  // Analytics: track GPS pings periodically
+  const lastTrackedPosRef = useRef<[number, number] | null>(null);
+  useEffect(() => {
+    if (!rawUserPos || !audioUnlocked) return;
+    const last = lastTrackedPosRef.current;
+    if (last) {
+      const dist = haversine(last[0], last[1], rawUserPos[0], rawUserPos[1]);
+      if (dist < 15) return;
+      addDistance(dist);
+    }
+    lastTrackedPosRef.current = rawUserPos;
+    trackGpsPing(rawUserPos[0], rawUserPos[1]);
+  }, [rawUserPos, audioUnlocked]);
 
   // Realtime presence for community participants
   useEffect(() => {

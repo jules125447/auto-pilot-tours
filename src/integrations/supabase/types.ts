@@ -38,6 +38,39 @@ export type Database = {
         }
         Relationships: []
       }
+      audio_plays: {
+        Row: {
+          audio_zone_id: string
+          circuit_id: string
+          completed: boolean
+          id: string
+          played_at: string
+          played_seconds: number
+          session_id: string
+          total_seconds: number | null
+        }
+        Insert: {
+          audio_zone_id: string
+          circuit_id: string
+          completed?: boolean
+          id?: string
+          played_at?: string
+          played_seconds?: number
+          session_id: string
+          total_seconds?: number | null
+        }
+        Update: {
+          audio_zone_id?: string
+          circuit_id?: string
+          completed?: boolean
+          id?: string
+          played_at?: string
+          played_seconds?: number
+          session_id?: string
+          total_seconds?: number | null
+        }
+        Relationships: []
+      }
       audio_zones: {
         Row: {
           audio_text: string | null
@@ -287,6 +320,36 @@ export type Database = {
           },
         ]
       }
+      gps_pings: {
+        Row: {
+          circuit_id: string
+          id: number
+          lat: number
+          lng: number
+          recorded_at: string
+          session_id: string
+          speed_kmh: number | null
+        }
+        Insert: {
+          circuit_id: string
+          id?: number
+          lat: number
+          lng: number
+          recorded_at?: string
+          session_id: string
+          speed_kmh?: number | null
+        }
+        Update: {
+          circuit_id?: string
+          id?: number
+          lat?: number
+          lng?: number
+          recorded_at?: string
+          session_id?: string
+          speed_kmh?: number | null
+        }
+        Relationships: []
+      }
       map_annotations: {
         Row: {
           caption: string | null
@@ -381,6 +444,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      navigation_sessions: {
+        Row: {
+          circuit_id: string
+          completed: boolean
+          created_at: string
+          distance_m: number
+          duration_s: number
+          ended_at: string | null
+          id: string
+          started_at: string
+          user_id: string | null
+        }
+        Insert: {
+          circuit_id: string
+          completed?: boolean
+          created_at?: string
+          distance_m?: number
+          duration_s?: number
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          circuit_id?: string
+          completed?: boolean
+          created_at?: string
+          distance_m?: number
+          duration_s?: number
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -595,6 +694,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stop_visits: {
+        Row: {
+          circuit_id: string
+          dwell_seconds: number
+          id: string
+          session_id: string
+          stop_id: string
+          visited_at: string
+        }
+        Insert: {
+          circuit_id: string
+          dwell_seconds?: number
+          id?: string
+          session_id: string
+          stop_id: string
+          visited_at?: string
+        }
+        Update: {
+          circuit_id?: string
+          dwell_seconds?: number
+          id?: string
+          session_id?: string
+          stop_id?: string
+          visited_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
