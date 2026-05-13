@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import CircuitCard from "@/components/CircuitCard";
 import Header from "@/components/Header";
 import { useCircuits } from "@/hooks/useCircuits";
-import heroImage from "@/assets/hero-jura.jpg";
+
 
 const regions = [
   { name: "Jura", emoji: "🏔️" },
