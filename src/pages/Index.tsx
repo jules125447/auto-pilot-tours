@@ -233,6 +233,7 @@ const Index = () => {
           </Link>
         </div>
       </footer>
+      <ConsentBanner />
     </div>
   );
 };
