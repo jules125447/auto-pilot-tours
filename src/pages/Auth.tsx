@@ -60,7 +60,7 @@ const Auth = () => {
         } as any);
       }
 
-      navigate("/");
+      navigate(redirectTo);
     }
     setLoading(false);
   };
