@@ -16,6 +16,7 @@ import { useCircuitPreload } from "@/hooks/useCircuitPreload";
 import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 import SpeedBubble from "@/components/navigation/SpeedBubble";
+import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
