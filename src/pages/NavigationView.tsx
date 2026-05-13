@@ -844,6 +844,30 @@ const NavigationView = () => {
     routeProgressRef.current = null;
   }, [circuit?.id]);
 
+  // Analytics: start session when navigation starts, end on unmount
+  useEffect(() => {
+    if (!circuit?.id || !audioUnlocked) return;
+    if (!hasAnalyticsConsent()) return;
+    startSession(circuit.id, user?.id || null);
+    return () => {
+      endSession(false);
+    };
+  }, [circuit?.id, audioUnlocked]);
+
+  // Analytics: track GPS pings periodically
+  const lastTrackedPosRef = useRef<[number, number] | null>(null);
+  useEffect(() => {
+    if (!rawUserPos || !audioUnlocked) return;
+    const last = lastTrackedPosRef.current;
+    if (last) {
+      const dist = haversine(last[0], last[1], rawUserPos[0], rawUserPos[1]);
+      if (dist < 15) return;
+      addDistance(dist);
+    }
+    lastTrackedPosRef.current = rawUserPos;
+    trackGpsPing(rawUserPos[0], rawUserPos[1]);
+  }, [rawUserPos, audioUnlocked]);
+
   // Realtime presence for community participants
   useEffect(() => {
     if (!circuit || !user || !audioUnlocked) return;
