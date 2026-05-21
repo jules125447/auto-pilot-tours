@@ -30,16 +30,16 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
       transition: { type: "spring" as const, damping: 18, stiffness: 220 },
     },
     grabbed: {
-      // 3D arc into Tilo's hand
-      x: [0, -2, HAND_X],
-      y: [0, -80, HAND_Y],
-      z: [0, 80, 40],
-      rotateY: [0, 180, 360],
-      rotateX: [0, -20, 0],
-      rotate: [0, -8, -6],
-      scale: [1, 1.18, 1.05],
+      // 3D arc into Tilo's hand — slow, dramatic, then settles in palm
+      x: [0, -2, -6, HAND_X, HAND_X],
+      y: [0, -50, -110, HAND_Y, HAND_Y],
+      z: [0, 60, 100, 40, 40],
+      rotateY: [0, 120, 240, 360, 360],
+      rotateX: [0, -15, -25, -5, 0],
+      rotate: [0, -4, -10, -6, -6],
+      scale: [1, 1.12, 1.22, 1.08, 1.05],
       opacity: 1,
-      transition: { duration: 1.8, ease: "easeInOut" as const, times: [0, 0.55, 1] },
+      transition: { duration: 2.4, ease: "easeInOut" as const, times: [0, 0.3, 0.6, 0.85, 1] },
     },
     returning: {
       // Gently placed back down

@@ -535,11 +535,18 @@ const NavigationView = () => {
   const speedRef = useRef<number | null>(null);
   useEffect(() => { speedRef.current = speed; }, [speed]);
 
-  // Reset stunt when Tilo speaks again
+  // Stunt-local message (Tilo's verdict line, shown + spoken without going through the queue)
+  const [stuntMessage, setStuntMessage] = useState<string | null>(null);
+
+  // Reset stunt when Tilo speaks again — but ignore the speech we trigger
+  // ourselves during the verdict (otherwise the bubble snaps back mid-animation).
+  const stuntActiveRef = useRef(false);
   useEffect(() => {
     if (!tilo.speaking) return;
+    if (stuntActiveRef.current) return;
     setTiloHidden(false);
     setStuntPhase("idle");
+    setStuntMessage(null);
     lastSeenSpokeAtRef.current = Date.now();
   }, [tilo.speaking]);
 
@@ -560,30 +567,53 @@ const NavigationView = () => {
 
   // Step the stunt through its phases
   useEffect(() => {
-    if (stuntPhase === "idle" || stuntPhase === "done") return;
+    if (stuntPhase === "idle" || stuntPhase === "done") {
+      stuntActiveRef.current = false;
+      return;
+    }
+    stuntActiveRef.current = true;
     let timer: number;
     if (stuntPhase === "reach") {
       // Arm extends + eyes look down toward the speedometer
-      timer = window.setTimeout(() => setStuntPhase("grab"), 1400);
+      timer = window.setTimeout(() => setStuntPhase("grab"), 1800);
     } else if (stuntPhase === "grab") {
-      // Bubble flies up in 3D into the waiting hand
+      // Bubble flies up in 3D into the waiting hand — give it time to land
       timer = window.setTimeout(() => {
         const s = speedRef.current ?? 0;
-        setStuntPhase(s > 110 ? "verdict_bad" : "verdict_ok");
-      }, 2000);
+        const over = s > 110;
+        // Verbal commentary on speed while he inspects the dial
+        const sRound = Math.round(s);
+        const line = over
+          ? `Eh ! ${sRound} km/h, tu te crois en F1 ou quoi ?`
+          : sRound < 30
+          ? `${sRound} km/h, on est pas pressés, j'adore.`
+          : `${sRound} km/h, nickel, on profite tranquille.`;
+        setStuntMessage(line);
+        speak(line);
+        setStuntPhase(over ? "verdict_bad" : "verdict_ok");
+      }, 2600);
     } else if (stuntPhase === "verdict_ok") {
       // Smile, then gently place the bubble back
-      timer = window.setTimeout(() => setStuntPhase("exit"), 2600);
+      timer = window.setTimeout(() => {
+        setStuntMessage(null);
+        setStuntPhase("exit");
+      }, 3200);
     } else if (stuntPhase === "verdict_bad") {
       // Angry, throw the bubble — needs more time to be readable
-      timer = window.setTimeout(() => setStuntPhase("exit"), 2800);
+      timer = window.setTimeout(() => {
+        setStuntMessage(null);
+        setStuntPhase("exit");
+      }, 3400);
     } else if (stuntPhase === "exit") {
       setTiloHidden(true);
       // Slow walk off-screen
-      timer = window.setTimeout(() => setStuntPhase("done"), 1800);
+      timer = window.setTimeout(() => {
+        stuntActiveRef.current = false;
+        setStuntPhase("done");
+      }, 1800);
     }
     return () => window.clearTimeout(timer);
-  }, [stuntPhase]);
+  }, [stuntPhase, speak]);
 
   const speedBubbleStunt: "idle" | "grabbed" | "returning" | "thrown" =
     stuntPhase === "grab"
@@ -1655,8 +1685,8 @@ const NavigationView = () => {
         <SpeedBubble speed={speed} stunt={speedBubbleStunt} />
         <TiloCompanion
           visible={tilo.visible && voiceEnabled && !tiloHidden}
-          speaking={tilo.speaking}
-          message={tilo.message}
+          speaking={tilo.speaking || !!stuntMessage}
+          message={stuntMessage ?? tilo.message}
           lookDirection={tilo.lookDirection}
           onClose={tilo.hide}
           mood={tiloMood}
