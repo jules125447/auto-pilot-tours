@@ -11,16 +11,6 @@ interface TileSource {
 
 export const MAP_TILE_SOURCES: TileSource[] = [
   {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    options: {
-      crossOrigin: true,
-      detectRetina: true,
-      keepBuffer: 6,
-      maxZoom: 20,
-      subdomains: "abcd",
-    },
-  },
-  {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     options: {
       crossOrigin: true,
@@ -35,9 +25,19 @@ export const MAP_TILE_SOURCES: TileSource[] = [
     options: {
       crossOrigin: true,
       detectRetina: true,
-      keepBuffer: 4,
+      keepBuffer: 6,
       maxZoom: 19,
       subdomains: "abc",
+    },
+  },
+  {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    options: {
+      crossOrigin: true,
+      detectRetina: true,
+      keepBuffer: 4,
+      maxZoom: 20,
+      subdomains: "abcd",
     },
   },
 ];
