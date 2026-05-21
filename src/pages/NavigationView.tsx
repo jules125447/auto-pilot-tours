@@ -1453,9 +1453,24 @@ const NavigationView = () => {
   }
 
   const currentStop = circuit.stops[currentStopIndex];
-  const isArrivingAtStop = navInfo.distToNextStop > 0 && navInfo.distToNextStop < 80;
-  const currentDirection: TurnDirection = isArrivingAtStop ? "arrive" : (turnInfo?.turn.direction ?? "straight");
-  const currentDistToTurn = isArrivingAtStop ? navInfo.distToNextStop : (turnInfo?.distanceToTurn ?? (navInfo.distToNextStop || 500));
+  const approachingStart = !!routeToStart && !hasReachedStart;
+  const isArrivingAtStop = hasReachedStart && navInfo.distToNextStop > 0 && navInfo.distToNextStop < 80;
+  const isArrivingAtStartPoint = approachingStart && (routeToStartInfo?.distance ?? Infinity) < 80;
+  const currentDirection: TurnDirection = isArrivingAtStop || isArrivingAtStartPoint
+    ? "arrive"
+    : (turnInfo?.turn.direction ?? "straight");
+  const currentDistToTurn = isArrivingAtStop
+    ? navInfo.distToNextStop
+    : isArrivingAtStartPoint
+      ? (routeToStartInfo?.distance ?? 0)
+      : (turnInfo?.distanceToTurn ?? (approachingStart ? (routeToStartInfo?.distance ?? 500) : (navInfo.distToNextStop || 500)));
+  const currentStreetName = isArrivingAtStop
+    ? currentStop?.title
+    : isArrivingAtStartPoint
+      ? "Point de départ"
+      : approachingStart
+        ? "Vers le point de départ"
+        : undefined;
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden bg-background">
