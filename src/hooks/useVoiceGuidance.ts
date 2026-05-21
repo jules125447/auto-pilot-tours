@@ -130,7 +130,12 @@ export function useVoiceGuidance(options?: VoiceGuidanceOptions) {
       voices.find((v) => v.lang.startsWith("fr"));
     if (frVoice) utterance.voice = frVoice;
 
+    let finished = false;
+    let safetyTimer: ReturnType<typeof setTimeout> | null = null;
     const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (safetyTimer) clearTimeout(safetyTimer);
       options?.onSpeakEnd?.();
       speaking.current = false;
       // small gap then flush next
@@ -138,6 +143,13 @@ export function useVoiceGuidance(options?: VoiceGuidanceOptions) {
     };
     utterance.onend = finish;
     utterance.onerror = finish;
+
+    // Safety net: on iOS/Safari `onend` is unreliable and can never fire,
+    // which would leave `speaking` stuck `true` and block Tilo's stunt +
+    // audio ducking forever. Estimate duration (~14 chars/sec at rate 1.05)
+    // and force-close afterwards.
+    const estimatedMs = Math.max(2500, (text.length / 14) * 1000 + 1500);
+    safetyTimer = setTimeout(finish, estimatedMs);
 
     try {
       speechSynthesis.cancel();
