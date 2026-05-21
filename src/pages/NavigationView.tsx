@@ -17,6 +17,8 @@ import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 import SpeedBubble from "@/components/navigation/SpeedBubble";
 import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
+import TiloCompanion from "@/components/navigation/TiloCompanion";
+import { useTilo } from "@/hooks/useTilo";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
@@ -367,9 +369,10 @@ const NavigationView = () => {
     });
   }, [fadeMusicTo]);
 
+  const [isVoiceSpeaking, setIsVoiceSpeaking] = useState(false);
   const { speak, announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
-    onSpeakStart: duckAudio,
-    onSpeakEnd: unduckAudio,
+    onSpeakStart: () => { duckAudio(); setIsVoiceSpeaking(true); },
+    onSpeakEnd: () => { unduckAudio(); setIsVoiceSpeaking(false); },
   });
 
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
@@ -512,31 +515,55 @@ const NavigationView = () => {
     setAudioUnlocked(true);
   }, []);
 
-  // Welcome greeting with AI-generated personalized message
+  // Tilo companion orchestrator
+  const tilo = useTilo({
+    speak,
+    active: audioUnlocked,
+    isSpeakingExternal: isVoiceSpeaking,
+  });
+  // Stable ref so effects don't loop on hook re-creation
+  const tiloRef = useRef(tilo);
+  useEffect(() => { tiloRef.current = tilo; });
+
+  // Welcome through Tilo
   useEffect(() => {
     if (!audioUnlocked || welcomeSpoken || !circuit || !voiceEnabled) return;
     setWelcomeSpoken(true);
-
     const userName = user?.email?.split("@")[0] || "Voyageur";
     const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
-    const fallback = `Bienvenue ${displayName} sur le circuit ${circuit.title}. Bonne route !`;
-
-    supabase.functions.invoke("welcome-greeting", {
-      body: {
+    tiloRef.current.enqueue(
+      {
+        type: "welcome",
         userName: displayName,
         circuitName: circuit.title,
         circuitDescription: circuit.description || "",
       },
-    }).then(({ data, error }) => {
-      if (error || !data?.greeting) {
-        speak(fallback);
-      } else {
-        speak(data.greeting);
-      }
-    }).catch(() => {
-      speak(fallback);
-    });
-  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user, speak]);
+      { priority: true }
+    );
+  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user]);
+
+  // Speed warning trigger — when going too fast on the circuit
+  const lastSpeedWarnRef = useRef(0);
+  useEffect(() => {
+    if (!voiceEnabled || !hasReachedStart || speed === null) return;
+    if (speed < 110) return;
+    const now = Date.now();
+    if (now - lastSpeedWarnRef.current < 90_000) return;
+    lastSpeedWarnRef.current = now;
+    tiloRef.current.enqueue({ type: "speed_warning", speed: Math.round(speed) });
+  }, [speed, voiceEnabled, hasReachedStart]);
+
+  // Idle banter — speak occasionally when nothing else happens
+  useEffect(() => {
+    if (!audioUnlocked || !voiceEnabled || !hasReachedStart) return;
+    const interval = window.setInterval(() => {
+      const sinceLast = Date.now() - tiloRef.current.lastSpokeAt();
+      if (sinceLast < 180_000) return;
+      const pickJoke = Math.random() > 0.5;
+      tiloRef.current.enqueue(pickJoke ? { type: "joke" } : { type: "idle_banter" });
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [audioUnlocked, voiceEnabled, hasReachedStart]);
 
   useEffect(() => {
     if (!navigator.permissions?.query) {
@@ -1121,7 +1148,18 @@ const NavigationView = () => {
     const dist = haversine(lat, lng, stop.lat, stop.lng);
     if (dist < 50 && !visitedStops.has(currentStopIndex)) {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
-      if (voiceEnabled) announceArrival(stop.title);
+      if (voiceEnabled) {
+        // Tilo announces arrival with personality
+        tiloRef.current.enqueue({
+          type: "poi_arrival",
+          poiName: stop.title,
+          poiDescription: (stop as any).description || "",
+        });
+      }
+      const isLast = currentStopIndex >= circuit.stops.length - 1;
+      if (isLast && voiceEnabled) {
+        tiloRef.current.enqueue({ type: "trip_end", circuitName: circuit.title });
+      }
       // Auto-advance to next stop after arrival
       if (currentStopIndex < circuit.stops.length - 1) {
         setTimeout(() => {
@@ -1129,7 +1167,7 @@ const NavigationView = () => {
         }, 2000);
       }
     }
-  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, announceArrival]);
+  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled]);
 
   // Off-route detection & recalculation
   useEffect(() => {
@@ -1531,6 +1569,13 @@ const NavigationView = () => {
           )}
         </AnimatePresence>
         <SpeedBubble speed={speed} />
+        <TiloCompanion
+          visible={tilo.visible && voiceEnabled}
+          speaking={tilo.speaking}
+          message={tilo.message}
+          lookDirection={tilo.lookDirection}
+          onClose={tilo.hide}
+        />
       </div>
       <NavigationBar
         currentStop={currentStop}
