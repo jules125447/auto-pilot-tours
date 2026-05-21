@@ -23,6 +23,7 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
       y: 0,
       rotate: 0,
       scale: 1,
+      opacity: 1,
       transition: { type: "spring" as const, damping: 18, stiffness: 220 },
     },
     grabbed: {
@@ -30,6 +31,7 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
       y: HAND_Y,
       rotate: [0, -12, -6],
       scale: [1, 1.08, 1],
+      opacity: 1,
       transition: { duration: 0.8, ease: "easeOut" as const },
     },
     returning: {
@@ -37,6 +39,7 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
       y: [HAND_Y, HAND_Y + 40, 0],
       rotate: [-6, -3, 0],
       scale: [1, 1.02, 1],
+      opacity: 1,
       transition: { duration: 1.1, ease: "easeInOut" as const },
     },
     thrown: {
@@ -44,13 +47,14 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
       y: [HAND_Y, HAND_Y - 60, -80, -30, 0],
       rotate: [0, 240, 540, 720, 720],
       scale: [1, 1.05, 1, 0.95, 1],
+      opacity: 1,
       transition: { duration: 1.4, ease: "easeInOut" as const, times: [0, 0.2, 0.55, 0.8, 1] },
     },
   } as const;
 
   return (
     <motion.div
-      initial={{ scale: 0, opacity: 0 }}
+      initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
       animate={stunt}
       variants={variants as any}
       className="absolute left-3 z-[1002]"
