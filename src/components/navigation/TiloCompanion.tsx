@@ -329,6 +329,63 @@ const TiloCompanion = ({
                   </svg>
                 )}
               </motion.div>
+
+              {/* BOOMBOX — appears next to Tilo while dancing */}
+              <AnimatePresence>
+                {dancing && (
+                  <motion.div
+                    initial={{ x: -60, y: 20, opacity: 0, rotate: -20 }}
+                    animate={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
+                    exit={{ x: -60, y: 30, opacity: 0, rotate: -20, transition: { duration: 0.8 } }}
+                    transition={{ type: "spring", damping: 14, stiffness: 200 }}
+                    className="absolute pointer-events-none"
+                    style={{ left: "-38%", top: "38%", width: "62%" }}
+                  >
+                    <motion.div
+                      animate={{ rotate: [-8, 8, -8], y: [0, -4, 0] }}
+                      transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <svg viewBox="0 0 120 80" className="w-full h-auto drop-shadow-lg">
+                        {/* body */}
+                        <rect x="4" y="14" width="112" height="60" rx="8" fill="hsl(220 25% 18%)" stroke="hsl(25 95% 55%)" strokeWidth="2.5" />
+                        {/* handle */}
+                        <path d="M30 14 Q 60 -4 90 14" stroke="hsl(25 95% 55%)" strokeWidth="3" fill="none" strokeLinecap="round" />
+                        {/* speakers */}
+                        <circle cx="28" cy="46" r="16" fill="hsl(25 90% 50%)" />
+                        <circle cx="28" cy="46" r="9" fill="hsl(220 25% 10%)" />
+                        <circle cx="28" cy="46" r="4" fill="hsl(35 95% 65%)" />
+                        <circle cx="92" cy="46" r="16" fill="hsl(25 90% 50%)" />
+                        <circle cx="92" cy="46" r="9" fill="hsl(220 25% 10%)" />
+                        <circle cx="92" cy="46" r="4" fill="hsl(35 95% 65%)" />
+                        {/* display */}
+                        <rect x="48" y="28" width="24" height="10" rx="2" fill="hsl(140 80% 55%)" />
+                        {/* buttons */}
+                        <circle cx="54" cy="58" r="2.5" fill="hsl(25 95% 55%)" />
+                        <circle cx="60" cy="58" r="2.5" fill="hsl(25 95% 55%)" />
+                        <circle cx="66" cy="58" r="2.5" fill="hsl(25 95% 55%)" />
+                      </svg>
+                    </motion.div>
+
+                    {/* musical notes */}
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute text-2xl"
+                        style={{ left: `${20 + i * 25}%`, top: -10 }}
+                        animate={{ y: [-5, -40, -70], opacity: [0, 1, 0], rotate: [0, 15, -15] }}
+                        transition={{
+                          duration: 2.2,
+                          repeat: Infinity,
+                          delay: i * 0.7,
+                          ease: "easeOut",
+                        }}
+                      >
+                        ♪
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
             {/* Speech bubble */}
