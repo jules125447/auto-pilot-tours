@@ -193,19 +193,20 @@ const TiloCompanion = ({
                   transformOrigin: "50% 92%",
                 }}
                 animate={{
-                  rotate:
-                    mood === "angry"
-                      ? [-6, 8, -6, 8, -6]
-                      : mood === "happy"
-                      ? [-2, 2, -2]
-                      : speaking
-                      ? [-3, 4, -2, 3, -3]
-                      : [-2, 2, -2],
-                  y: speaking ? [0, -1.5, 0, -1, 0] : [0, -1, 0],
+                  rotate: lookingDown
+                    ? [0, -4, -2, -4]
+                    : mood === "angry"
+                    ? [-6, 8, -6, 8, -6]
+                    : mood === "happy"
+                    ? [-2, 2, -2]
+                    : speaking
+                    ? [-3, 4, -2, 3, -3]
+                    : [-2, 2, -2],
+                  y: lookingDown ? [0, 4, 5, 4] : speaking ? [0, -1.5, 0, -1, 0] : [0, -1, 0],
                 }}
                 transition={{
-                  duration: mood === "angry" ? 0.35 : speaking ? 1.1 : 3.6,
-                  repeat: Infinity,
+                  duration: lookingDown ? 1.6 : mood === "angry" ? 0.35 : speaking ? 1.1 : 3.6,
+                  repeat: lookingDown ? 0 : Infinity,
                   ease: "easeInOut",
                 }}
               >
