@@ -23,7 +23,10 @@ import { useTilo } from "@/hooks/useTilo";
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
 const START_ARRIVAL_RADIUS_METERS = 45;
-const MAX_ACCEPTED_GPS_ACCURACY_METERS = 30;
+// Strict threshold once a good fix has been seen; lenient before any fix
+// so users with imprecise providers (WiFi/cell) still get a working position.
+const MAX_ACCEPTED_GPS_ACCURACY_METERS = 60;
+const INITIAL_GPS_ACCURACY_FALLBACK_METERS = 200;
 const POSITION_HISTORY_LIMIT = 5;
 const MIN_MOVEMENT_FOR_HEADING_METERS = 5;
 const MAX_STATIONARY_DRIFT_METERS = 6;
