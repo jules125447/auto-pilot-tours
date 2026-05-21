@@ -105,9 +105,13 @@ const TiloCompanion = ({
           <div className="flex items-end gap-2 pointer-events-auto">
             {/* Whole mascot — bobs */}
             <motion.div
-              animate={{ y: speaking ? [0, -4, 0, -2, 0] : [0, -3, 0] }}
+              animate={
+                dancing
+                  ? { y: [0, -10, 0, -6, 0], rotate: [-4, 4, -4, 4, -4] }
+                  : { y: speaking ? [0, -4, 0, -2, 0] : [0, -3, 0] }
+              }
               transition={{
-                duration: speaking ? 0.7 : 3.2,
+                duration: dancing ? 0.55 : speaking ? 0.7 : 3.2,
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
