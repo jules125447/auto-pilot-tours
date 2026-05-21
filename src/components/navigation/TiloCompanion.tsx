@@ -75,8 +75,14 @@ const TiloCompanion = ({
         <motion.div
           initial={{ y: 140, opacity: 0, scale: 0.8 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ x: -260, y: 40, opacity: 0, scale: 0.85, rotate: -8 }}
-          transition={{ type: "spring", damping: 20, stiffness: 220 }}
+          exit={{ x: -320, y: 20, opacity: 0, scale: 0.8, rotate: -10 }}
+          transition={{
+            type: "spring",
+            damping: 22,
+            stiffness: 180,
+            // Slow, readable exit
+            exit: { duration: 1.6, ease: "easeInOut" },
+          }}
           className="absolute left-3 z-[1002] pointer-events-none"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 230px)" }}
         >
