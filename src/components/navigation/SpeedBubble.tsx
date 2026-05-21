@@ -72,7 +72,11 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
       animate={stunt}
       variants={variants as any}
       className="absolute left-3 z-[1002]"
-      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 120px)" }}
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 120px)",
+        perspective: 800,
+        transformStyle: "preserve-3d",
+      }}
     >
       <div className="relative">
         {speedLimit !== null && (
