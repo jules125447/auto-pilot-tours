@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type TiloEvent =
   | { type: "welcome"; userName: string; circuitName: string; circuitDescription?: string }
+  | { type: "circuit_start"; circuitName: string }
   | { type: "speed_warning"; speed: number }
   | { type: "poi_arrival"; poiName: string; poiDescription?: string }
   | { type: "poi_commentary"; poiName: string; poiDescription?: string }
