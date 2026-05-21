@@ -1728,16 +1728,17 @@ const NavigationView = () => {
         </AnimatePresence>
         <SpeedBubble speed={speed} stunt={speedBubbleStunt} />
         <TiloCompanion
-          visible={tilo.visible && voiceEnabled && !tiloHidden}
-          speaking={tilo.speaking || !!stuntMessage}
-          message={stuntMessage ?? tilo.message}
+          visible={(tilo.visible && voiceEnabled && !tiloHidden) || tiloDancing}
+          speaking={tilo.speaking || !!stuntMessage || !!musicMessage}
+          message={musicMessage ?? stuntMessage ?? tilo.message}
           lookDirection={tilo.lookDirection}
           onClose={tilo.hide}
-          mood={tiloMood}
+          mood={tiloDancing ? "happy" : tiloMood}
           holding={tiloHolding}
           reaching={tiloReaching}
           lookingDown={tiloLookingDown}
           throwing={tiloThrowing}
+          dancing={tiloDancing}
         />
       </div>
       <NavigationBar
