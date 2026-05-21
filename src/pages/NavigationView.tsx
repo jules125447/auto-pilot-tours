@@ -23,7 +23,10 @@ import { useTilo } from "@/hooks/useTilo";
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
 const START_ARRIVAL_RADIUS_METERS = 45;
-const MAX_ACCEPTED_GPS_ACCURACY_METERS = 30;
+// Strict threshold once a good fix has been seen; lenient before any fix
+// so users with imprecise providers (WiFi/cell) still get a working position.
+const MAX_ACCEPTED_GPS_ACCURACY_METERS = 60;
+const INITIAL_GPS_ACCURACY_FALLBACK_METERS = 200;
 const POSITION_HISTORY_LIMIT = 5;
 const MIN_MOVEMENT_FOR_HEADING_METERS = 5;
 const MAX_STATIONARY_DRIFT_METERS = 6;
@@ -771,18 +774,25 @@ const NavigationView = () => {
         provider: inferredSource,
       });
 
+      // Looser threshold while we haven't accepted any fix yet — otherwise the
+      // app gets stuck "calibrating" on devices without a true GPS chip.
+      const hasPreviousAccepted = !!lastAcceptedFixRef.current;
+      const accuracyLimit = hasPreviousAccepted
+        ? MAX_ACCEPTED_GPS_ACCURACY_METERS
+        : INITIAL_GPS_ACCURACY_FALLBACK_METERS;
+
       if (
         measuredAccuracy !== null &&
-        measuredAccuracy > MAX_ACCEPTED_GPS_ACCURACY_METERS
+        measuredAccuracy > accuracyLimit
       ) {
         logGps("warn", "fix_rejected_accuracy", {
           source,
           accuracy: roundGpsValue(measuredAccuracy, 1),
-          threshold: MAX_ACCEPTED_GPS_ACCURACY_METERS,
+          threshold: accuracyLimit,
           provider: inferredSource,
         });
 
-        if (!lastAcceptedFixRef.current) {
+        if (!hasPreviousAccepted) {
           return;
         }
 
@@ -1451,8 +1461,14 @@ const NavigationView = () => {
       setRouteToStartInfo(null);
       setRouteToStartSteps([]);
       setHasReachedStart(true);
+      if (voiceEnabled && circuit) {
+        tiloRef.current.enqueue(
+          { type: "circuit_start", circuitName: circuit.title },
+          { priority: true }
+        );
+      }
     }
-  }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart]);
+  }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart, voiceEnabled, circuit]);
 
   const handleNextStop = () => {
     if (!circuit) return;

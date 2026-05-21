@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type TiloEvent =
   | { type: "welcome"; userName: string; circuitName: string; circuitDescription?: string }
+  | { type: "circuit_start"; circuitName: string }
   | { type: "speed_warning"; speed: number }
   | { type: "poi_arrival"; poiName: string; poiDescription?: string }
   | { type: "poi_commentary"; poiName: string; poiDescription?: string }
@@ -36,6 +37,7 @@ export function useTilo({ speak, active, isSpeakingExternal }: UseTiloOptions) {
 
   const cooldownMs: Record<TiloEvent["type"], number> = {
     welcome: 0,
+    circuit_start: 0,
     speed_warning: 90_000,
     poi_arrival: 15_000,
     poi_commentary: 30_000,
