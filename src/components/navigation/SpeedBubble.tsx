@@ -21,34 +21,48 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
     idle: {
       x: 0,
       y: 0,
+      z: 0,
       rotate: 0,
+      rotateY: 0,
+      rotateX: 0,
       scale: 1,
       opacity: 1,
       transition: { type: "spring" as const, damping: 18, stiffness: 220 },
     },
     grabbed: {
-      x: HAND_X,
-      y: HAND_Y,
-      rotate: [0, -12, -6],
-      scale: [1, 1.08, 1],
+      // 3D arc into Tilo's hand
+      x: [0, -2, HAND_X],
+      y: [0, -80, HAND_Y],
+      z: [0, 80, 40],
+      rotateY: [0, 180, 360],
+      rotateX: [0, -20, 0],
+      rotate: [0, -8, -6],
+      scale: [1, 1.18, 1.05],
       opacity: 1,
-      transition: { duration: 0.8, ease: "easeOut" as const },
+      transition: { duration: 1.8, ease: "easeInOut" as const, times: [0, 0.55, 1] },
     },
     returning: {
-      x: [HAND_X, HAND_X - 2, 0],
-      y: [HAND_Y, HAND_Y + 40, 0],
-      rotate: [-6, -3, 0],
-      scale: [1, 1.02, 1],
+      // Gently placed back down
+      x: [HAND_X, HAND_X - 4, -2, 0],
+      y: [HAND_Y, HAND_Y + 30, -20, 0],
+      z: [40, 30, 10, 0],
+      rotateY: [360, 270, 180, 0],
+      rotateX: [0, 10, 5, 0],
+      rotate: [-6, -3, -1, 0],
+      scale: [1.05, 1.02, 1, 1],
       opacity: 1,
-      transition: { duration: 1.1, ease: "easeInOut" as const },
+      transition: { duration: 2.2, ease: "easeInOut" as const, times: [0, 0.35, 0.75, 1] },
     },
     thrown: {
-      x: [HAND_X, 80, 240, 180, 0],
-      y: [HAND_Y, HAND_Y - 60, -80, -30, 0],
-      rotate: [0, 240, 540, 720, 720],
-      scale: [1, 1.05, 1, 0.95, 1],
+      // Hurled, spins, then snaps back
+      x: [HAND_X, 120, 280, 200, 60, 0],
+      y: [HAND_Y, HAND_Y - 100, -120, -40, 20, 0],
+      z: [40, 120, 60, 20, 10, 0],
+      rotate: [-6, 240, 540, 780, 900, 900],
+      rotateY: [360, 540, 720, 540, 360, 0],
+      scale: [1.05, 1.1, 0.95, 0.9, 0.95, 1],
       opacity: 1,
-      transition: { duration: 1.4, ease: "easeInOut" as const, times: [0, 0.2, 0.55, 0.8, 1] },
+      transition: { duration: 2.4, ease: "easeInOut" as const, times: [0, 0.18, 0.45, 0.7, 0.88, 1] },
     },
   } as const;
 
@@ -58,7 +72,11 @@ const SpeedBubble = ({ speed, speedLimit = null, stunt = "idle" }: SpeedBubblePr
       animate={stunt}
       variants={variants as any}
       className="absolute left-3 z-[1002]"
-      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 120px)" }}
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 120px)",
+        perspective: 800,
+        transformStyle: "preserve-3d",
+      }}
     >
       <div className="relative">
         {speedLimit !== null && (
