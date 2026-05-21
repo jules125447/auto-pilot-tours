@@ -1244,6 +1244,7 @@ const NavigationView = () => {
     if (distanceToStart <= START_ARRIVAL_RADIUS_METERS) {
       setRouteToStart(null);
       setRouteToStartInfo(null);
+      setRouteToStartSteps([]);
       return;
     }
 
@@ -1259,6 +1260,7 @@ const NavigationView = () => {
       if (!abortController.signal.aborted) {
         setRouteToStart(result?.coordinates ?? null);
         setRouteToStartInfo(result ? { distance: result.distance, duration: result.duration } : null);
+        setRouteToStartSteps(result?.steps ?? []);
       }
     }, 300);
 
@@ -1274,6 +1276,7 @@ const NavigationView = () => {
     if (currentStopIndex > 0 || hasReachedStart) {
       setRouteToStart(null);
       setRouteToStartInfo(null);
+      setRouteToStartSteps([]);
     }
   }, [routeToStart, currentStopIndex, hasReachedStart]);
 
@@ -1294,6 +1297,7 @@ const NavigationView = () => {
       routeToStartAbortRef.current?.abort();
       setRouteToStart(null);
       setRouteToStartInfo(null);
+      setRouteToStartSteps([]);
       setHasReachedStart(true);
     }
   }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart]);
