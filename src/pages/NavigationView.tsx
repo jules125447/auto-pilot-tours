@@ -525,6 +525,72 @@ const NavigationView = () => {
   const tiloRef = useRef(tilo);
   useEffect(() => { tiloRef.current = tilo; });
 
+  // ----- Tilo "speedometer" stunt -----
+  // ~10s after Tilo finishes talking, he grabs the speed bubble, judges the
+  // driver's speed (smile or throw), then exits screen. Re-appears on next speech.
+  type StuntPhase = "idle" | "grab" | "verdict_ok" | "verdict_bad" | "exit" | "done";
+  const [stuntPhase, setStuntPhase] = useState<StuntPhase>("idle");
+  const [tiloHidden, setTiloHidden] = useState(false);
+  const lastSeenSpokeAtRef = useRef(0);
+  const speedRef = useRef<number | null>(null);
+  useEffect(() => { speedRef.current = speed; }, [speed]);
+
+  // Reset stunt when Tilo speaks again
+  useEffect(() => {
+    if (!tilo.speaking) return;
+    setTiloHidden(false);
+    setStuntPhase("idle");
+    lastSeenSpokeAtRef.current = Date.now();
+  }, [tilo.speaking]);
+
+  // Drive the stunt 10s after last speech
+  useEffect(() => {
+    if (!audioUnlocked || !voiceEnabled) return;
+    const interval = window.setInterval(() => {
+      if (stuntPhase !== "idle") return;
+      const lastSpoke = tiloRef.current.lastSpokeAt();
+      if (lastSpoke === 0) return;
+      if (tiloRef.current.speaking) return;
+      if (Date.now() - lastSpoke < 10_000) return;
+      // Trigger
+      setStuntPhase("grab");
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [audioUnlocked, voiceEnabled, stuntPhase]);
+
+  // Step the stunt through its phases
+  useEffect(() => {
+    if (stuntPhase === "idle" || stuntPhase === "done") return;
+    let timer: number;
+    if (stuntPhase === "grab") {
+      timer = window.setTimeout(() => {
+        const s = speedRef.current ?? 0;
+        setStuntPhase(s > 110 ? "verdict_bad" : "verdict_ok");
+      }, 900);
+    } else if (stuntPhase === "verdict_ok") {
+      timer = window.setTimeout(() => setStuntPhase("exit"), 1500);
+    } else if (stuntPhase === "verdict_bad") {
+      timer = window.setTimeout(() => setStuntPhase("exit"), 1700);
+    } else if (stuntPhase === "exit") {
+      setTiloHidden(true);
+      timer = window.setTimeout(() => setStuntPhase("done"), 900);
+    }
+    return () => window.clearTimeout(timer);
+  }, [stuntPhase]);
+
+  const speedBubbleStunt: "idle" | "grabbed" | "returning" | "thrown" =
+    stuntPhase === "grab"
+      ? "grabbed"
+      : stuntPhase === "verdict_ok"
+      ? "returning"
+      : stuntPhase === "verdict_bad"
+      ? "thrown"
+      : "idle";
+  const tiloMood: "idle" | "happy" | "angry" =
+    stuntPhase === "verdict_ok" ? "happy" : stuntPhase === "verdict_bad" ? "angry" : "idle";
+  const tiloHolding = stuntPhase === "grab" || stuntPhase === "verdict_ok" || stuntPhase === "verdict_bad";
+  const tiloThrowing = stuntPhase === "verdict_bad";
+
   // Welcome through Tilo
   useEffect(() => {
     if (!audioUnlocked || welcomeSpoken || !circuit || !voiceEnabled) return;
