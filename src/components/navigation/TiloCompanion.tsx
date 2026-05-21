@@ -226,12 +226,20 @@ const TiloCompanion = ({
                       right: "22%",
                       top: "44%",
                       height: "16%",
-                      background:
-                        mood === "angry"
-                          ? "radial-gradient(ellipse at 28% 50%, hsl(0 100% 60% / 0.8), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(0 100% 60% / 0.8), transparent 40%)"
-                          : mood === "happy"
-                          ? "radial-gradient(ellipse at 28% 50%, hsl(140 90% 65% / 0.7), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(140 90% 65% / 0.7), transparent 40%)"
-                          : "radial-gradient(ellipse at 28% 50%, hsl(35 100% 65% / 0.55), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(35 100% 65% / 0.55), transparent 40%)",
+                      background: (() => {
+                        // Pupil position (left%, top%) inside the eye ellipse
+                        const px = lookingDown ? 18 : 28;
+                        const py = lookingDown ? 88 : 50;
+                        const qx = lookingDown ? 62 : 72;
+                        const qy = lookingDown ? 88 : 50;
+                        const color =
+                          mood === "angry"
+                            ? "hsl(0 100% 60% / 0.85)"
+                            : mood === "happy"
+                            ? "hsl(140 90% 65% / 0.75)"
+                            : "hsl(35 100% 65% / 0.6)";
+                        return `radial-gradient(ellipse at ${px}% ${py}%, ${color}, transparent 38%), radial-gradient(ellipse at ${qx}% ${qy}%, ${color}, transparent 38%)`;
+                      })(),
                       filter: "blur(2px)",
                       borderRadius: "50%",
                     }}
