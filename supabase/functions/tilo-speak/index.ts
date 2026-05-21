@@ -8,6 +8,7 @@ const corsHeaders = {
 
 type EventType =
   | "welcome"
+  | "circuit_start"
   | "speed_warning"
   | "poi_arrival"
   | "poi_commentary"
