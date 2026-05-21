@@ -1150,7 +1150,7 @@ const NavigationView = () => {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
       if (voiceEnabled) {
         // Tilo announces arrival with personality
-        tilo.enqueue({
+        tiloRef.current.enqueue({
           type: "poi_arrival",
           poiName: stop.title,
           poiDescription: (stop as any).description || "",
@@ -1158,7 +1158,7 @@ const NavigationView = () => {
       }
       const isLast = currentStopIndex >= circuit.stops.length - 1;
       if (isLast && voiceEnabled) {
-        tilo.enqueue({ type: "trip_end", circuitName: circuit.title });
+        tiloRef.current.enqueue({ type: "trip_end", circuitName: circuit.title });
       }
       // Auto-advance to next stop after arrival
       if (currentStopIndex < circuit.stops.length - 1) {
@@ -1167,7 +1167,7 @@ const NavigationView = () => {
         }, 2000);
       }
     }
-  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, tilo]);
+  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled]);
 
   // Off-route detection & recalculation
   useEffect(() => {
