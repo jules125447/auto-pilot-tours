@@ -1486,7 +1486,7 @@ const NavigationView = () => {
           recalculatedRoute={recalculatedRoute}
           annotations={circuit.map_annotations}
         />
-        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={isArrivingAtStop ? currentStop?.title : undefined} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} roundaboutExit={turnInfo?.turn.roundaboutExit} />
+        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={currentStreetName} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} roundaboutExit={turnInfo?.turn.roundaboutExit} />
 
         {/* Right-side floating controls */}
         <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>
