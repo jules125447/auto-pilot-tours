@@ -37,6 +37,7 @@ export function useTilo({ speak, active, isSpeakingExternal }: UseTiloOptions) {
 
   const cooldownMs: Record<TiloEvent["type"], number> = {
     welcome: 0,
+    circuit_start: 0,
     speed_warning: 90_000,
     poi_arrival: 15_000,
     poi_commentary: 30_000,
