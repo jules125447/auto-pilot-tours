@@ -528,7 +528,7 @@ const NavigationView = () => {
   // ----- Tilo "speedometer" stunt -----
   // ~10s after Tilo finishes talking, he grabs the speed bubble, judges the
   // driver's speed (smile or throw), then exits screen. Re-appears on next speech.
-  type StuntPhase = "idle" | "grab" | "verdict_ok" | "verdict_bad" | "exit" | "done";
+  type StuntPhase = "idle" | "reach" | "grab" | "verdict_ok" | "verdict_bad" | "exit" | "done";
   const [stuntPhase, setStuntPhase] = useState<StuntPhase>("idle");
   const [tiloHidden, setTiloHidden] = useState(false);
   const lastSeenSpokeAtRef = useRef(0);
@@ -552,8 +552,8 @@ const NavigationView = () => {
       if (lastSpoke === 0) return;
       if (tiloRef.current.speaking) return;
       if (Date.now() - lastSpoke < 10_000) return;
-      // Trigger
-      setStuntPhase("grab");
+      // Start with the reach so the user clearly sees the arm extend
+      setStuntPhase("reach");
     }, 1000);
     return () => window.clearInterval(interval);
   }, [audioUnlocked, voiceEnabled, stuntPhase]);
@@ -562,12 +562,15 @@ const NavigationView = () => {
   useEffect(() => {
     if (stuntPhase === "idle" || stuntPhase === "done") return;
     let timer: number;
-    if (stuntPhase === "grab") {
-      // Let the bubble fly into Tilo's hand in 3D — give it time to be seen
+    if (stuntPhase === "reach") {
+      // Arm extends + eyes look down toward the speedometer
+      timer = window.setTimeout(() => setStuntPhase("grab"), 1400);
+    } else if (stuntPhase === "grab") {
+      // Bubble flies up in 3D into the waiting hand
       timer = window.setTimeout(() => {
         const s = speedRef.current ?? 0;
         setStuntPhase(s > 110 ? "verdict_bad" : "verdict_ok");
-      }, 2200);
+      }, 2000);
     } else if (stuntPhase === "verdict_ok") {
       // Smile, then gently place the bubble back
       timer = window.setTimeout(() => setStuntPhase("exit"), 2600);
@@ -592,7 +595,18 @@ const NavigationView = () => {
       : "idle";
   const tiloMood: "idle" | "happy" | "angry" =
     stuntPhase === "verdict_ok" ? "happy" : stuntPhase === "verdict_bad" ? "angry" : "idle";
-  const tiloHolding = stuntPhase === "grab" || stuntPhase === "verdict_ok" || stuntPhase === "verdict_bad";
+  // Arm is extended/raised during reach + entire holding sequence
+  const tiloHolding =
+    stuntPhase === "reach" ||
+    stuntPhase === "grab" ||
+    stuntPhase === "verdict_ok" ||
+    stuntPhase === "verdict_bad";
+  const tiloReaching = stuntPhase === "reach";
+  const tiloLookingDown =
+    stuntPhase === "reach" ||
+    stuntPhase === "grab" ||
+    stuntPhase === "verdict_ok" ||
+    stuntPhase === "verdict_bad";
   const tiloThrowing = stuntPhase === "verdict_bad";
 
   // Welcome through Tilo
@@ -1647,6 +1661,8 @@ const NavigationView = () => {
           onClose={tilo.hide}
           mood={tiloMood}
           holding={tiloHolding}
+          reaching={tiloReaching}
+          lookingDown={tiloLookingDown}
           throwing={tiloThrowing}
         />
       </div>

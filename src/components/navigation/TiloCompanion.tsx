@@ -19,6 +19,10 @@ interface TiloCompanionProps {
   holding?: boolean;
   /** When true, the right arm performs a throwing motion */
   throwing?: boolean;
+  /** Visibly extends the left arm down toward the speedometer */
+  reaching?: boolean;
+  /** Eyes look down (toward the speedometer) */
+  lookingDown?: boolean;
 }
 
 /**
@@ -32,6 +36,8 @@ const TiloCompanion = ({
   mood = "idle",
   holding = false,
   throwing = false,
+  reaching = false,
+  lookingDown = false,
 }: TiloCompanionProps) => {
   // Blink loop
   const [blink, setBlink] = useState(false);
@@ -52,13 +58,15 @@ const TiloCompanion = ({
   const H = 140;
 
   // Left arm rotation depending on action
-  const leftArmAnim = holding
-    ? { rotate: [-2, -28, -34, -30] } // raised up to "hold" the speedometer
+  const leftArmAnim = reaching
+    ? { rotate: [-2, 18, 28, 24, 28], scaleY: [1, 1.05, 1.12, 1.1, 1.12] } // extends down toward bubble
+    : holding
+    ? { rotate: [28, -10, -28, -34, -30], scaleY: [1.12, 1.05, 1, 1, 1] } // pulls bubble up to chest
     : speaking
     ? { rotate: [-2, 6, -3, 4, -2] }
     : { rotate: [-2, 3, -2] };
-  const leftArmDur = holding ? 0.8 : speaking ? 0.9 : 2.8;
-  const leftArmRepeat = holding ? 0 : Infinity;
+  const leftArmDur = reaching ? 1.3 : holding ? 1.4 : speaking ? 0.9 : 2.8;
+  const leftArmRepeat = reaching || holding ? 0 : Infinity;
 
   // Right arm: throw motion overrides idle
   const rightArmAnim = throwing
@@ -185,19 +193,20 @@ const TiloCompanion = ({
                   transformOrigin: "50% 92%",
                 }}
                 animate={{
-                  rotate:
-                    mood === "angry"
-                      ? [-6, 8, -6, 8, -6]
-                      : mood === "happy"
-                      ? [-2, 2, -2]
-                      : speaking
-                      ? [-3, 4, -2, 3, -3]
-                      : [-2, 2, -2],
-                  y: speaking ? [0, -1.5, 0, -1, 0] : [0, -1, 0],
+                  rotate: lookingDown
+                    ? [0, -4, -2, -4]
+                    : mood === "angry"
+                    ? [-6, 8, -6, 8, -6]
+                    : mood === "happy"
+                    ? [-2, 2, -2]
+                    : speaking
+                    ? [-3, 4, -2, 3, -3]
+                    : [-2, 2, -2],
+                  y: lookingDown ? [0, 4, 5, 4] : speaking ? [0, -1.5, 0, -1, 0] : [0, -1, 0],
                 }}
                 transition={{
-                  duration: mood === "angry" ? 0.35 : speaking ? 1.1 : 3.6,
-                  repeat: Infinity,
+                  duration: lookingDown ? 1.6 : mood === "angry" ? 0.35 : speaking ? 1.1 : 3.6,
+                  repeat: lookingDown ? 0 : Infinity,
                   ease: "easeInOut",
                 }}
               >
@@ -217,12 +226,20 @@ const TiloCompanion = ({
                       right: "22%",
                       top: "44%",
                       height: "16%",
-                      background:
-                        mood === "angry"
-                          ? "radial-gradient(ellipse at 28% 50%, hsl(0 100% 60% / 0.8), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(0 100% 60% / 0.8), transparent 40%)"
-                          : mood === "happy"
-                          ? "radial-gradient(ellipse at 28% 50%, hsl(140 90% 65% / 0.7), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(140 90% 65% / 0.7), transparent 40%)"
-                          : "radial-gradient(ellipse at 28% 50%, hsl(35 100% 65% / 0.55), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(35 100% 65% / 0.55), transparent 40%)",
+                      background: (() => {
+                        // Pupil position (left%, top%) inside the eye ellipse
+                        const px = lookingDown ? 18 : 28;
+                        const py = lookingDown ? 88 : 50;
+                        const qx = lookingDown ? 62 : 72;
+                        const qy = lookingDown ? 88 : 50;
+                        const color =
+                          mood === "angry"
+                            ? "hsl(0 100% 60% / 0.85)"
+                            : mood === "happy"
+                            ? "hsl(140 90% 65% / 0.75)"
+                            : "hsl(35 100% 65% / 0.6)";
+                        return `radial-gradient(ellipse at ${px}% ${py}%, ${color}, transparent 38%), radial-gradient(ellipse at ${qx}% ${qy}%, ${color}, transparent 38%)`;
+                      })(),
                       filter: "blur(2px)",
                       borderRadius: "50%",
                     }}
