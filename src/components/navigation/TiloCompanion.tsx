@@ -19,6 +19,10 @@ interface TiloCompanionProps {
   holding?: boolean;
   /** When true, the right arm performs a throwing motion */
   throwing?: boolean;
+  /** Visibly extends the left arm down toward the speedometer */
+  reaching?: boolean;
+  /** Eyes look down (toward the speedometer) */
+  lookingDown?: boolean;
 }
 
 /**
@@ -32,6 +36,8 @@ const TiloCompanion = ({
   mood = "idle",
   holding = false,
   throwing = false,
+  reaching = false,
+  lookingDown = false,
 }: TiloCompanionProps) => {
   // Blink loop
   const [blink, setBlink] = useState(false);
