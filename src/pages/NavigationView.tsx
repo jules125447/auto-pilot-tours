@@ -563,17 +563,21 @@ const NavigationView = () => {
     if (stuntPhase === "idle" || stuntPhase === "done") return;
     let timer: number;
     if (stuntPhase === "grab") {
+      // Let the bubble fly into Tilo's hand in 3D — give it time to be seen
       timer = window.setTimeout(() => {
         const s = speedRef.current ?? 0;
         setStuntPhase(s > 110 ? "verdict_bad" : "verdict_ok");
-      }, 900);
+      }, 2200);
     } else if (stuntPhase === "verdict_ok") {
-      timer = window.setTimeout(() => setStuntPhase("exit"), 1500);
+      // Smile, then gently place the bubble back
+      timer = window.setTimeout(() => setStuntPhase("exit"), 2600);
     } else if (stuntPhase === "verdict_bad") {
-      timer = window.setTimeout(() => setStuntPhase("exit"), 1700);
+      // Angry, throw the bubble — needs more time to be readable
+      timer = window.setTimeout(() => setStuntPhase("exit"), 2800);
     } else if (stuntPhase === "exit") {
       setTiloHidden(true);
-      timer = window.setTimeout(() => setStuntPhase("done"), 900);
+      // Slow walk off-screen
+      timer = window.setTimeout(() => setStuntPhase("done"), 1800);
     }
     return () => window.clearTimeout(timer);
   }, [stuntPhase]);
