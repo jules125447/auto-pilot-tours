@@ -1661,6 +1661,8 @@ const NavigationView = () => {
           onClose={tilo.hide}
           mood={tiloMood}
           holding={tiloHolding}
+          reaching={tiloReaching}
+          lookingDown={tiloLookingDown}
           throwing={tiloThrowing}
         />
       </div>
