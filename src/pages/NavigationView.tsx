@@ -282,6 +282,7 @@ const NavigationView = () => {
   const routeProgressRef = useRef<number | null>(null);
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
   const [routeToStartInfo, setRouteToStartInfo] = useState<{ distance: number; duration: number } | null>(null);
+  const [routeToStartSteps, setRouteToStartSteps] = useState<import("@/lib/routing").RouteStep[]>([]);
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
   // Off-route recalculation
