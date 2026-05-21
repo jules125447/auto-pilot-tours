@@ -565,8 +565,12 @@ const NavigationView = () => {
       if (stuntPhase !== "idle") return;
       const lastSpoke = tiloRef.current.lastSpokeAt();
       if (lastSpoke === 0) return;
-      if (tiloRef.current.speaking) return;
-      if (Date.now() - lastSpoke < 10_000) return;
+      const sinceSpoke = Date.now() - lastSpoke;
+      // On mobile the SpeechSynthesis end event sometimes never fires, which
+      // would leave `speaking` stuck true. We still wait for it normally, but
+      // after 20s force the stunt regardless so Tilo doesn't freeze on screen.
+      if (tiloRef.current.speaking && sinceSpoke < 20_000) return;
+      if (sinceSpoke < 10_000) return;
       // Start with the reach so the user clearly sees the arm extend
       setStuntPhase("reach");
     }, 1000);
