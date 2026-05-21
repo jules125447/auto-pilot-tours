@@ -1685,8 +1685,8 @@ const NavigationView = () => {
         <SpeedBubble speed={speed} stunt={speedBubbleStunt} />
         <TiloCompanion
           visible={tilo.visible && voiceEnabled && !tiloHidden}
-          speaking={tilo.speaking}
-          message={tilo.message}
+          speaking={tilo.speaking || !!stuntMessage}
+          message={stuntMessage ?? tilo.message}
           lookDirection={tilo.lookDirection}
           onClose={tilo.hide}
           mood={tiloMood}
