@@ -541,6 +541,11 @@ const NavigationView = () => {
   // Stunt-local message (Tilo's verdict line, shown + spoken without going through the queue)
   const [stuntMessage, setStuntMessage] = useState<string | null>(null);
 
+  // Dancing mode for music segments
+  const [tiloDancing, setTiloDancing] = useState(false);
+  const [musicMessage, setMusicMessage] = useState<string | null>(null);
+  const dancingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Reset stunt when Tilo speaks again — but ignore the speech we trigger
   // ourselves during the verdict (otherwise the bubble snaps back mid-animation).
   const stuntActiveRef = useRef(false);
@@ -1206,6 +1211,23 @@ const NavigationView = () => {
           activeMusicIdRef.current = null;
           musicAudioRef.current = null;
         });
+
+        // 🎵 Tilo arrives with a boombox and announces the track
+        const track = (seg as any).track_name as string | undefined;
+        const artist = (seg as any).artist_name as string | undefined;
+        if (voiceEnabled && track) {
+          const line = artist
+            ? `Petite ambiance musicale : ${track}, par ${artist}.`
+            : `Petite ambiance musicale : ${track}.`;
+          setMusicMessage(line);
+          speak(line);
+        }
+        setTiloDancing(true);
+        if (dancingTimerRef.current) clearTimeout(dancingTimerRef.current);
+        dancingTimerRef.current = setTimeout(() => {
+          setTiloDancing(false);
+          setMusicMessage(null);
+        }, 30_000);
       }
 
       if (!isInside && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
@@ -1217,9 +1239,15 @@ const NavigationView = () => {
             activeMusicIdRef.current = null;
           }
         });
+        if (dancingTimerRef.current) {
+          clearTimeout(dancingTimerRef.current);
+          dancingTimerRef.current = null;
+        }
+        setTiloDancing(false);
+        setMusicMessage(null);
       }
     });
-  }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute, calibrated]);
+  }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute, calibrated, voiceEnabled, speak]);
 
   // Sound segments — only trigger after calibration, use route projection
   useEffect(() => {
@@ -1700,16 +1728,17 @@ const NavigationView = () => {
         </AnimatePresence>
         <SpeedBubble speed={speed} stunt={speedBubbleStunt} />
         <TiloCompanion
-          visible={tilo.visible && voiceEnabled && !tiloHidden}
-          speaking={tilo.speaking || !!stuntMessage}
-          message={stuntMessage ?? tilo.message}
+          visible={(tilo.visible && voiceEnabled && !tiloHidden) || tiloDancing}
+          speaking={tilo.speaking || !!stuntMessage || !!musicMessage}
+          message={musicMessage ?? stuntMessage ?? tilo.message}
           lookDirection={tilo.lookDirection}
           onClose={tilo.hide}
-          mood={tiloMood}
+          mood={tiloDancing ? "happy" : tiloMood}
           holding={tiloHolding}
           reaching={tiloReaching}
           lookingDown={tiloLookingDown}
           throwing={tiloThrowing}
+          dancing={tiloDancing}
         />
       </div>
       <NavigationBar
