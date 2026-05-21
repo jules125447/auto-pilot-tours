@@ -30,7 +30,7 @@ Règles strictes:
 function userPromptFor(eventType: EventType, ctx: Record<string, unknown>): string {
   switch (eventType) {
     case "welcome":
-      return `L'utilisateur "${ctx.userName ?? "voyageur"}" démarre le circuit "${ctx.circuitName ?? ""}". ${ctx.circuitDescription ? `Contexte: ${ctx.circuitDescription}.` : ""} Accueille-le chaleureusement, donne envie de partir à l'aventure.`;
+      return `L'utilisateur "${ctx.userName ?? "voyageur"}" démarre le circuit "${ctx.circuitName ?? ""}". ${ctx.circuitDescription ? `Contexte: ${ctx.circuitDescription}.` : ""} Présente-toi en disant que tu t'appelles Tilo et que tu seras son guide tout au long de cette sortie. Souhaite-lui la bienvenue chaleureusement, mentionne brièvement le circuit, et donne envie de partir à l'aventure. 2 à 3 phrases courtes, ton oral et amical.`;
     case "speed_warning":
       return `L'utilisateur roule à ${ctx.speed} km/h, ce qui est un peu rapide pour profiter du paysage. Invite-le gentiment à lever le pied, avec humour, sans le sermonner.`;
     case "poi_arrival":
