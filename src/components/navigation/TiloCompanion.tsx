@@ -58,13 +58,15 @@ const TiloCompanion = ({
   const H = 140;
 
   // Left arm rotation depending on action
-  const leftArmAnim = holding
-    ? { rotate: [-2, -28, -34, -30] } // raised up to "hold" the speedometer
+  const leftArmAnim = reaching
+    ? { rotate: [-2, 18, 28, 24, 28], scaleY: [1, 1.05, 1.12, 1.1, 1.12] } // extends down toward bubble
+    : holding
+    ? { rotate: [28, -10, -28, -34, -30], scaleY: [1.12, 1.05, 1, 1, 1] } // pulls bubble up to chest
     : speaking
     ? { rotate: [-2, 6, -3, 4, -2] }
     : { rotate: [-2, 3, -2] };
-  const leftArmDur = holding ? 0.8 : speaking ? 0.9 : 2.8;
-  const leftArmRepeat = holding ? 0 : Infinity;
+  const leftArmDur = reaching ? 1.3 : holding ? 1.4 : speaking ? 0.9 : 2.8;
+  const leftArmRepeat = reaching || holding ? 0 : Infinity;
 
   // Right arm: throw motion overrides idle
   const rightArmAnim = throwing
