@@ -47,7 +47,7 @@ function userPromptFor(eventType: EventType, ctx: Record<string, unknown>): stri
 }
 
 const FALLBACKS: Record<EventType, string[]> = {
-  welcome: ["Allez, on s'installe et on profite. La route est à nous !"],
+  welcome: ["Salut, moi c'est Tilo ! Je serai ton guide pour cette sortie. Allez, on s'installe et on profite, la route est à nous !"],
   speed_warning: ["Doucement, on est là pour profiter du paysage, pas pour battre un record."],
   poi_arrival: ["On y est, prends le temps de regarder autour de toi."],
   poi_commentary: ["Regarde bien autour, c'est un endroit qui vaut le détour."],
