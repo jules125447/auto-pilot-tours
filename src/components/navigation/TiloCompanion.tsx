@@ -23,6 +23,8 @@ interface TiloCompanionProps {
   reaching?: boolean;
   /** Eyes look down (toward the speedometer) */
   lookingDown?: boolean;
+  /** Dancing mode — Tilo arrives with a boombox and grooves */
+  dancing?: boolean;
 }
 
 /**
