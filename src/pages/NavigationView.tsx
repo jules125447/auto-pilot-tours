@@ -774,18 +774,25 @@ const NavigationView = () => {
         provider: inferredSource,
       });
 
+      // Looser threshold while we haven't accepted any fix yet — otherwise the
+      // app gets stuck "calibrating" on devices without a true GPS chip.
+      const hasPreviousAccepted = !!lastAcceptedFixRef.current;
+      const accuracyLimit = hasPreviousAccepted
+        ? MAX_ACCEPTED_GPS_ACCURACY_METERS
+        : INITIAL_GPS_ACCURACY_FALLBACK_METERS;
+
       if (
         measuredAccuracy !== null &&
-        measuredAccuracy > MAX_ACCEPTED_GPS_ACCURACY_METERS
+        measuredAccuracy > accuracyLimit
       ) {
         logGps("warn", "fix_rejected_accuracy", {
           source,
           accuracy: roundGpsValue(measuredAccuracy, 1),
-          threshold: MAX_ACCEPTED_GPS_ACCURACY_METERS,
+          threshold: accuracyLimit,
           provider: inferredSource,
         });
 
-        if (!lastAcceptedFixRef.current) {
+        if (!hasPreviousAccepted) {
           return;
         }
 
