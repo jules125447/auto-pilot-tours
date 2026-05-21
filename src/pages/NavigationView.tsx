@@ -469,15 +469,31 @@ const NavigationView = () => {
     }).catch(() => {});
   }, [circuit?.route]);
 
+  // Pick the active route + steps depending on whether we're heading to start or driving the circuit
+  const activeNavRoute = useMemo<[number, number][] | null>(() => {
+    if (!hasReachedStart && currentStopIndex === 0 && routeToStart && routeToStart.length > 1) {
+      return routeToStart;
+    }
+    const r = circuit?.route as [number, number][] | undefined;
+    return r && r.length > 1 ? r : null;
+  }, [hasReachedStart, currentStopIndex, routeToStart, circuit?.route]);
+
+  const activeNavSteps = useMemo(() => {
+    if (!hasReachedStart && currentStopIndex === 0 && routeToStart && routeToStart.length > 1) {
+      return routeToStartSteps;
+    }
+    return osrmSteps;
+  }, [hasReachedStart, currentStopIndex, routeToStart, routeToStartSteps, osrmSteps]);
+
   const turns = useMemo(() => {
-    if (!circuit?.route) return [];
-    return extractTurns(circuit.route as [number, number][], osrmSteps.length > 0 ? osrmSteps : undefined);
-  }, [circuit?.route, osrmSteps]);
+    if (!activeNavRoute) return [];
+    return extractTurns(activeNavRoute, activeNavSteps.length > 0 ? activeNavSteps : undefined);
+  }, [activeNavRoute, activeNavSteps]);
 
   const turnInfo = useMemo(() => {
-    if (!userPos || !circuit?.route || turns.length === 0) return null;
-    return findNextTurn(userPos[0], userPos[1], circuit.route as [number, number][], turns);
-  }, [userPos, circuit?.route, turns]);
+    if (!userPos || !activeNavRoute || turns.length === 0) return null;
+    return findNextTurn(userPos[0], userPos[1], activeNavRoute, turns);
+  }, [userPos, activeNavRoute, turns]);
 
   // Unlock audio context on user interaction
   const handleUnlockAudio = useCallback(() => {
