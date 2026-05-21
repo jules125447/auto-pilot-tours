@@ -40,6 +40,7 @@ const TiloCompanion = ({
   throwing = false,
   reaching = false,
   lookingDown = false,
+  dancing = false,
 }: TiloCompanionProps) => {
   // Blink loop
   const [blink, setBlink] = useState(false);
