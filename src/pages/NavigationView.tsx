@@ -282,6 +282,7 @@ const NavigationView = () => {
   const routeProgressRef = useRef<number | null>(null);
   const [routeToStart, setRouteToStart] = useState<[number, number][] | null>(null);
   const [routeToStartInfo, setRouteToStartInfo] = useState<{ distance: number; duration: number } | null>(null);
+  const [routeToStartSteps, setRouteToStartSteps] = useState<import("@/lib/routing").RouteStep[]>([]);
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
   // Off-route recalculation
@@ -468,15 +469,31 @@ const NavigationView = () => {
     }).catch(() => {});
   }, [circuit?.route]);
 
+  // Pick the active route + steps depending on whether we're heading to start or driving the circuit
+  const activeNavRoute = useMemo<[number, number][] | null>(() => {
+    if (!hasReachedStart && currentStopIndex === 0 && routeToStart && routeToStart.length > 1) {
+      return routeToStart;
+    }
+    const r = circuit?.route as [number, number][] | undefined;
+    return r && r.length > 1 ? r : null;
+  }, [hasReachedStart, currentStopIndex, routeToStart, circuit?.route]);
+
+  const activeNavSteps = useMemo(() => {
+    if (!hasReachedStart && currentStopIndex === 0 && routeToStart && routeToStart.length > 1) {
+      return routeToStartSteps;
+    }
+    return osrmSteps;
+  }, [hasReachedStart, currentStopIndex, routeToStart, routeToStartSteps, osrmSteps]);
+
   const turns = useMemo(() => {
-    if (!circuit?.route) return [];
-    return extractTurns(circuit.route as [number, number][], osrmSteps.length > 0 ? osrmSteps : undefined);
-  }, [circuit?.route, osrmSteps]);
+    if (!activeNavRoute) return [];
+    return extractTurns(activeNavRoute, activeNavSteps.length > 0 ? activeNavSteps : undefined);
+  }, [activeNavRoute, activeNavSteps]);
 
   const turnInfo = useMemo(() => {
-    if (!userPos || !circuit?.route || turns.length === 0) return null;
-    return findNextTurn(userPos[0], userPos[1], circuit.route as [number, number][], turns);
-  }, [userPos, circuit?.route, turns]);
+    if (!userPos || !activeNavRoute || turns.length === 0) return null;
+    return findNextTurn(userPos[0], userPos[1], activeNavRoute, turns);
+  }, [userPos, activeNavRoute, turns]);
 
   // Unlock audio context on user interaction
   const handleUnlockAudio = useCallback(() => {
@@ -1227,6 +1244,7 @@ const NavigationView = () => {
     if (distanceToStart <= START_ARRIVAL_RADIUS_METERS) {
       setRouteToStart(null);
       setRouteToStartInfo(null);
+      setRouteToStartSteps([]);
       return;
     }
 
@@ -1242,6 +1260,7 @@ const NavigationView = () => {
       if (!abortController.signal.aborted) {
         setRouteToStart(result?.coordinates ?? null);
         setRouteToStartInfo(result ? { distance: result.distance, duration: result.duration } : null);
+        setRouteToStartSteps(result?.steps ?? []);
       }
     }, 300);
 
@@ -1257,6 +1276,7 @@ const NavigationView = () => {
     if (currentStopIndex > 0 || hasReachedStart) {
       setRouteToStart(null);
       setRouteToStartInfo(null);
+      setRouteToStartSteps([]);
     }
   }, [routeToStart, currentStopIndex, hasReachedStart]);
 
@@ -1277,6 +1297,7 @@ const NavigationView = () => {
       routeToStartAbortRef.current?.abort();
       setRouteToStart(null);
       setRouteToStartInfo(null);
+      setRouteToStartSteps([]);
       setHasReachedStart(true);
     }
   }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart]);
@@ -1432,9 +1453,24 @@ const NavigationView = () => {
   }
 
   const currentStop = circuit.stops[currentStopIndex];
-  const isArrivingAtStop = navInfo.distToNextStop > 0 && navInfo.distToNextStop < 80;
-  const currentDirection: TurnDirection = isArrivingAtStop ? "arrive" : (turnInfo?.turn.direction ?? "straight");
-  const currentDistToTurn = isArrivingAtStop ? navInfo.distToNextStop : (turnInfo?.distanceToTurn ?? (navInfo.distToNextStop || 500));
+  const approachingStart = !!routeToStart && !hasReachedStart;
+  const isArrivingAtStop = hasReachedStart && navInfo.distToNextStop > 0 && navInfo.distToNextStop < 80;
+  const isArrivingAtStartPoint = approachingStart && (routeToStartInfo?.distance ?? Infinity) < 80;
+  const currentDirection: TurnDirection = isArrivingAtStop || isArrivingAtStartPoint
+    ? "arrive"
+    : (turnInfo?.turn.direction ?? "straight");
+  const currentDistToTurn = isArrivingAtStop
+    ? navInfo.distToNextStop
+    : isArrivingAtStartPoint
+      ? (routeToStartInfo?.distance ?? 0)
+      : (turnInfo?.distanceToTurn ?? (approachingStart ? (routeToStartInfo?.distance ?? 500) : (navInfo.distToNextStop || 500)));
+  const currentStreetName = isArrivingAtStop
+    ? currentStop?.title
+    : isArrivingAtStartPoint
+      ? "Point de départ"
+      : approachingStart
+        ? "Vers le point de départ"
+        : undefined;
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden bg-background">
@@ -1450,7 +1486,7 @@ const NavigationView = () => {
           recalculatedRoute={recalculatedRoute}
           annotations={circuit.map_annotations}
         />
-        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={isArrivingAtStop ? currentStop?.title : undefined} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} roundaboutExit={turnInfo?.turn.roundaboutExit} />
+        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={currentStreetName} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} roundaboutExit={turnInfo?.turn.roundaboutExit} />
 
         {/* Right-side floating controls */}
         <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>
