@@ -521,6 +521,9 @@ const NavigationView = () => {
     active: audioUnlocked,
     isSpeakingExternal: isVoiceSpeaking,
   });
+  // Stable ref so effects don't loop on hook re-creation
+  const tiloRef = useRef(tilo);
+  useEffect(() => { tiloRef.current = tilo; });
 
   // Welcome through Tilo
   useEffect(() => {
@@ -528,7 +531,7 @@ const NavigationView = () => {
     setWelcomeSpoken(true);
     const userName = user?.email?.split("@")[0] || "Voyageur";
     const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
-    tilo.enqueue(
+    tiloRef.current.enqueue(
       {
         type: "welcome",
         userName: displayName,
@@ -537,7 +540,7 @@ const NavigationView = () => {
       },
       { priority: true }
     );
-  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user, tilo]);
+  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user]);
 
   // Speed warning trigger — when going too fast on the circuit
   const lastSpeedWarnRef = useRef(0);
@@ -547,21 +550,20 @@ const NavigationView = () => {
     const now = Date.now();
     if (now - lastSpeedWarnRef.current < 90_000) return;
     lastSpeedWarnRef.current = now;
-    tilo.enqueue({ type: "speed_warning", speed: Math.round(speed) });
-  }, [speed, voiceEnabled, hasReachedStart, tilo]);
+    tiloRef.current.enqueue({ type: "speed_warning", speed: Math.round(speed) });
+  }, [speed, voiceEnabled, hasReachedStart]);
 
   // Idle banter — speak occasionally when nothing else happens
   useEffect(() => {
     if (!audioUnlocked || !voiceEnabled || !hasReachedStart) return;
     const interval = window.setInterval(() => {
-      const sinceLast = Date.now() - tilo.lastSpokeAt();
+      const sinceLast = Date.now() - tiloRef.current.lastSpokeAt();
       if (sinceLast < 180_000) return;
-      // Alternate between joke and banter
       const pickJoke = Math.random() > 0.5;
-      tilo.enqueue(pickJoke ? { type: "joke" } : { type: "idle_banter" });
+      tiloRef.current.enqueue(pickJoke ? { type: "joke" } : { type: "idle_banter" });
     }, 60_000);
     return () => window.clearInterval(interval);
-  }, [audioUnlocked, voiceEnabled, hasReachedStart, tilo]);
+  }, [audioUnlocked, voiceEnabled, hasReachedStart]);
 
   useEffect(() => {
     if (!navigator.permissions?.query) {
