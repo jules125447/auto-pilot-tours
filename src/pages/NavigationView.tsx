@@ -367,9 +367,10 @@ const NavigationView = () => {
     });
   }, [fadeMusicTo]);
 
+  const [isVoiceSpeaking, setIsVoiceSpeaking] = useState(false);
   const { speak, announceDirection, announceArrival, announceAudioZone } = useVoiceGuidance({
-    onSpeakStart: duckAudio,
-    onSpeakEnd: unduckAudio,
+    onSpeakStart: () => { duckAudio(); setIsVoiceSpeaking(true); },
+    onSpeakEnd: () => { unduckAudio(); setIsVoiceSpeaking(false); },
   });
 
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
