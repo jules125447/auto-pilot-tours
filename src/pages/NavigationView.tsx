@@ -1146,7 +1146,18 @@ const NavigationView = () => {
     const dist = haversine(lat, lng, stop.lat, stop.lng);
     if (dist < 50 && !visitedStops.has(currentStopIndex)) {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
-      if (voiceEnabled) announceArrival(stop.title);
+      if (voiceEnabled) {
+        // Tilo announces arrival with personality
+        tilo.enqueue({
+          type: "poi_arrival",
+          poiName: stop.title,
+          poiDescription: (stop as any).description || "",
+        });
+      }
+      const isLast = currentStopIndex >= circuit.stops.length - 1;
+      if (isLast && voiceEnabled) {
+        tilo.enqueue({ type: "trip_end", circuitName: circuit.title });
+      }
       // Auto-advance to next stop after arrival
       if (currentStopIndex < circuit.stops.length - 1) {
         setTimeout(() => {
@@ -1154,7 +1165,7 @@ const NavigationView = () => {
         }, 2000);
       }
     }
-  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, announceArrival]);
+  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, tilo]);
 
   // Off-route detection & recalculation
   useEffect(() => {
