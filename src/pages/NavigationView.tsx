@@ -574,10 +574,10 @@ const NavigationView = () => {
     stuntActiveRef.current = true;
     let timer: number;
     if (stuntPhase === "reach") {
-      // Arm extends + eyes look down toward the speedometer
-      timer = window.setTimeout(() => setStuntPhase("grab"), 1800);
+      // Arm extends + eyes look down — give the magnetic "call" time to build
+      timer = window.setTimeout(() => setStuntPhase("grab"), 2200);
     } else if (stuntPhase === "grab") {
-      // Bubble flies up in 3D into the waiting hand — give it time to land
+      // Cinematic 3.6s arc into the hand — wait until the bubble has truly landed
       timer = window.setTimeout(() => {
         const s = speedRef.current ?? 0;
         const over = s > 110;
@@ -591,7 +591,7 @@ const NavigationView = () => {
         setStuntMessage(line);
         speak(line);
         setStuntPhase(over ? "verdict_bad" : "verdict_ok");
-      }, 2600);
+      }, 3700);
     } else if (stuntPhase === "verdict_ok") {
       // Smile, then gently place the bubble back
       timer = window.setTimeout(() => {
