@@ -515,31 +515,53 @@ const NavigationView = () => {
     setAudioUnlocked(true);
   }, []);
 
-  // Welcome greeting with AI-generated personalized message
+  // Tilo companion orchestrator
+  const tilo = useTilo({
+    speak,
+    active: audioUnlocked,
+    isSpeakingExternal: isVoiceSpeaking,
+  });
+
+  // Welcome through Tilo
   useEffect(() => {
     if (!audioUnlocked || welcomeSpoken || !circuit || !voiceEnabled) return;
     setWelcomeSpoken(true);
-
     const userName = user?.email?.split("@")[0] || "Voyageur";
     const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
-    const fallback = `Bienvenue ${displayName} sur le circuit ${circuit.title}. Bonne route !`;
-
-    supabase.functions.invoke("welcome-greeting", {
-      body: {
+    tilo.enqueue(
+      {
+        type: "welcome",
         userName: displayName,
         circuitName: circuit.title,
         circuitDescription: circuit.description || "",
       },
-    }).then(({ data, error }) => {
-      if (error || !data?.greeting) {
-        speak(fallback);
-      } else {
-        speak(data.greeting);
-      }
-    }).catch(() => {
-      speak(fallback);
-    });
-  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user, speak]);
+      { priority: true }
+    );
+  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user, tilo]);
+
+  // Speed warning trigger — when going too fast on the circuit
+  const lastSpeedWarnRef = useRef(0);
+  useEffect(() => {
+    if (!voiceEnabled || !hasReachedStart || speed === null) return;
+    if (speed < 110) return;
+    const now = Date.now();
+    if (now - lastSpeedWarnRef.current < 90_000) return;
+    lastSpeedWarnRef.current = now;
+    tilo.enqueue({ type: "speed_warning", speed: Math.round(speed) });
+  }, [speed, voiceEnabled, hasReachedStart, tilo]);
+
+  // Idle banter — speak occasionally when nothing else happens
+  useEffect(() => {
+    if (!audioUnlocked || !voiceEnabled || !hasReachedStart) return;
+    const interval = window.setInterval(() => {
+      const sinceLast = Date.now() - tilo.lastSpokeAt();
+      if (sinceLast < 180_000) return;
+      // Alternate between joke and banter
+      const pickJoke = Math.random() > 0.5;
+      tilo.enqueue(pickJoke ? { type: "joke" } : { type: "idle_banter" });
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [audioUnlocked, voiceEnabled, hasReachedStart, tilo]);
 
   useEffect(() => {
     if (!navigator.permissions?.query) {
