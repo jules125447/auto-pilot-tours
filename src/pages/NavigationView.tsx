@@ -541,6 +541,11 @@ const NavigationView = () => {
   // Stunt-local message (Tilo's verdict line, shown + spoken without going through the queue)
   const [stuntMessage, setStuntMessage] = useState<string | null>(null);
 
+  // Dancing mode for music segments
+  const [tiloDancing, setTiloDancing] = useState(false);
+  const [musicMessage, setMusicMessage] = useState<string | null>(null);
+  const dancingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Reset stunt when Tilo speaks again — but ignore the speech we trigger
   // ourselves during the verdict (otherwise the bubble snaps back mid-animation).
   const stuntActiveRef = useRef(false);
