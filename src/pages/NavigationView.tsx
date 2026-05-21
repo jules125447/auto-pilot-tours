@@ -1461,8 +1461,14 @@ const NavigationView = () => {
       setRouteToStartInfo(null);
       setRouteToStartSteps([]);
       setHasReachedStart(true);
+      if (voiceEnabled && circuit) {
+        tiloRef.current.enqueue(
+          { type: "circuit_start", circuitName: circuit.title },
+          { priority: true }
+        );
+      }
     }
-  }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart]);
+  }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart, voiceEnabled, circuit]);
 
   const handleNextStop = () => {
     if (!circuit) return;
