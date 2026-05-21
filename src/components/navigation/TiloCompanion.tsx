@@ -5,19 +5,34 @@ import tiloHead from "@/assets/tilo-head.png";
 import tiloArmLeft from "@/assets/tilo-arm-left.png";
 import tiloArmRight from "@/assets/tilo-arm-right.png";
 
+export type TiloMood = "idle" | "happy" | "angry";
+
 interface TiloCompanionProps {
   visible: boolean;
   speaking: boolean;
   message: string | null;
   lookDirection?: -1 | 0 | 1;
   onClose: () => void;
+  /** Mood overlay (smile / angry brow on the head) */
+  mood?: TiloMood;
+  /** When true, the left arm is held up (presenting the speedometer) */
+  holding?: boolean;
+  /** When true, the right arm performs a throwing motion */
+  throwing?: boolean;
 }
 
 /**
  * Tilo — mascot built from layered parts (body + head + arms).
  * Each part animates independently: head tilts/nods, arms swing, eyes blink/glow.
  */
-const TiloCompanion = ({ visible, speaking, message }: TiloCompanionProps) => {
+const TiloCompanion = ({
+  visible,
+  speaking,
+  message,
+  mood = "idle",
+  holding = false,
+  throwing = false,
+}: TiloCompanionProps) => {
   // Blink loop
   const [blink, setBlink] = useState(false);
   useEffect(() => {
@@ -36,13 +51,31 @@ const TiloCompanion = ({ visible, speaking, message }: TiloCompanionProps) => {
   const W = 150;
   const H = 140;
 
+  // Left arm rotation depending on action
+  const leftArmAnim = holding
+    ? { rotate: [-2, -28, -34, -30] } // raised up to "hold" the speedometer
+    : speaking
+    ? { rotate: [-2, 6, -3, 4, -2] }
+    : { rotate: [-2, 3, -2] };
+  const leftArmDur = holding ? 0.8 : speaking ? 0.9 : 2.8;
+  const leftArmRepeat = holding ? 0 : Infinity;
+
+  // Right arm: throw motion overrides idle
+  const rightArmAnim = throwing
+    ? { rotate: [-4, -60, 80, 40, -4] }
+    : speaking
+    ? { rotate: [-4, 14, -6, 10, -4] }
+    : { rotate: [-3, 8, -3] };
+  const rightArmDur = throwing ? 1.2 : speaking ? 1 : 2.4;
+  const rightArmRepeat = throwing ? 0 : Infinity;
+
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
           initial={{ y: 140, opacity: 0, scale: 0.8 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 140, opacity: 0, scale: 0.85 }}
+          exit={{ x: -260, y: 40, opacity: 0, scale: 0.85, rotate: -8 }}
           transition={{ type: "spring", damping: 20, stiffness: 220 }}
           className="absolute left-3 z-[1002] pointer-events-none"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 230px)" }}
@@ -59,14 +92,20 @@ const TiloCompanion = ({ visible, speaking, message }: TiloCompanionProps) => {
               className="relative"
               style={{ width: W, height: H }}
             >
-              {/* Glow halo */}
+              {/* Glow halo — color shifts with mood */}
               <motion.div
-                animate={{ opacity: speaking ? [0.55, 0.95, 0.55] : [0.35, 0.55, 0.35] }}
+                animate={{
+                  opacity: speaking ? [0.55, 0.95, 0.55] : [0.35, 0.55, 0.35],
+                }}
                 transition={{ duration: speaking ? 0.7 : 2.6, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute -inset-3 rounded-full blur-2xl pointer-events-none"
                 style={{
                   background:
-                    "radial-gradient(circle, hsl(25 95% 55% / 0.6), hsl(15 85% 50% / 0.15) 60%, transparent 80%)",
+                    mood === "happy"
+                      ? "radial-gradient(circle, hsl(140 80% 55% / 0.6), hsl(140 70% 45% / 0.15) 60%, transparent 80%)"
+                      : mood === "angry"
+                      ? "radial-gradient(circle, hsl(0 90% 55% / 0.7), hsl(15 80% 45% / 0.2) 60%, transparent 80%)"
+                      : "radial-gradient(circle, hsl(25 95% 55% / 0.6), hsl(15 85% 50% / 0.15) 60%, transparent 80%)",
                 }}
               />
 
@@ -89,68 +128,68 @@ const TiloCompanion = ({ visible, speaking, message }: TiloCompanionProps) => {
                 style={{ filter: "drop-shadow(0 8px 12px rgba(180,80,30,0.35))" }}
               />
 
-              {/* LEFT ARM (phone) — swings from shoulder */}
+              {/* LEFT ARM (phone) — swings from shoulder; raises when holding */}
               <motion.img
                 src={tiloArmLeft}
                 alt=""
                 draggable={false}
                 className="absolute select-none"
                 style={{
-                  // crop was (150..380, 400..720) on 1066x992
                   left: `${(150 / 1066) * 100}%`,
                   top: `${(400 / 992) * 100}%`,
                   width: `${(230 / 1066) * 100}%`,
-                  transformOrigin: "85% 5%", // near the shoulder (top-right of crop)
+                  transformOrigin: "85% 5%",
                 }}
-                animate={{
-                  rotate: speaking ? [-2, 6, -3, 4, -2] : [-2, 3, -2],
-                }}
+                animate={leftArmAnim}
                 transition={{
-                  duration: speaking ? 0.9 : 2.8,
-                  repeat: Infinity,
+                  duration: leftArmDur,
+                  repeat: leftArmRepeat,
                   ease: "easeInOut",
                 }}
               />
 
-              {/* RIGHT ARM (flag) — waves */}
+              {/* RIGHT ARM (flag) — waves; throws on demand */}
               <motion.img
                 src={tiloArmRight}
                 alt=""
                 draggable={false}
                 className="absolute select-none"
                 style={{
-                  // crop was (740..1010, 200..600) on 1066x992
                   left: `${(740 / 1066) * 100}%`,
                   top: `${(200 / 992) * 100}%`,
                   width: `${(270 / 1066) * 100}%`,
-                  transformOrigin: "20% 95%", // shoulder (bottom-left of crop)
+                  transformOrigin: "20% 95%",
                 }}
-                animate={{
-                  rotate: speaking ? [-4, 14, -6, 10, -4] : [-3, 8, -3],
-                }}
+                animate={rightArmAnim}
                 transition={{
-                  duration: speaking ? 1 : 2.4,
-                  repeat: Infinity,
+                  duration: rightArmDur,
+                  repeat: rightArmRepeat,
                   ease: "easeInOut",
                 }}
               />
 
-              {/* HEAD — tilts, with eye blink overlay */}
+              {/* HEAD — tilts, with eye blink overlay + mood expression */}
               <motion.div
                 className="absolute"
                 style={{
-                  // crop was (260..790, 40..410) on 1066x992
                   left: `${(260 / 1066) * 100}%`,
                   top: `${(40 / 992) * 100}%`,
                   width: `${(530 / 1066) * 100}%`,
-                  transformOrigin: "50% 92%", // neck pivot
+                  transformOrigin: "50% 92%",
                 }}
                 animate={{
-                  rotate: speaking ? [-3, 4, -2, 3, -3] : [-2, 2, -2],
+                  rotate:
+                    mood === "angry"
+                      ? [-6, 8, -6, 8, -6]
+                      : mood === "happy"
+                      ? [-2, 2, -2]
+                      : speaking
+                      ? [-3, 4, -2, 3, -3]
+                      : [-2, 2, -2],
                   y: speaking ? [0, -1.5, 0, -1, 0] : [0, -1, 0],
                 }}
                 transition={{
-                  duration: speaking ? 1.1 : 3.6,
+                  duration: mood === "angry" ? 0.35 : speaking ? 1.1 : 3.6,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
@@ -172,7 +211,11 @@ const TiloCompanion = ({ visible, speaking, message }: TiloCompanionProps) => {
                       top: "44%",
                       height: "16%",
                       background:
-                        "radial-gradient(ellipse at 28% 50%, hsl(35 100% 65% / 0.55), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(35 100% 65% / 0.55), transparent 40%)",
+                        mood === "angry"
+                          ? "radial-gradient(ellipse at 28% 50%, hsl(0 100% 60% / 0.8), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(0 100% 60% / 0.8), transparent 40%)"
+                          : mood === "happy"
+                          ? "radial-gradient(ellipse at 28% 50%, hsl(140 90% 65% / 0.7), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(140 90% 65% / 0.7), transparent 40%)"
+                          : "radial-gradient(ellipse at 28% 50%, hsl(35 100% 65% / 0.55), transparent 40%), radial-gradient(ellipse at 72% 50%, hsl(35 100% 65% / 0.55), transparent 40%)",
                       filter: "blur(2px)",
                       borderRadius: "50%",
                     }}
@@ -198,6 +241,57 @@ const TiloCompanion = ({ visible, speaking, message }: TiloCompanionProps) => {
                       borderRadius: "40%",
                     }}
                   />
+                )}
+
+                {/* Mood mouth overlay (SVG) */}
+                {mood !== "idle" && (
+                  <svg
+                    viewBox="0 0 100 40"
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: "30%",
+                      right: "30%",
+                      top: "66%",
+                      width: "40%",
+                      height: "14%",
+                    }}
+                  >
+                    {mood === "happy" ? (
+                      <path
+                        d="M10 10 Q 50 38 90 10"
+                        fill="none"
+                        stroke="hsl(140 80% 30%)"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                      />
+                    ) : (
+                      <path
+                        d="M10 30 Q 50 0 90 30"
+                        fill="none"
+                        stroke="hsl(0 80% 35%)"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                      />
+                    )}
+                  </svg>
+                )}
+
+                {/* Angry brows */}
+                {mood === "angry" && (
+                  <svg
+                    viewBox="0 0 100 20"
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: "18%",
+                      right: "18%",
+                      top: "36%",
+                      width: "64%",
+                      height: "10%",
+                    }}
+                  >
+                    <path d="M5 18 L 40 4" stroke="hsl(0 85% 30%)" strokeWidth="5" strokeLinecap="round" />
+                    <path d="M95 18 L 60 4" stroke="hsl(0 85% 30%)" strokeWidth="5" strokeLinecap="round" />
+                  </svg>
                 )}
               </motion.div>
             </motion.div>
