@@ -1634,13 +1634,16 @@ const NavigationView = () => {
             </motion.div>
           )}
         </AnimatePresence>
-        <SpeedBubble speed={speed} />
+        <SpeedBubble speed={speed} stunt={speedBubbleStunt} />
         <TiloCompanion
-          visible={tilo.visible && voiceEnabled}
+          visible={tilo.visible && voiceEnabled && !tiloHidden}
           speaking={tilo.speaking}
           message={tilo.message}
           lookDirection={tilo.lookDirection}
           onClose={tilo.hide}
+          mood={tiloMood}
+          holding={tiloHolding}
+          throwing={tiloThrowing}
         />
       </div>
       <NavigationBar
