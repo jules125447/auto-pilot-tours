@@ -680,6 +680,33 @@ const CreatorSidebar = ({
                           </div>
                         </div>
 
+                        {/* Tilo mood for this zone */}
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-2">Tête de Tilo pendant ce commentaire :</p>
+                          <div className="grid grid-cols-5 gap-1">
+                            <button type="button"
+                              onClick={() => onUpdateAudio(zone.id, { tiloMood: undefined })}
+                              className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md text-[10px] transition-colors ${
+                                !zone.tiloMood ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/40 hover:bg-muted text-muted-foreground border border-transparent"
+                              }`}>
+                              <span className="text-base leading-none">🎭</span>
+                              <span>Auto</span>
+                            </button>
+                            {TILO_EXPRESSIONS.map((expr) => (
+                              <button key={expr.value} type="button"
+                                onClick={() => onUpdateAudio(zone.id, { tiloMood: expr.value })}
+                                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md text-[10px] transition-colors ${
+                                  zone.tiloMood === expr.value ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/40 hover:bg-muted text-muted-foreground border border-transparent"
+                                }`}>
+                                <span className="text-base leading-none">{expr.emoji}</span>
+                                <span>{expr.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+
+
                         {/* TTS mode */}
                         {(zone.audioSource || "tts") === "tts" && (
                           <>
