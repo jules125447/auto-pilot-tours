@@ -592,17 +592,20 @@ const NavigationView = () => {
       // Cinematic 3.6s arc into the hand — wait until the bubble has truly landed
       timer = window.setTimeout(() => {
         const s = speedRef.current ?? 0;
-        const over = s > 110;
-        // Verbal commentary on speed while he inspects the dial
         const sRound = Math.round(s);
-        const line = over
-          ? `Eh ! ${sRound} km/h, tu te crois en F1 ou quoi ?`
-          : sRound < 30
-          ? `${sRound} km/h, on est pas pressés, j'adore.`
-          : `${sRound} km/h, nickel, on profite tranquille.`;
+        const tooFast = sRound > 110;
+        const fast = sRound > 90 && sRound <= 110;
+        const slow = sRound > 0 && sRound < 30;
+        const line = tooFast
+          ? `Oula… ${sRound} km/h, on est un peu pressé là, doucement !`
+          : fast
+          ? `${sRound} km/h, ça file bien, profite quand même du paysage !`
+          : slow
+          ? `${sRound} km/h, balade tranquille, j'aime bien ce rythme.`
+          : `${sRound} km/h, parfait rythme, on profite bien de la route.`;
         setStuntMessage(line);
         speak(line);
-        setStuntPhase(over ? "verdict_bad" : "verdict_ok");
+        setStuntPhase(tooFast ? "verdict_bad" : "verdict_ok");
       }, 3700);
     } else if (stuntPhase === "verdict_ok") {
       // Smile, then gently place the bubble back
