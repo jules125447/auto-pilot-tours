@@ -83,6 +83,7 @@ export type Database = {
           lng: number
           radius_meters: number | null
           sort_order: number | null
+          tilo_mood: string | null
         }
         Insert: {
           audio_text?: string | null
@@ -95,6 +96,7 @@ export type Database = {
           lng: number
           radius_meters?: number | null
           sort_order?: number | null
+          tilo_mood?: string | null
         }
         Update: {
           audio_text?: string | null
@@ -107,6 +109,7 @@ export type Database = {
           lng?: number
           radius_meters?: number | null
           sort_order?: number | null
+          tilo_mood?: string | null
         }
         Relationships: [
           {
@@ -232,6 +235,7 @@ export type Database = {
           region: string | null
           review_count: number | null
           route: Json | null
+          tilo_personality: Json
           title: string
           updated_at: string
         }
@@ -251,6 +255,7 @@ export type Database = {
           region?: string | null
           review_count?: number | null
           route?: Json | null
+          tilo_personality?: Json
           title: string
           updated_at?: string
         }
@@ -270,6 +275,7 @@ export type Database = {
           region?: string | null
           review_count?: number | null
           route?: Json | null
+          tilo_personality?: Json
           title?: string
           updated_at?: string
         }
