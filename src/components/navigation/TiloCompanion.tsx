@@ -5,7 +5,7 @@ import tiloHead from "@/assets/tilo-head.png";
 import tiloArmLeft from "@/assets/tilo-arm-left.png";
 import tiloArmRight from "@/assets/tilo-arm-right.png";
 
-export type TiloMood = "idle" | "happy" | "angry";
+export type TiloMood = "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed";
 
 interface TiloCompanionProps {
   visible: boolean;
