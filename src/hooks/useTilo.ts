@@ -58,6 +58,7 @@ export function useTilo({ speak, active, isSpeakingExternal, personality }: UseT
         body: {
           eventType: event.type,
           context: { ...event },
+          personality,
         },
       });
       if (error || !data?.text) return "";
