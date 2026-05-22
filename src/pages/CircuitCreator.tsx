@@ -713,6 +713,8 @@ const CircuitCreator = () => {
           isEditing={isEditing}
           coverImageUrl={coverImageUrl}
           onCoverImageChange={setCoverImageUrl}
+          tiloPersonality={tiloPersonality}
+          setTiloPersonality={setTiloPersonality}
         />
 
         <div className="flex-1 relative">
