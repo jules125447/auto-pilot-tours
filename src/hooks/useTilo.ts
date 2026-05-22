@@ -18,6 +18,12 @@ interface UseTiloOptions {
   active: boolean;
   /** External "is currently speaking" signal coming from the TTS engine */
   isSpeakingExternal: boolean;
+  /** Personality for this circuit — influences the AI prompt tone */
+  personality?: {
+    dominant_expression?: string;
+    energy_level?: number;
+    style?: string;
+  };
 }
 
 /**
