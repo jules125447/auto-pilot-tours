@@ -32,6 +32,13 @@ export interface AudioZoneData {
   text: string;
   audioSource?: "tts" | "recorded" | "file";
   audioUrl?: string;
+  tiloMood?: string;
+}
+
+export interface TiloPersonality {
+  dominant_expression: string;
+  energy_level: number;
+  style: string;
 }
 
 export interface MusicSegmentData {
