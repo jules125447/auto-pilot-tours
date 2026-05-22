@@ -74,6 +74,26 @@ const stopTypes = [
   { value: "speed_check", label: "⚠️ Contrôle de vitesse" },
 ];
 
+const TILO_EXPRESSIONS: { value: string; label: string; emoji: string }[] = [
+  { value: "happy", label: "Joyeux", emoji: "😄" },
+  { value: "calm", label: "Calme", emoji: "😌" },
+  { value: "surprised", label: "Surpris", emoji: "😮" },
+  { value: "funny", label: "Drôle", emoji: "🤪" },
+  { value: "amazed", label: "Émerveillé", emoji: "🤩" },
+  { value: "mysterious", label: "Mystérieux", emoji: "🤫" },
+  { value: "energetic", label: "Énergique", emoji: "⚡" },
+  { value: "sad", label: "Mélancolique", emoji: "🥺" },
+  { value: "angry", label: "Râleur", emoji: "😤" },
+];
+
+const TILO_STYLES: { value: string; label: string }[] = [
+  { value: "friendly", label: "Ami sympa" },
+  { value: "guide", label: "Guide expert" },
+  { value: "comedian", label: "Humoriste" },
+  { value: "poet", label: "Poète rêveur" },
+  { value: "coach", label: "Coach motivant" },
+];
+
 const estimateAudioDuration = (text: string): number => {
   if (!text.trim()) return 0;
   const words = text.trim().split(/\s+/).length;
