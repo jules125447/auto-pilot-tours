@@ -30,7 +30,7 @@ interface UseTiloOptions {
  * Queues contextual Tilo interventions, fetches a French line from the
  * `tilo-speak` edge function and triggers the visible avatar + voice.
  */
-export function useTilo({ speak, active, isSpeakingExternal }: UseTiloOptions) {
+export function useTilo({ speak, active, isSpeakingExternal, personality }: UseTiloOptions) {
   const [visible, setVisible] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
