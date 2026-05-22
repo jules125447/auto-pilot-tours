@@ -638,8 +638,14 @@ const NavigationView = () => {
       : stuntPhase === "verdict_bad"
       ? "thrown"
       : "idle";
-  const tiloMood: "idle" | "happy" | "angry" =
-    stuntPhase === "verdict_ok" ? "happy" : stuntPhase === "verdict_bad" ? "angry" : "idle";
+  const tiloMood: "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" =
+    stuntPhase === "reach" || stuntPhase === "grab"
+      ? "surprised"
+      : stuntPhase === "verdict_bad"
+      ? "funny"
+      : stuntPhase === "verdict_ok"
+      ? ((speedRef.current ?? 0) < 30 ? "calm" : "happy")
+      : "idle";
   // Arm is extended/raised during reach + entire holding sequence
   const tiloHolding =
     stuntPhase === "reach" ||
