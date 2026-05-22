@@ -22,6 +22,11 @@ export interface CircuitWithStops {
   published: boolean | null;
   creator_id: string;
   circuit_type: string;
+  tilo_personality: {
+    dominant_expression: string;
+    energy_level: number;
+    style: string;
+  };
   stops: {
     id: string;
     title: string;
