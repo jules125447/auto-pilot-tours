@@ -190,6 +190,14 @@ const CircuitCreator = () => {
         setCircuitType((c as any).circuit_type || "amateur");
         setPrice(c.price ?? 9.99);
         setCoverImageUrl(c.image_url || "");
+        const tp = (c as any).tilo_personality;
+        if (tp && typeof tp === "object") {
+          setTiloPersonality({
+            dominant_expression: tp.dominant_expression || "happy",
+            energy_level: typeof tp.energy_level === "number" ? tp.energy_level : 3,
+            style: tp.style || "friendly",
+          });
+        }
         const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
         setRoute(loadedRoute);
         // Use route endpoints as waypoints for simplicity
