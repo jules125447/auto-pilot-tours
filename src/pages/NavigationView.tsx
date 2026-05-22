@@ -535,6 +535,7 @@ const NavigationView = () => {
   type StuntPhase = "idle" | "reach" | "grab" | "verdict_ok" | "verdict_bad" | "exit" | "done";
   const [stuntPhase, setStuntPhase] = useState<StuntPhase>("idle");
   const [tiloHidden, setTiloHidden] = useState(false);
+  const [audioZoneMood, setAudioZoneMood] = useState<string | null>(null);
   const lastSeenSpokeAtRef = useRef(0);
   const speedRef = useRef<number | null>(null);
   useEffect(() => { speedRef.current = speed; }, [speed]);
