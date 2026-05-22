@@ -640,7 +640,7 @@ const NavigationView = () => {
       : stuntPhase === "verdict_bad"
       ? "thrown"
       : "idle";
-  const tiloMood: "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" =
+  const stuntDerivedMood: "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed" =
     stuntPhase === "reach" || stuntPhase === "grab"
       ? "surprised"
       : stuntPhase === "verdict_bad"
@@ -648,6 +648,14 @@ const NavigationView = () => {
       : stuntPhase === "verdict_ok"
       ? ((speedRef.current ?? 0) < 30 ? "calm" : "happy")
       : "idle";
+  // Priority: stunt override > audio zone mood > circuit dominant expression > idle
+  const validMoods = new Set(["idle", "happy", "angry", "surprised", "calm", "funny", "amazed"]);
+  const dominant = circuit?.tilo_personality?.dominant_expression;
+  const personalityMood = (dominant && validMoods.has(dominant) ? dominant : "happy") as
+    "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed";
+  const zoneMood = (audioZoneMood && validMoods.has(audioZoneMood) ? audioZoneMood : null) as
+    "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed" | null;
+  const tiloMood = stuntDerivedMood !== "idle" ? stuntDerivedMood : (zoneMood ?? personalityMood);
   // Arm is extended/raised during reach + entire holding sequence
   const tiloHolding =
     stuntPhase === "reach" ||
