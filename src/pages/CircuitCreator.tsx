@@ -32,6 +32,13 @@ export interface AudioZoneData {
   text: string;
   audioSource?: "tts" | "recorded" | "file";
   audioUrl?: string;
+  tiloMood?: string;
+}
+
+export interface TiloPersonality {
+  dominant_expression: string;
+  energy_level: number;
+  style: string;
 }
 
 export interface MusicSegmentData {
@@ -127,6 +134,11 @@ const CircuitCreator = () => {
   const [circuitType, setCircuitType] = useState("amateur");
   const [price, setPrice] = useState(9.99);
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [tiloPersonality, setTiloPersonality] = useState<TiloPersonality>({
+    dominant_expression: "happy",
+    energy_level: 3,
+    style: "friendly",
+  });
 
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
@@ -178,6 +190,14 @@ const CircuitCreator = () => {
         setCircuitType((c as any).circuit_type || "amateur");
         setPrice(c.price ?? 9.99);
         setCoverImageUrl(c.image_url || "");
+        const tp = (c as any).tilo_personality;
+        if (tp && typeof tp === "object") {
+          setTiloPersonality({
+            dominant_expression: tp.dominant_expression || "happy",
+            energy_level: typeof tp.energy_level === "number" ? tp.energy_level : 3,
+            style: tp.style || "friendly",
+          });
+        }
         const loadedRoute = Array.isArray(c.route) ? (c.route as [number, number][]) : [];
         setRoute(loadedRoute);
         // Use route endpoints as waypoints for simplicity
@@ -203,6 +223,7 @@ const CircuitCreator = () => {
           setAudioZones(audioRes.data.map(a => ({
             id: a.id, lat: a.lat, lng: a.lng, radius: a.radius_meters || 100, text: a.audio_text || "",
             audioUrl: a.audio_url || undefined,
+            tiloMood: (a as any).tilo_mood || undefined,
           })));
         }
         if (musicRes.data) {
@@ -466,6 +487,7 @@ const CircuitCreator = () => {
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
             price,
+            tilo_personality: tiloPersonality as any,
           })
           .eq("id", editId)
           .eq("creator_id", user.id);
@@ -498,6 +520,7 @@ const CircuitCreator = () => {
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
             price,
+            tilo_personality: tiloPersonality as any,
           })
           .select("id")
           .single();
@@ -533,6 +556,7 @@ const CircuitCreator = () => {
             audio_text: a.audioSource === "tts" || !a.audioSource ? a.text : null,
             audio_url: a.audioUrl || null,
             sort_order: i,
+            tilo_mood: a.tiloMood || null,
           }))
         );
         if (audioErr) throw audioErr;
@@ -689,6 +713,8 @@ const CircuitCreator = () => {
           isEditing={isEditing}
           coverImageUrl={coverImageUrl}
           onCoverImageChange={setCoverImageUrl}
+          tiloPersonality={tiloPersonality}
+          setTiloPersonality={setTiloPersonality}
         />
 
         <div className="flex-1 relative">

@@ -16,7 +16,7 @@ type EventType =
   | "idle_banter"
   | "trip_end";
 
-const SYSTEM_PROMPT = `Tu es Tilo, un compagnon de voyage virtuel chaleureux, sympa et un peu blagueur, pour l'application AutoPilot Tours (circuits touristiques en voiture).
+const BASE_SYSTEM_PROMPT = `Tu es Tilo, un compagnon de voyage virtuel pour l'application AutoPilot Tours (circuits touristiques en voiture).
 
 Règles strictes:
 - Réponds en FRANÇAIS uniquement
@@ -27,6 +27,39 @@ Règles strictes:
 - Le texte sera lu par synthèse vocale, écris donc comme on parle
 - Ne te présente pas, ne dis pas "je suis Tilo"
 - Pas de phrase qui commence par "En tant que..."`;
+
+const EXPRESSION_HINTS: Record<string, string> = {
+  happy: "Ton chaleureux, souriant, optimiste.",
+  calm: "Ton posé, doux, apaisant.",
+  surprised: "Ton enjoué, étonné, vif.",
+  funny: "Ton blagueur, taquin, qui glisse une pointe d'humour.",
+  amazed: "Ton émerveillé, contemplatif, plein d'admiration.",
+  mysterious: "Ton intrigant, qui suggère sans tout dévoiler.",
+  energetic: "Ton dynamique, motivant, qui donne envie de bouger.",
+  sad: "Ton mélancolique, doux, presque nostalgique.",
+  angry: "Ton bougon mais bienveillant, légèrement râleur.",
+};
+
+const STYLE_HINTS: Record<string, string> = {
+  friendly: "Comme un copain de road-trip détendu.",
+  guide: "Comme un guide local cultivé qui partage des anecdotes.",
+  comedian: "Comme un humoriste qui place une vanne légère.",
+  poet: "Comme un poète rêveur, image évocatrice.",
+  coach: "Comme un coach motivant, phrases qui boostent.",
+};
+
+function buildSystemPrompt(personality: any): string {
+  if (!personality || typeof personality !== "object") return BASE_SYSTEM_PROMPT;
+  const expr = EXPRESSION_HINTS[personality.dominant_expression] || "";
+  const style = STYLE_HINTS[personality.style] || "";
+  const energy = typeof personality.energy_level === "number" ? personality.energy_level : 3;
+  const energyHint =
+    energy <= 2 ? "Niveau d'énergie bas: parle doucement, sans excitation."
+    : energy >= 4 ? "Niveau d'énergie élevé: sois pétillant et enthousiaste."
+    : "Niveau d'énergie modéré.";
+  const extras = [expr, style, energyHint].filter(Boolean).join(" ");
+  return extras ? `${BASE_SYSTEM_PROMPT}\n\nPersonnalité pour ce circuit: ${extras}` : BASE_SYSTEM_PROMPT;
+}
 
 function userPromptFor(eventType: EventType, ctx: Record<string, unknown>): string {
   switch (eventType) {
@@ -72,6 +105,8 @@ serve(async (req) => {
     const body = await req.json();
     const eventType = (body.eventType as EventType) || "idle_banter";
     const context = (body.context as Record<string, unknown>) || {};
+    const personality = body.personality;
+    const systemPrompt = buildSystemPrompt(personality);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -85,7 +120,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPromptFor(eventType, context) },
         ],
         max_tokens: 120,

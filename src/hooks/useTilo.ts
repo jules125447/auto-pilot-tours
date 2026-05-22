@@ -18,13 +18,19 @@ interface UseTiloOptions {
   active: boolean;
   /** External "is currently speaking" signal coming from the TTS engine */
   isSpeakingExternal: boolean;
+  /** Personality for this circuit — influences the AI prompt tone */
+  personality?: {
+    dominant_expression?: string;
+    energy_level?: number;
+    style?: string;
+  };
 }
 
 /**
  * Queues contextual Tilo interventions, fetches a French line from the
  * `tilo-speak` edge function and triggers the visible avatar + voice.
  */
-export function useTilo({ speak, active, isSpeakingExternal }: UseTiloOptions) {
+export function useTilo({ speak, active, isSpeakingExternal, personality }: UseTiloOptions) {
   const [visible, setVisible] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
@@ -52,6 +58,7 @@ export function useTilo({ speak, active, isSpeakingExternal }: UseTiloOptions) {
         body: {
           eventType: event.type,
           context: { ...event },
+          personality,
         },
       });
       if (error || !data?.text) return "";
@@ -59,7 +66,7 @@ export function useTilo({ speak, active, isSpeakingExternal }: UseTiloOptions) {
     } catch {
       return "";
     }
-  }, []);
+  }, [personality]);
 
   // Reflect external speech state (for mouth animation)
   useEffect(() => {

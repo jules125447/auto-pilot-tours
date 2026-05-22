@@ -523,6 +523,7 @@ const NavigationView = () => {
     speak,
     active: audioUnlocked,
     isSpeakingExternal: isVoiceSpeaking,
+    personality: circuit?.tilo_personality,
   });
   // Stable ref so effects don't loop on hook re-creation
   const tiloRef = useRef(tilo);
@@ -534,6 +535,7 @@ const NavigationView = () => {
   type StuntPhase = "idle" | "reach" | "grab" | "verdict_ok" | "verdict_bad" | "exit" | "done";
   const [stuntPhase, setStuntPhase] = useState<StuntPhase>("idle");
   const [tiloHidden, setTiloHidden] = useState(false);
+  const [audioZoneMood, setAudioZoneMood] = useState<string | null>(null);
   const lastSeenSpokeAtRef = useRef(0);
   const speedRef = useRef<number | null>(null);
   useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -638,7 +640,7 @@ const NavigationView = () => {
       : stuntPhase === "verdict_bad"
       ? "thrown"
       : "idle";
-  const tiloMood: "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" =
+  const stuntDerivedMood: "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed" =
     stuntPhase === "reach" || stuntPhase === "grab"
       ? "surprised"
       : stuntPhase === "verdict_bad"
@@ -646,6 +648,14 @@ const NavigationView = () => {
       : stuntPhase === "verdict_ok"
       ? ((speedRef.current ?? 0) < 30 ? "calm" : "happy")
       : "idle";
+  // Priority: stunt override > audio zone mood > circuit dominant expression > idle
+  const validMoods = new Set(["idle", "happy", "angry", "surprised", "calm", "funny", "amazed"]);
+  const dominant = circuit?.tilo_personality?.dominant_expression;
+  const personalityMood = (dominant && validMoods.has(dominant) ? dominant : "happy") as
+    "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed";
+  const zoneMood = (audioZoneMood && validMoods.has(audioZoneMood) ? audioZoneMood : null) as
+    "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed" | null;
+  const tiloMood = stuntDerivedMood !== "idle" ? stuntDerivedMood : (zoneMood ?? personalityMood);
   // Arm is extended/raised during reach + entire holding sequence
   const tiloHolding =
     stuntPhase === "reach" ||
@@ -1158,19 +1168,22 @@ const NavigationView = () => {
 
       if (shouldTrigger) {
         setTriggeredAudioZones((prev) => new Set(prev).add(zone.id));
-        
+        const zoneMood = (zone as any).tilo_mood as string | null | undefined;
+        if (zoneMood) setAudioZoneMood(zoneMood);
+
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
           audio.play().catch((e) => console.warn("Audio play failed:", e));
           setAudioPlaying(true);
-          audio.onended = () => setAudioPlaying(false);
-          audio.onerror = () => setAudioPlaying(false);
+          const clear = () => { setAudioPlaying(false); setAudioZoneMood(null); };
+          audio.onended = clear;
+          audio.onerror = clear;
         } else if (zone.audio_text) {
           setAudioPlaying(true);
           if (voiceEnabled) announceAudioZone(zone.audio_text);
           const words = zone.audio_text.trim().split(/\s+/).length;
           const displayMs = Math.max(4000, (words / 150) * 60 * 1000);
-          setTimeout(() => setAudioPlaying(false), displayMs);
+          setTimeout(() => { setAudioPlaying(false); setAudioZoneMood(null); }, displayMs);
         }
       }
     });

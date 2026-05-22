@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search, Waves, Mic, Upload, FileAudio, ImagePlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, MapAnnotationData, EditorMode } from "@/pages/CircuitCreator";
+import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, MapAnnotationData, EditorMode, TiloPersonality } from "@/pages/CircuitCreator";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AMBIENT_SOUNDS, startAmbientSound, stopAmbientSound } from "@/lib/ambientSounds";
@@ -62,6 +62,8 @@ interface CreatorSidebarProps {
   isEditing?: boolean;
   coverImageUrl?: string;
   onCoverImageChange?: (url: string) => void;
+  tiloPersonality: TiloPersonality;
+  setTiloPersonality: (v: TiloPersonality) => void;
 }
 
 const stopTypes = [
@@ -70,6 +72,26 @@ const stopTypes = [
   { value: "restaurant", label: "🍽️ Restaurant" },
   { value: "parking", label: "🅿️ Parking" },
   { value: "speed_check", label: "⚠️ Contrôle de vitesse" },
+];
+
+const TILO_EXPRESSIONS: { value: string; label: string; emoji: string }[] = [
+  { value: "happy", label: "Joyeux", emoji: "😄" },
+  { value: "calm", label: "Calme", emoji: "😌" },
+  { value: "surprised", label: "Surpris", emoji: "😮" },
+  { value: "funny", label: "Drôle", emoji: "🤪" },
+  { value: "amazed", label: "Émerveillé", emoji: "🤩" },
+  { value: "mysterious", label: "Mystérieux", emoji: "🤫" },
+  { value: "energetic", label: "Énergique", emoji: "⚡" },
+  { value: "sad", label: "Mélancolique", emoji: "🥺" },
+  { value: "angry", label: "Râleur", emoji: "😤" },
+];
+
+const TILO_STYLES: { value: string; label: string }[] = [
+  { value: "friendly", label: "Ami sympa" },
+  { value: "guide", label: "Guide expert" },
+  { value: "comedian", label: "Humoriste" },
+  { value: "poet", label: "Poète rêveur" },
+  { value: "coach", label: "Coach motivant" },
 ];
 
 const estimateAudioDuration = (text: string): number => {
@@ -347,6 +369,7 @@ const CreatorSidebar = ({
   onUpdateAnnotation, onDeleteAnnotation,
   onSave, onPublish, saving, routePointsCount, mode, isEditing,
   coverImageUrl, onCoverImageChange,
+  tiloPersonality, setTiloPersonality,
 }: CreatorSidebarProps) => {
   const [musicSearch, setMusicSearch] = useState("");
   const [itunesResults, setItunesResults] = useState<any[]>([]);
@@ -476,6 +499,66 @@ const CreatorSidebar = ({
             </div>
           </div>
 
+          {/* Tilo personality */}
+          <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-secondary/5 p-3 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <span className="text-lg">🎭</span> Personnalité de Tilo
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Définit l'humeur dominante du compagnon pour ce circuit.</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-1.5">Expression dominante</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {TILO_EXPRESSIONS.map((expr) => (
+                  <button
+                    key={expr.value}
+                    type="button"
+                    onClick={() => setTiloPersonality({ ...tiloPersonality, dominant_expression: expr.value })}
+                    className={`flex flex-col items-center gap-0.5 p-2 rounded-md text-xs transition-colors ${
+                      tiloPersonality.dominant_expression === expr.value
+                        ? "bg-primary/15 border border-primary text-foreground"
+                        : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
+                    }`}
+                  >
+                    <span className="text-lg leading-none">{expr.emoji}</span>
+                    <span className="text-[10px]">{expr.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-semibold text-foreground">Niveau d'énergie</p>
+                <span className="text-xs text-muted-foreground">{tiloPersonality.energy_level}/5</span>
+              </div>
+              <Slider
+                value={[tiloPersonality.energy_level]}
+                min={1}
+                max={5}
+                step={1}
+                onValueChange={(v) => setTiloPersonality({ ...tiloPersonality, energy_level: v[0] })}
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                <span>Posé</span>
+                <span>Survolté</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-1.5">Style narratif</p>
+              <Select value={tiloPersonality.style} onValueChange={(v) => setTiloPersonality({ ...tiloPersonality, style: v })}>
+                <SelectTrigger className="text-sm h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TILO_STYLES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+
+
           {/* Stats */}
           <div className="flex gap-2 flex-wrap text-xs text-muted-foreground">
             <span className="px-2 py-1 rounded-md bg-muted">{routePointsCount} pts route</span>
@@ -596,6 +679,33 @@ const CreatorSidebar = ({
                             </button>
                           </div>
                         </div>
+
+                        {/* Tilo mood for this zone */}
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-2">Tête de Tilo pendant ce commentaire :</p>
+                          <div className="grid grid-cols-5 gap-1">
+                            <button type="button"
+                              onClick={() => onUpdateAudio(zone.id, { tiloMood: undefined })}
+                              className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md text-[10px] transition-colors ${
+                                !zone.tiloMood ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/40 hover:bg-muted text-muted-foreground border border-transparent"
+                              }`}>
+                              <span className="text-base leading-none">🎭</span>
+                              <span>Auto</span>
+                            </button>
+                            {TILO_EXPRESSIONS.map((expr) => (
+                              <button key={expr.value} type="button"
+                                onClick={() => onUpdateAudio(zone.id, { tiloMood: expr.value })}
+                                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-md text-[10px] transition-colors ${
+                                  zone.tiloMood === expr.value ? "bg-primary/15 border border-primary text-foreground" : "bg-muted/40 hover:bg-muted text-muted-foreground border border-transparent"
+                                }`}>
+                                <span className="text-base leading-none">{expr.emoji}</span>
+                                <span>{expr.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+
 
                         {/* TTS mode */}
                         {(zone.audioSource || "tts") === "tts" && (
