@@ -105,6 +105,8 @@ serve(async (req) => {
     const body = await req.json();
     const eventType = (body.eventType as EventType) || "idle_banter";
     const context = (body.context as Record<string, unknown>) || {};
+    const personality = body.personality;
+    const systemPrompt = buildSystemPrompt(personality);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
