@@ -556,6 +556,7 @@ const CircuitCreator = () => {
             audio_text: a.audioSource === "tts" || !a.audioSource ? a.text : null,
             audio_url: a.audioUrl || null,
             sort_order: i,
+            tilo_mood: a.tiloMood || null,
           }))
         );
         if (audioErr) throw audioErr;
