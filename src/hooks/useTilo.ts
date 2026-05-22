@@ -66,7 +66,7 @@ export function useTilo({ speak, active, isSpeakingExternal, personality }: UseT
     } catch {
       return "";
     }
-  }, []);
+  }, [personality]);
 
   // Reflect external speech state (for mouth animation)
   useEffect(() => {
