@@ -523,6 +523,7 @@ const NavigationView = () => {
     speak,
     active: audioUnlocked,
     isSpeakingExternal: isVoiceSpeaking,
+    personality: circuit?.tilo_personality,
   });
   // Stable ref so effects don't loop on hook re-creation
   const tiloRef = useRef(tilo);
