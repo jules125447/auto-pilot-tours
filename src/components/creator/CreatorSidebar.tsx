@@ -349,6 +349,7 @@ const CreatorSidebar = ({
   onUpdateAnnotation, onDeleteAnnotation,
   onSave, onPublish, saving, routePointsCount, mode, isEditing,
   coverImageUrl, onCoverImageChange,
+  tiloPersonality, setTiloPersonality,
 }: CreatorSidebarProps) => {
   const [musicSearch, setMusicSearch] = useState("");
   const [itunesResults, setItunesResults] = useState<any[]>([]);
