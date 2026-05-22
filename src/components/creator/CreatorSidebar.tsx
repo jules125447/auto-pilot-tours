@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Volume2, Save, Send, Trash2, Loader2, Music, Play, Square, Check, Search, Waves, Mic, Upload, FileAudio, ImagePlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, MapAnnotationData, EditorMode } from "@/pages/CircuitCreator";
+import type { StopData, AudioZoneData, MusicSegmentData, SoundSegmentData, MapAnnotationData, EditorMode, TiloPersonality } from "@/pages/CircuitCreator";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AMBIENT_SOUNDS, startAmbientSound, stopAmbientSound } from "@/lib/ambientSounds";
