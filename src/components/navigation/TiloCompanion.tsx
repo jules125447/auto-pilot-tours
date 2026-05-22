@@ -291,24 +291,49 @@ const TiloCompanion = ({
                       height: "14%",
                     }}
                   >
-                    {mood === "happy" ? (
-                      <path
-                        d="M10 10 Q 50 38 90 10"
-                        fill="none"
-                        stroke="hsl(140 80% 30%)"
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                      />
+                    {mood === "happy" || mood === "amazed" ? (
+                      <path d="M10 10 Q 50 38 90 10" fill="none" stroke="hsl(140 80% 30%)" strokeWidth="6" strokeLinecap="round" />
+                    ) : mood === "funny" ? (
+                      <>
+                        <path d="M8 14 Q 50 42 92 14" fill="hsl(0 70% 35%)" stroke="hsl(0 70% 25%)" strokeWidth="4" strokeLinecap="round" />
+                        <path d="M20 24 Q 50 36 80 24" fill="hsl(0 0% 100%)" stroke="none" />
+                      </>
+                    ) : mood === "surprised" ? (
+                      <ellipse cx="50" cy="22" rx="10" ry="14" fill="hsl(220 25% 12%)" stroke="hsl(25 60% 30%)" strokeWidth="3" />
+                    ) : mood === "calm" ? (
+                      <path d="M20 18 Q 50 26 80 18" fill="none" stroke="hsl(25 50% 30%)" strokeWidth="5" strokeLinecap="round" />
                     ) : (
-                      <path
-                        d="M10 30 Q 50 0 90 30"
-                        fill="none"
-                        stroke="hsl(0 80% 35%)"
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                      />
+                      <path d="M10 30 Q 50 0 90 30" fill="none" stroke="hsl(0 80% 35%)" strokeWidth="6" strokeLinecap="round" />
                     )}
                   </svg>
+                )}
+
+                {/* Surprised / amazed → raised eyebrows */}
+                {(mood === "surprised" || mood === "amazed") && (
+                  <svg
+                    viewBox="0 0 100 20"
+                    className="absolute pointer-events-none"
+                    style={{ left: "18%", right: "18%", top: "32%", width: "64%", height: "10%" }}
+                  >
+                    <path d="M8 14 Q 22 2 36 14" stroke="hsl(25 50% 25%)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                    <path d="M64 14 Q 78 2 92 14" stroke="hsl(25 50% 25%)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                  </svg>
+                )}
+
+                {/* Funny → blush cheeks */}
+                {mood === "funny" && (
+                  <>
+                    <div className="absolute rounded-full pointer-events-none" style={{ left: "18%", top: "58%", width: "12%", height: "8%", background: "hsl(0 80% 70% / 0.55)", filter: "blur(2px)" }} />
+                    <div className="absolute rounded-full pointer-events-none" style={{ right: "18%", top: "58%", width: "12%", height: "8%", background: "hsl(0 80% 70% / 0.55)", filter: "blur(2px)" }} />
+                  </>
+                )}
+
+                {/* Calm → half-closed eyelids */}
+                {mood === "calm" && (
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{ left: "22%", right: "22%", top: "44%", height: "8%", background: "hsl(220 25% 10%)", borderRadius: "40%", opacity: 0.85 }}
+                  />
                 )}
 
                 {/* Angry brows */}
