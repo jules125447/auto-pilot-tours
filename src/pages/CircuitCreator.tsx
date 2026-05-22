@@ -520,6 +520,7 @@ const CircuitCreator = () => {
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
             price,
+            tilo_personality: tiloPersonality as any,
           })
           .select("id")
           .single();
