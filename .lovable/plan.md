@@ -1,68 +1,125 @@
-# Plan : Espace Admin & Analytics
+# Plan — Tilo personnalisé + contrôle vitesse + chat IA
 
-## 1. Sécurité & accès admin
+Cette demande est large. Je propose de la livrer en **3 lots** pour garder chaque étape testable. Tu valides, et on attaque le lot 1 tout de suite.
 
-**Important** : Je ne vais PAS coder en dur les identifiants `julesbailly39130@gmail.com / julessuzy39` dans le code (faille critique). À la place :
-- Tu créeras le compte normalement via la page d'inscription avec ces identifiants
-- Je te donnerai une commande SQL (via migration) pour ajouter le rôle `admin` à ton `user_id`
-- L'enum `app_role` sera étendu avec `admin` (déjà présent dans la fonction `has_role`, à confirmer)
-- Une policy RLS + un hook `useIsAdmin()` côté client protègent l'accès au dashboard
+---
 
-Bouton "Admin" discret en bas du footer → redirige vers `/auth?admin=1` puis `/admin` si rôle admin.
+## Lot 1 — Tilo expressif + Point contrôle de vitesse (priorité haute)
 
-## 2. Tracking des données analytics
+### A. Refonte visuelle de Tilo (`TiloCompanion.tsx`)
+Ajouter un système d'expressions réelles, pas juste un bob générique.
 
-Aujourd'hui **aucune donnée d'usage n'est collectée** (pas de table sessions, events, plays audio, etc.). Pour avoir un vrai dashboard, il faut d'abord enregistrer ces événements. Je vais créer :
+Nouveau prop : `expression: 'happy' | 'neutral' | 'surprised' | 'amazed' | 'calm' | 'mysterious' | 'sad' | 'funny' | 'energetic'`
 
-- `navigation_sessions` : un trajet utilisateur (circuit_id, user_id, started_at, ended_at, completed, distance_m, duration_s)
-- `gps_pings` : positions GPS échantillonnées (session_id, lat, lng, speed, timestamp) → heatmap
-- `stop_visits` : passage à un POI (session_id, stop_id, dwell_seconds)
-- `audio_plays` : lectures audio (session_id, audio_zone_id, played_seconds, completed)
+Chaque expression modifie :
+- **Yeux** : forme (ronds, plissés, étoilés, mi-clos), position des sourcils
+- **Bouche** : courbe (sourire, droite, ouverte O, rictus)
+- **Couleur joues** : rose pour heureux/gêné, transparent pour neutre
+- **Animation tête** : bob lent (calme), rapide (énergie), penchée (mystère)
 
-RLS : insert autorisé pour user authentifié sur ses propres lignes, select réservé admin (via `has_role`).
+Clignement automatique toutes les 3-5s (déjà partiel, à renforcer avec scaleY animé).
 
-Hooks d'instrumentation ajoutés dans `NavigationView.tsx` et `useVoiceGuidance.ts` pour logger ces events en arrière-plan (batch toutes les ~10s pour les pings GPS).
+Lip sync : quand `speaking=true`, bouche s'ouvre/ferme à 8Hz (déjà partiel).
 
-## 3. Dashboard `/admin`
+### B. Point contrôle de vitesse (nouveau type de stop)
+Migration DB : ajouter `'speed_check'` comme valeur possible dans `circuit_stops.stop_type` (déjà text libre, pas de contrainte → pas de migration nécessaire, juste convention).
 
-Layout sidebar style Stripe/Notion avec sections :
+Dans `CircuitEditorMap` / éditeur de stops : ajouter option "⚠️ Contrôle de vitesse" dans le sélecteur de type.
 
-- **Vue d'ensemble** : KPI cards (utilisateurs actifs 7j/30j, sessions, revenus, taux complétion, circuit top)
-- **Trajets** : circuits les plus empruntés, durée moyenne, distance moyenne, taux abandon, horaires d'utilisation (graph par heure/jour de semaine)
-- **GPS & Heatmap** : carte Leaflet avec `leaflet.heat` (ajout dépendance) sur les `gps_pings`, filtres période/circuit
-- **Audio** : top audios, temps d'écoute moyen, taux complétion, audios ignorés
-- **Engagement** : sessions terminées vs abandonnées, stops favoris, retours
-- **Business** : revenus mensuels (line chart), revenus par circuit (bar), nombre d'achats, conversion, top circuits rentables (utilise `purchases`)
-- **Filtres globaux** : période (7j/30j/90j/all), région, circuit
+Dans `NavigationView.tsx` :
+- Détecter approche d'un stop `stop_type === 'speed_check'` (< 100m)
+- Déclencher séquence dédiée :
+  1. Tilo apparaît avec expression `surprised`
+  2. Animation existante `grabbed` du speedometer (déjà OK)
+  3. Tilo regarde le compteur 2s
+  4. Tilo commente selon vitesse réelle :
+     - `> limite+10` → expression `funny`, "Oula, on est pressé !"
+     - `±10 de limite` → expression `happy`, "Parfait rythme."
+     - `< 30 km/h` → expression `calm`, "Balade tranquille, j'aime bien."
+  5. Speedometer revient, Tilo disparaît après 4s
 
-Composants : `recharts` (déjà installé) pour les graphiques, cartes shadcn avec gradients orange/amber existants, animations framer-motion subtiles.
+Nouveau type d'event Tilo : `speed_check` avec contexte `{ speed, limit, verdict }`.
 
-## 4. RGPD
+---
 
-- Note dans le footer "Données anonymisées à des fins d'analyse"
-- Une `Edge Function delete-my-data` supprimera sessions/pings/plays liés au user (bouton dans page profil — version simple)
-- Tracking actif uniquement après acceptation (banner cookies léger, stocké en localStorage)
+## Lot 2 — Personnalisation Tilo par circuit
+
+### A. Migration DB
+```sql
+ALTER TABLE circuits ADD COLUMN tilo_personality jsonb 
+  DEFAULT '{"dominant_expression":"happy","energy_level":"medium","style":"friendly"}';
+```
+
+### B. Éditeur de circuit
+Nouveau panneau "Personnalité de Tilo" dans `CircuitCreator.tsx` :
+- Select expression dominante (9 options)
+- Slider énergie (calme → dynamique)
+- Select style (relax / humoristique / mystérieux / éducatif)
+
+### C. Application runtime
+`NavigationView` charge `circuit.tilo_personality` et le passe à `useTilo` + `TiloCompanion`. Le prompt de `tilo-speak` reçoit la personnalité pour adapter le ton.
+
+---
+
+## Lot 3 — Bouton flottant Tilo + conversation IA
+
+### A. Nouveau composant `TiloChatButton.tsx`
+Bouton flottant en bas (au-dessus de la NavigationBar), icône avatar Tilo.
+- État idle : pulse douce
+- État "highlight" (quand Tilo le présente) : glow orange + scale 1.2
+- Désactivé en mode conduite : grisé avec tooltip "Disponible à l'arrêt"
+
+Détection arrêt : `speed < 5 km/h` pendant > 3s.
+
+### B. Message d'onboarding (1ère fois par session)
+Au premier `welcome`, Tilo ajoute : "Tu vois le bouton avec mon visage en bas ? Tape dessus à l'arrêt pour me parler. Surtout pas en conduisant, hein !"
+Le bouton fait son animation glow à ce moment.
+
+### C. Edge function `tilo-chat`
+Nouvelle fonction (différente de `tilo-speak`) qui :
+- Reçoit l'historique de la conversation
+- Système prompt = persona Tilo + personnalité du circuit + contexte (POIs proches)
+- Stream la réponse
+- Modèle : `google/gemini-3-flash-preview`
+
+### D. Sheet de conversation
+`TiloChatSheet.tsx` — bottom sheet avec :
+- Avatar Tilo animé (expression réactive)
+- Historique messages (markdown)
+- Input texte + bouton micro (Web Speech API → texte)
+- TTS sur les réponses
+
+À la fermeture : Tilo dit "Je repasse en mode guide de route 👍"
+
+---
+
+## Lot 4 (optionnel) — Analytics admin
+- Nouvelle table `tilo_interactions` (type, emotion, speed_at, circuit_id, session_id)
+- Section dans `AdminDashboard` : top interactions, émotions, questions, impact vitesse
+
+---
 
 ## Détails techniques
 
-**Fichiers créés :**
-- `src/pages/AdminDashboard.tsx` (layout + routing interne par tabs)
-- `src/components/admin/{KpiCard,SessionsChart,RevenueChart,GpsHeatmap,AudioStats,Filters}.tsx`
-- `src/hooks/useIsAdmin.ts`, `src/hooks/useAnalyticsTracker.ts`
-- `src/lib/analytics.ts` (batch d'events)
-- Migration : tables analytics + RLS + extension enum `app_role` si besoin
-- Footer mis à jour (lien Admin discret)
-- Route `/admin` ajoutée dans `App.tsx`, protégée par `useIsAdmin`
+**Fichiers à créer :**
+- `src/components/navigation/TiloChatButton.tsx`
+- `src/components/navigation/TiloChatSheet.tsx`
+- `src/lib/tiloExpressions.ts` (mapping expression → SVG params)
+- `supabase/functions/tilo-chat/index.ts`
 
-**Dépendance :** `leaflet.heat` pour la heatmap.
+**Fichiers à modifier :**
+- `src/components/navigation/TiloCompanion.tsx` (système d'expressions)
+- `src/hooks/useTilo.ts` (event `speed_check`, expression courante)
+- `src/pages/NavigationView.tsx` (détection speed_check, intégration bouton)
+- `src/pages/CircuitCreator.tsx` (panneau personnalité + type speed_check)
+- `src/components/creator/CircuitEditorMap.tsx` (icône speed_check)
+- `supabase/functions/tilo-speak/index.ts` (event `speed_check`, prise en compte personnalité)
 
-**Hors scope (pour rester focalisé) :**
-- Saisons / régions touristiques avancées (nécessiterait géocodage inverse à grande échelle)
-- Suppression RGPD complète automatisée (version simple : bouton delete)
-- Auth 2FA admin (pas demandé mais possible plus tard)
+**Migrations :**
+- 1 seule : ajout colonne `tilo_personality` sur `circuits`
 
-## Étape 1 après ton accord
+---
 
-Je crée la migration (tables + RLS) et te demande de l'approuver. Ensuite j'implémente le tracking + dashboard. Tu pourras ensuite te connecter avec ton compte et je passerai ton `user_id` en `admin` via une commande à exécuter.
+## Question
 
-Tu valides ?
+Le périmètre total = ~4h de build. **Je propose d'attaquer immédiatement le Lot 1** (Tilo expressif + point contrôle de vitesse) qui apporte 80% de la valeur visible. On enchaîne avec Lot 2 et 3 après ton retour. OK pour démarrer comme ça ?
