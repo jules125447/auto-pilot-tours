@@ -487,6 +487,7 @@ const CircuitCreator = () => {
             circuit_type: circuitType,
             image_url: coverImageUrl || null,
             price,
+            tilo_personality: tiloPersonality as any,
           })
           .eq("id", editId)
           .eq("creator_id", user.id);
