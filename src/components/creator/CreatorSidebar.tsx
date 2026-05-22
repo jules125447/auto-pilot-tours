@@ -62,6 +62,8 @@ interface CreatorSidebarProps {
   isEditing?: boolean;
   coverImageUrl?: string;
   onCoverImageChange?: (url: string) => void;
+  tiloPersonality: TiloPersonality;
+  setTiloPersonality: (v: TiloPersonality) => void;
 }
 
 const stopTypes = [
