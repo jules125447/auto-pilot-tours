@@ -134,6 +134,11 @@ const CircuitCreator = () => {
   const [circuitType, setCircuitType] = useState("amateur");
   const [price, setPrice] = useState(9.99);
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [tiloPersonality, setTiloPersonality] = useState<TiloPersonality>({
+    dominant_expression: "happy",
+    energy_level: 3,
+    style: "friendly",
+  });
 
   const [waypoints, setWaypoints] = useState<[number, number][]>([]);
   const [route, setRoute] = useState<[number, number][]>([]);
