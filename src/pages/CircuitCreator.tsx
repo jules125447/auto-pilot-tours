@@ -223,6 +223,7 @@ const CircuitCreator = () => {
           setAudioZones(audioRes.data.map(a => ({
             id: a.id, lat: a.lat, lng: a.lng, radius: a.radius_meters || 100, text: a.audio_text || "",
             audioUrl: a.audio_url || undefined,
+            tiloMood: (a as any).tilo_mood || undefined,
           })));
         }
         if (musicRes.data) {
