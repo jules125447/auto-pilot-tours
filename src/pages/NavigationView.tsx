@@ -1325,6 +1325,27 @@ const NavigationView = () => {
     }
   }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled]);
 
+  // Speed-check stop proximity → trigger the speedometer stunt automatically
+  const triggeredSpeedChecksRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!userPos || !circuit || !voiceEnabled || !audioUnlocked) return;
+    const [lat, lng] = userPos;
+    for (const stop of circuit.stops) {
+      if ((stop as any).type !== "speed_check") continue;
+      const key = (stop as any).id ?? `${stop.lat},${stop.lng}`;
+      if (triggeredSpeedChecksRef.current.has(key)) continue;
+      const dist = haversine(lat, lng, stop.lat, stop.lng);
+      if (dist < 120) {
+        triggeredSpeedChecksRef.current.add(key);
+        // Make sure Tilo is on screen and force a stunt now
+        setTiloHidden(false);
+        if (stuntPhase === "idle" || stuntPhase === "done") {
+          setStuntPhase("reach");
+        }
+      }
+    }
+  }, [userPos, circuit, voiceEnabled, audioUnlocked, stuntPhase]);
+
   // Off-route detection & recalculation
   useEffect(() => {
     if (!rawUserPos || !circuit || !hasReachedStart || !calibrated) return;
