@@ -69,6 +69,7 @@ const stopTypes = [
   { value: "viewpoint", label: "👁️ Point de vue" },
   { value: "restaurant", label: "🍽️ Restaurant" },
   { value: "parking", label: "🅿️ Parking" },
+  { value: "speed_check", label: "⚠️ Contrôle de vitesse" },
 ];
 
 const estimateAudioDuration = (text: string): number => {

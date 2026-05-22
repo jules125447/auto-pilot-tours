@@ -592,17 +592,20 @@ const NavigationView = () => {
       // Cinematic 3.6s arc into the hand — wait until the bubble has truly landed
       timer = window.setTimeout(() => {
         const s = speedRef.current ?? 0;
-        const over = s > 110;
-        // Verbal commentary on speed while he inspects the dial
         const sRound = Math.round(s);
-        const line = over
-          ? `Eh ! ${sRound} km/h, tu te crois en F1 ou quoi ?`
-          : sRound < 30
-          ? `${sRound} km/h, on est pas pressés, j'adore.`
-          : `${sRound} km/h, nickel, on profite tranquille.`;
+        const tooFast = sRound > 110;
+        const fast = sRound > 90 && sRound <= 110;
+        const slow = sRound > 0 && sRound < 30;
+        const line = tooFast
+          ? `Oula… ${sRound} km/h, on est un peu pressé là, doucement !`
+          : fast
+          ? `${sRound} km/h, ça file bien, profite quand même du paysage !`
+          : slow
+          ? `${sRound} km/h, balade tranquille, j'aime bien ce rythme.`
+          : `${sRound} km/h, parfait rythme, on profite bien de la route.`;
         setStuntMessage(line);
         speak(line);
-        setStuntPhase(over ? "verdict_bad" : "verdict_ok");
+        setStuntPhase(tooFast ? "verdict_bad" : "verdict_ok");
       }, 3700);
     } else if (stuntPhase === "verdict_ok") {
       // Smile, then gently place the bubble back
@@ -635,8 +638,14 @@ const NavigationView = () => {
       : stuntPhase === "verdict_bad"
       ? "thrown"
       : "idle";
-  const tiloMood: "idle" | "happy" | "angry" =
-    stuntPhase === "verdict_ok" ? "happy" : stuntPhase === "verdict_bad" ? "angry" : "idle";
+  const tiloMood: "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" =
+    stuntPhase === "reach" || stuntPhase === "grab"
+      ? "surprised"
+      : stuntPhase === "verdict_bad"
+      ? "funny"
+      : stuntPhase === "verdict_ok"
+      ? ((speedRef.current ?? 0) < 30 ? "calm" : "happy")
+      : "idle";
   // Arm is extended/raised during reach + entire holding sequence
   const tiloHolding =
     stuntPhase === "reach" ||
@@ -1324,6 +1333,27 @@ const NavigationView = () => {
       }
     }
   }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled]);
+
+  // Speed-check stop proximity → trigger the speedometer stunt automatically
+  const triggeredSpeedChecksRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!userPos || !circuit || !voiceEnabled || !audioUnlocked) return;
+    const [lat, lng] = userPos;
+    for (const stop of circuit.stops) {
+      if ((stop as any).type !== "speed_check") continue;
+      const key = (stop as any).id ?? `${stop.lat},${stop.lng}`;
+      if (triggeredSpeedChecksRef.current.has(key)) continue;
+      const dist = haversine(lat, lng, stop.lat, stop.lng);
+      if (dist < 120) {
+        triggeredSpeedChecksRef.current.add(key);
+        // Make sure Tilo is on screen and force a stunt now
+        setTiloHidden(false);
+        if (stuntPhase === "idle" || stuntPhase === "done") {
+          setStuntPhase("reach");
+        }
+      }
+    }
+  }, [userPos, circuit, voiceEnabled, audioUnlocked, stuntPhase]);
 
   // Off-route detection & recalculation
   useEffect(() => {
