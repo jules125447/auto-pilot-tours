@@ -499,6 +499,66 @@ const CreatorSidebar = ({
             </div>
           </div>
 
+          {/* Tilo personality */}
+          <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-secondary/5 p-3 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <span className="text-lg">🎭</span> Personnalité de Tilo
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Définit l'humeur dominante du compagnon pour ce circuit.</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-1.5">Expression dominante</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {TILO_EXPRESSIONS.map((expr) => (
+                  <button
+                    key={expr.value}
+                    type="button"
+                    onClick={() => setTiloPersonality({ ...tiloPersonality, dominant_expression: expr.value })}
+                    className={`flex flex-col items-center gap-0.5 p-2 rounded-md text-xs transition-colors ${
+                      tiloPersonality.dominant_expression === expr.value
+                        ? "bg-primary/15 border border-primary text-foreground"
+                        : "bg-muted/50 hover:bg-muted text-muted-foreground border border-transparent"
+                    }`}
+                  >
+                    <span className="text-lg leading-none">{expr.emoji}</span>
+                    <span className="text-[10px]">{expr.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-semibold text-foreground">Niveau d'énergie</p>
+                <span className="text-xs text-muted-foreground">{tiloPersonality.energy_level}/5</span>
+              </div>
+              <Slider
+                value={[tiloPersonality.energy_level]}
+                min={1}
+                max={5}
+                step={1}
+                onValueChange={(v) => setTiloPersonality({ ...tiloPersonality, energy_level: v[0] })}
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                <span>Posé</span>
+                <span>Survolté</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-1.5">Style narratif</p>
+              <Select value={tiloPersonality.style} onValueChange={(v) => setTiloPersonality({ ...tiloPersonality, style: v })}>
+                <SelectTrigger className="text-sm h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TILO_STYLES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+
+
           {/* Stats */}
           <div className="flex gap-2 flex-wrap text-xs text-muted-foreground">
             <span className="px-2 py-1 rounded-md bg-muted">{routePointsCount} pts route</span>
