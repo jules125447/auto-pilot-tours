@@ -103,6 +103,11 @@ function mapCircuit(
     published: circuit.published,
     creator_id: circuit.creator_id,
     circuit_type: (circuit as any).circuit_type || "amateur",
+    tilo_personality: ((circuit as any).tilo_personality as any) || {
+      dominant_expression: "happy",
+      energy_level: 3,
+      style: "friendly",
+    },
     stops: stops
       .filter((s) => s.circuit_id === circuit.id)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
