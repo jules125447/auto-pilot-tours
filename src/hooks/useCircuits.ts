@@ -46,6 +46,7 @@ export interface CircuitWithStops {
     audio_url: string | null;
     radius_meters: number | null;
     sort_order: number | null;
+    tilo_mood: string | null;
   }[];
   music_segments: {
     id: string;
