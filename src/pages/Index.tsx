@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Search, Compass, Car, Loader2, PlusCircle, ArrowRight, Sparkles, Volume2, Headphones, Navigation2, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import CircuitCard from "@/components/CircuitCard";
 import Header from "@/components/Header";
 import { useCircuits } from "@/hooks/useCircuits";
 import ConsentBanner from "@/components/ConsentBanner";
+import tiloMascot from "@/assets/tilo-mascot.png";
 
 
 const regions = [
