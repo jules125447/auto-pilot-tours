@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { Geolocation } from "@capacitor/geolocation";
 import { ArrowLeft, Loader2, Volume2, VolumeX, Play, Lock, Download } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
 import { useAuth } from "@/contexts/AuthContext";
@@ -754,6 +756,15 @@ const NavigationView = () => {
 
   // Geolocation
   useEffect(() => {
+    // Demande la permission native sur mobile (Capacitor)
+    const requestNativePermission = async () => {
+      try {
+        const { Geolocation } = await import("@capacitor/geolocation");
+        await Geolocation.requestPermissions();
+      } catch {}
+    };
+    requestNativePermission();
+
     if (!navigator.geolocation) {
       logGps("error", "geolocation_unavailable", {
         message: "Geolocation API non disponible sur cet appareil.",
@@ -980,22 +991,42 @@ const NavigationView = () => {
       rejectAccuracyOverMeters: MAX_ACCEPTED_GPS_ACCURACY_METERS,
     });
 
-    requestSingleHighAccuracyFix("initial");
-
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
+    if (Capacitor.isNativePlatform()) {
+      Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: HIGH_ACCURACY_TIMEOUT_MS })
+        .then((pos) => processPosition(pos as any, "initial"))
+        .catch((err) => logGps("warn", "single_fix_failed", { reason: "initial", message: err.message }));
+    } else {
+      requestSingleHighAccuracyFix("initial");
     }
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => processPosition(pos, "watch"),
-      (err) => {
-        logGps("warn", "watch_error", {
-          code: err.code,
-          message: err.message,
-        });
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
-    );
+    if (watchIdRef.current !== null) {
+      if (Capacitor.isNativePlatform()) {
+        Geolocation.clearWatch({ id: String(watchIdRef.current) });
+      } else {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      Geolocation.watchPosition(
+        { enableHighAccuracy: true, timeout: HIGH_ACCURACY_TIMEOUT_MS },
+        (pos, err) => {
+          if (err) { logGps("warn", "watch_error", { message: err.message }); return; }
+          if (pos) processPosition(pos as any, "watch");
+        }
+      ).then((id) => { watchIdRef.current = id as any; });
+    } else {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => processPosition(pos, "watch"),
+        (err) => {
+          logGps("warn", "watch_error", {
+            code: err.code,
+            message: err.message,
+          });
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
+      );
+    }
 
     const recoveryInterval = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;

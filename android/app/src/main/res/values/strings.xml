@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AutoPilot Tours</string>
+    <string name="title_activity_main">AutoPilot Tours</string>
+    <string name="package_name">com.jules.autopilottours</string>
+    <string name="custom_url_scheme">com.jules.autopilottours</string>
+</resources>
