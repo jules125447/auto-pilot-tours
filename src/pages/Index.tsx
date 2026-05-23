@@ -183,8 +183,10 @@ const Index = () => {
               Tous
             </button>
             {regions.map((r) => (
-              <button
+              <motion.button
                 key={r.name}
+                whileTap={{ scale: 0.93 }}
+                whileHover={{ scale: 1.04 }}
                 onClick={() => setSelectedRegion(r.name)}
                 className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
                   selectedRegion === r.name
@@ -193,7 +195,7 @@ const Index = () => {
                 }`}
               >
                 {r.emoji} {r.name}
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -226,7 +228,15 @@ const Index = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCircuits.map((circuit, i) => (
-                <CircuitCard key={circuit.id} circuit={circuit} index={i} />
+                <motion.div
+                  key={circuit.id}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ duration: 0.5, delay: Math.min(i * 0.06, 0.4), ease: "easeOut" }}
+                >
+                  <CircuitCard circuit={circuit} index={i} />
+                </motion.div>
               ))}
             </div>
           )}
