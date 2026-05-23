@@ -86,12 +86,11 @@ const Index = () => {
                 transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
                 className="relative"
               >
-                <div className="absolute -inset-4 rounded-full bg-primary/15 blur-2xl" aria-hidden />
+                <div className="absolute -inset-4 rounded-full bg-primary/20 blur-2xl" aria-hidden />
                 <img
-                  src="/tilo-splash.png"
+                  src={tiloMascot}
                   alt="Tilo, votre compagnon de voyage"
-                  className="relative w-40 h-40 object-contain object-center scale-[2.2] origin-center"
-                  style={{ objectPosition: "center 62%" }}
+                  className="relative w-44 h-44 object-contain drop-shadow-xl"
                   loading="eager"
                 />
               </motion.div>
