@@ -19,6 +19,12 @@ import SpeedBubble from "@/components/navigation/SpeedBubble";
 import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
 import TiloCompanion from "@/components/navigation/TiloCompanion";
 import { useTilo } from "@/hooks/useTilo";
+import {
+  ensureLocationPermission,
+  getCurrentPositionUnified,
+  watchPositionUnified,
+  isNativePlatform,
+} from "@/lib/nativeGeolocation";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
