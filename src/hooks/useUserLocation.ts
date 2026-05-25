@@ -1,24 +1,30 @@
 import { useState, useEffect } from "react";
+import { ensureLocationPermission, getCurrentPositionUnified } from "@/lib/nativeGeolocation";
 
 /**
  * Lightweight hook that grabs user's current position once.
- * Used for showing distance from user to circuit start.
+ * Uses native Capacitor GPS on mobile, browser API on web.
  */
 export function useUserLocation() {
   const [position, setPosition] = useState<[number, number] | null>(null);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPosition([pos.coords.latitude, pos.coords.longitude]);
-      },
-      () => {
+    let cancelled = false;
+    (async () => {
+      const ok = await ensureLocationPermission();
+      if (!ok || cancelled) return;
+      try {
+        const pos = await getCurrentPositionUnified({
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000,
+        });
+        if (!cancelled) setPosition([pos.coords.latitude, pos.coords.longitude]);
+      } catch {
         // silently fail — user may deny permission
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-    );
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   return position;
