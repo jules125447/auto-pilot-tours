@@ -1,84 +1,76 @@
-## Objectifs
+# Plan : App mobile native + GPS pro
 
-1. **Écran de chargement (splash) Tilo** affiché instantanément au lancement, avec animation de transition vers la page d'accueil.
-2. **Refonte mobile de la page d'accueil** (`/`) avec mise en page plus lisible et belles animations.
-3. **Fond de carte : aucun changement** (CartoDB Voyager conservé).
+Objectif : transformer l'app en vraie app mobile iOS/Android via **Capacitor**, avec un GPS de qualité Waze/Google Maps.
 
----
+## 1. Mise en place de Capacitor
 
-## 1. Splash screen Tilo
+- Installer `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android`
+- Créer `capacitor.config.ts` :
+  - `appId: app.lovable.2db36d945b96439e91496901232e8092`
+  - `appName: auto-pilot-tours`
+  - `server.url` pointant vers le sandbox Lovable (hot-reload sur appareil)
+- Plugins natifs nécessaires :
+  - `@capacitor/geolocation` → GPS hardware natif
+  - `@capacitor/network` → détection offline pour le mode hors-ligne
+  - `@capacitor/preferences` → stockage natif
+  - `@capacitor-community/text-to-speech` → TTS natif (plus fluide que SpeechSynthesis web)
+  - `@capacitor/status-bar` + `@capacitor/splash-screen` → finitions UI native
+  - `@capawesome/capacitor-background-task` → maintenir le GPS actif en arrière-plan
 
-**Asset** : copier l'image uploadée vers `public/tilo-splash.png` (référencée directement dans `index.html` pour un affichage instantané, avant même le bundle React).
+## 2. Abstraction GPS (web ↔ natif)
 
-**Affichage instantané** :
-- Dans `index.html` : `<link rel="preload" as="image" href="/tilo-splash.png">` + `<div id="splash">` avec image + texte, stylé via `<style>` inline dans `<head>`. Visible dès la première frame.
-- Fond crème identique à l'image (`#f5ede2`), mascotte centrée, texte "Chargement de votre aventure…" en bas.
-- Quand React monte, `main.tsx` ajoute la classe `splash-hide` au `#splash` → animation de sortie (fade + scale up sur le renard, fondu du fond) → suppression du DOM après ~900ms.
-- Durée minimale ~1.2s pour laisser le temps aux animations.
+Créer `src/lib/nativeGeolocation.ts` qui détecte la plateforme :
+- Sur natif → `Geolocation.watchPosition` de Capacitor (chip GPS direct, haute précision, fonctionne écran éteint)
+- Sur web → fallback `navigator.geolocation.watchPosition`
 
-**Animations internes du splash** (CSS pur) :
-- Mascotte : entrée scale + bounce douce.
-- Texte : fade-in décalé.
-- Points de pagination : pulse séquentiel (déjà visibles sur l'image).
-- Sortie : zoom léger + fade global.
+Avantages natif :
+- Précision réelle 3-5 m (vs 10-30 m sur web)
+- Pas de coupure quand l'écran s'éteint
+- Accès boussole/accéléromètre
 
----
+## 3. Filtrage GPS pro (Waze-like)
 
-## 2. Refonte mobile de la page d'accueil
+Nouveau module `src/lib/gpsFilter.ts` :
+- **Rejet bruit** : ignorer positions avec `accuracy > 30 m`
+- **Rejet sauts** : ignorer si vitesse implicite > 180 km/h entre 2 points
+- **Filtre Kalman 1D** sur lat et lng séparément (lissage sans lag)
+- **Hystérésis cap** : ne tourner la carte que si Δbearing > 8°
+- **Vitesse moyenne glissante** sur 30 s pour ETA stable
 
-Cible : viewport < 768px. Desktop inchangé.
+## 4. Snap-to-road amélioré
 
-**Problèmes actuels** :
-- Titre trop gros sur mobile (`clamp(2.25rem, 7vw, 5rem)`), lignes mal cassées.
-- Stats 3 colonnes serrées.
-- Pas de présence visuelle de Tilo.
-- Hiérarchie CTA faible.
+Améliorer `src/lib/navigationMap.ts` :
+- Remplacer `findClosestRouteIndex` par une **projection orthogonale** sur les segments (pas juste le point le plus proche)
+- Ajouter **monotonie** : l'index ne peut que progresser sauf si écart > 40 m pendant > 5 s
+- Pré-calculer `cumulativeDistances[]` pour calculer la distance restante en O(1) (somme des segments restants, pas vol d'oiseau)
+- Si écart perpendiculaire > 40 m pendant > 5 s → re-route automatique via OSRM
 
-**Nouvelle structure mobile** :
+## 5. Intégration dans `NavigationView.tsx` et `useUserLocation.ts`
 
-```
-┌────────────────────────┐
-│ Header                 │
-├────────────────────────┤
-│ [Badge "Nouveau"]      │
-│ Titre compact 3 lignes │
-│ Sous-titre court       │
-│ [🦊 Tilo flottant]    │ ← petite mascotte animée
-│ [🔍 Recherche]         │
-│ [+ Créer un circuit]   │
-│ ⭐4.9 · 🎧 · 📡         │ ← ligne unique
-├────────────────────────┤
-│ Stats scroll horiz     │ ← au lieu de 3 cols
-├────────────────────────┤
-│ Régions (chips)        │
-├────────────────────────┤
-│ Circuits 1 col         │
-└────────────────────────┘
-```
+- Brancher le nouveau hook `useNativeGeolocation` (natif + filtre + snap)
+- Remplacer les calculs de distance bird's-eye par les distances cumulatives sur route
+- ETA basée sur vitesse moyenne 30 s
 
-**Animations mobiles (framer-motion)** :
-- Titre : stagger fade + slide up sur chaque ligne.
-- Mascotte : flottement infini `y: [0, -8, 0]`.
-- Cartes circuits : `whileInView` fade + slide up progressif.
-- CTA : effet shine au tap.
-- Chips régions : scale au tap.
+## 6. Instructions de build (à exécuter par toi après export GitHub)
 
-**Responsive** :
-- Hero `pt-6 pb-10` mobile vs `pt-16 pb-20` desktop.
-- Titre `text-4xl` mobile, `text-7xl` desktop.
-- Stats `flex overflow-x-auto` mobile, `grid grid-cols-3` desktop.
+Lovable ne peut pas compiler le binaire iOS/Android. Une fois le code prêt :
 
----
+1. **Export to Github** (bouton en haut à droite)
+2. `git clone` ton repo localement
+3. `npm install`
+4. `npx cap add ios` et/ou `npx cap add android`
+5. `npm run build && npx cap sync`
+6. `npx cap run ios` (Mac + Xcode) ou `npx cap run android` (Android Studio)
 
-## Fichiers
+À chaque `git pull` ensuite : `npm install && npm run build && npx cap sync`.
 
-**Modifiés** :
-- `index.html` — splash inline (HTML + CSS dans `<head>`).
-- `src/main.tsx` — retrait du splash après mount React.
-- `src/index.css` — animations sortie splash + keyframes mobile.
-- `src/pages/Index.tsx` — refonte Hero mobile + mascotte flottante + animations enrichies.
+📖 Guide complet : https://lovable.dev/blog/2025-02-13-mobile-development-made-simple-with-capacitor
 
-**Créés** :
-- `public/tilo-splash.png` — copie de l'image uploadée.
+## Détails techniques
 
-**Pas de changement** : backend, DB, fond de carte, navigation, Tilo in-app.
+- Garde tout le code React existant : Capacitor encapsule, ne réécrit pas
+- CartoDB Voyager conservé comme demandé
+- Le fallback web reste fonctionnel (preview navigateur)
+- TTS : double implémentation (Capacitor natif sur device, SpeechSynthesis sur web)
+- Permission GPS demandée au 1er lancement via `Geolocation.requestPermissions()`
+- Pour le GPS arrière-plan iOS : ajouter `NSLocationAlwaysAndWhenInUseUsageDescription` dans `Info.plist` (instruction fournie après build)

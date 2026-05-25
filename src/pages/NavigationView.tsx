@@ -19,6 +19,12 @@ import SpeedBubble from "@/components/navigation/SpeedBubble";
 import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
 import TiloCompanion from "@/components/navigation/TiloCompanion";
 import { useTilo } from "@/hooks/useTilo";
+import {
+  ensureLocationPermission,
+  getCurrentPositionUnified,
+  watchPositionUnified,
+  isNativePlatform,
+} from "@/lib/nativeGeolocation";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
@@ -947,32 +953,30 @@ const NavigationView = () => {
       });
     };
 
-    const requestSingleHighAccuracyFix = (reason: "initial" | "recovery") => {
+    const requestSingleHighAccuracyFix = async (reason: "initial" | "recovery") => {
       if (disposed || highAccuracyRequestInFlightRef.current) return;
 
       highAccuracyRequestInFlightRef.current = true;
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          highAccuracyRequestInFlightRef.current = false;
-          processPosition(pos, reason);
-        },
-        (err) => {
-          highAccuracyRequestInFlightRef.current = false;
-          logGps("warn", "single_fix_failed", {
-            reason,
-            code: err.code,
-            message: err.message,
-          });
-        },
-        {
+      try {
+        const pos = await getCurrentPositionUnified({
           enableHighAccuracy: true,
           maximumAge: 0,
           timeout: HIGH_ACCURACY_TIMEOUT_MS,
-        }
-      );
+        });
+        highAccuracyRequestInFlightRef.current = false;
+        processPosition(pos as unknown as GeolocationPosition, reason);
+      } catch (err: any) {
+        highAccuracyRequestInFlightRef.current = false;
+        logGps("warn", "single_fix_failed", {
+          reason,
+          code: err?.code,
+          message: err?.message,
+        });
+      }
     };
 
     logGps("info", "tracking_started", {
+      native: isNativePlatform(),
       enableHighAccuracy: true,
       maximumAge: 0,
       timeoutMs: HIGH_ACCURACY_TIMEOUT_MS,
@@ -980,22 +984,20 @@ const NavigationView = () => {
       rejectAccuracyOverMeters: MAX_ACCEPTED_GPS_ACCURACY_METERS,
     });
 
-    requestSingleHighAccuracyFix("initial");
+    let unifiedWatch: { clear: () => void } | null = null;
 
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => processPosition(pos, "watch"),
-      (err) => {
-        logGps("warn", "watch_error", {
-          code: err.code,
-          message: err.message,
-        });
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
-    );
+    (async () => {
+      await ensureLocationPermission();
+      if (disposed) return;
+      requestSingleHighAccuracyFix("initial");
+      unifiedWatch = await watchPositionUnified(
+        (pos) => processPosition(pos as unknown as GeolocationPosition, "watch"),
+        (err) => {
+          logGps("warn", "watch_error", { code: err.code, message: err.message });
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
+      );
+    })();
 
     const recoveryInterval = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
@@ -1011,7 +1013,7 @@ const NavigationView = () => {
 
     return () => {
       disposed = true;
-      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+      unifiedWatch?.clear();
       if (calibrationTimerRef.current) clearTimeout(calibrationTimerRef.current);
       window.clearInterval(recoveryInterval);
     };
