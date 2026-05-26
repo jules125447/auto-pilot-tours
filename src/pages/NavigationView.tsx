@@ -25,6 +25,9 @@ import {
   watchPositionUnified,
   isNativePlatform,
 } from "@/lib/nativeGeolocation";
+import { activateWakeLock, releaseWakeLock } from "@/lib/nativeWakeLock";
+import { startBackgroundGps, stopBackgroundGps } from "@/lib/nativeBackgroundGeolocation";
+import { applyAudioElementHints } from "@/lib/nativeAudioSession";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
@@ -1052,6 +1055,23 @@ const NavigationView = () => {
     };
   }, [circuit?.id, audioUnlocked]);
 
+  // Wake lock + background GPS — only while user is actively navigating
+  useEffect(() => {
+    if (!audioUnlocked) return;
+    activateWakeLock();
+    let started = false;
+    startBackgroundGps(() => {
+      // No-op: the regular watchPositionUnified is already feeding the
+      // pipeline; this watcher exists purely to keep the OS from
+      // suspending GPS when the screen turns off / app backgrounds.
+    }).then((ok) => { started = ok; });
+    return () => {
+      releaseWakeLock();
+      if (started) stopBackgroundGps();
+    };
+  }, [audioUnlocked]);
+
+
   // Analytics: track GPS pings periodically
   const lastTrackedPosRef = useRef<[number, number] | null>(null);
   useEffect(() => {
@@ -1175,6 +1195,7 @@ const NavigationView = () => {
 
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
+          applyAudioElementHints(audio);
           audio.play().catch((e) => console.warn("Audio play failed:", e));
           setAudioPlaying(true);
           const clear = () => { setAudioPlaying(false); setAudioZoneMood(null); };
@@ -1226,6 +1247,7 @@ const NavigationView = () => {
           fadeAudio(old, 0, () => { old.pause(); });
         }
         const audio = new Audio(seg.preview_url);
+        applyAudioElementHints(audio);
         audio.volume = 0;
         audio.loop = true;
         const startTimeSec = (seg as any).start_time;

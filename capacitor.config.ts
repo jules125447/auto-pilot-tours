@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.lovable.2db36d945b96439e91496901232e8092",
-  appName: "auto-pilot-tours",
+  appName: "Tilo",
   webDir: "dist",
   // Hot-reload from Lovable sandbox on physical devices / emulators.
   // Remove `server.url` for a production store build (and run `npx cap sync`).
@@ -12,21 +12,34 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1500,
-      backgroundColor: "#FFF7ED",
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: "#FB923C",
+      androidScaleType: "CENTER_CROP",
       showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true,
     },
     Geolocation: {
-      // iOS-only — Android perms are declared in AndroidManifest.xml after `npx cap add android`
       permissions: ["location"],
     },
+    BackgroundGeolocation: {
+      // Android foreground service notification — required by Google Play
+      // when tracking GPS in background.
+      backgroundMessage: "Tilo continue de vous guider sur votre circuit.",
+      backgroundTitle: "Navigation Tilo en cours",
+    },
+    KeepAwake: {},
   },
   ios: {
     contentInset: "always",
     limitsNavigationsToAppBoundDomains: false,
+    // Allow audio (TTS + music) to keep playing alongside Spotify/Apple Music
+    backgroundColor: "#FB923C",
   },
   android: {
     allowMixedContent: true,
+    backgroundColor: "#FB923C",
   },
 };
 
