@@ -25,6 +25,8 @@ import {
   watchPositionUnified,
   isNativePlatform,
 } from "@/lib/nativeGeolocation";
+import { activateWakeLock, releaseWakeLock } from "@/lib/nativeWakeLock";
+import { startBackgroundGps, stopBackgroundGps } from "@/lib/nativeBackgroundGeolocation";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
