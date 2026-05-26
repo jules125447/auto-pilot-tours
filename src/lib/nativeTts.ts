@@ -36,7 +36,8 @@ export async function speakUnified(opts: SpeakOptions): Promise<void> {
         rate,
         pitch,
         volume,
-        category: "playback",
+        // "ambient" lets music apps (Spotify/Apple Music) keep playing alongside Tilo
+        category: "ambient",
       });
       onEnd?.();
     } catch (e) {
