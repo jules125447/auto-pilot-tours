@@ -1194,6 +1194,7 @@ const NavigationView = () => {
 
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
+          applyAudioElementHints(audio);
           audio.play().catch((e) => console.warn("Audio play failed:", e));
           setAudioPlaying(true);
           const clear = () => { setAudioPlaying(false); setAudioZoneMood(null); };
