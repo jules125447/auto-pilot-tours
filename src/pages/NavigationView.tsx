@@ -27,6 +27,7 @@ import {
 } from "@/lib/nativeGeolocation";
 import { activateWakeLock, releaseWakeLock } from "@/lib/nativeWakeLock";
 import { startBackgroundGps, stopBackgroundGps } from "@/lib/nativeBackgroundGeolocation";
+import { applyAudioElementHints } from "@/lib/nativeAudioSession";
 
 const FADE_DURATION = 2000;
 const CALIBRATION_DELAY_MS = 10000; // 10 seconds warmup
@@ -1246,6 +1247,7 @@ const NavigationView = () => {
           fadeAudio(old, 0, () => { old.pause(); });
         }
         const audio = new Audio(seg.preview_url);
+        applyAudioElementHints(audio);
         audio.volume = 0;
         audio.loop = true;
         const startTimeSec = (seg as any).start_time;
