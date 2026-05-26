@@ -1054,6 +1054,23 @@ const NavigationView = () => {
     };
   }, [circuit?.id, audioUnlocked]);
 
+  // Wake lock + background GPS — only while user is actively navigating
+  useEffect(() => {
+    if (!audioUnlocked) return;
+    activateWakeLock();
+    let started = false;
+    startBackgroundGps(() => {
+      // No-op: the regular watchPositionUnified is already feeding the
+      // pipeline; this watcher exists purely to keep the OS from
+      // suspending GPS when the screen turns off / app backgrounds.
+    }).then((ok) => { started = ok; });
+    return () => {
+      releaseWakeLock();
+      if (started) stopBackgroundGps();
+    };
+  }, [audioUnlocked]);
+
+
   // Analytics: track GPS pings periodically
   const lastTrackedPosRef = useRef<[number, number] | null>(null);
   useEffect(() => {
