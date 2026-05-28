@@ -25,7 +25,7 @@ const NavigationTopHeader = ({ onBack, voiceEnabled, onToggleVoice }: Navigation
         <img
           src={tiloLogo}
           alt="Tilo"
-          className="h-20 sm:h-24 w-auto object-contain drop-shadow-sm select-none"
+          className="h-32 sm:h-36 w-auto object-contain drop-shadow-sm select-none -my-4"
           draggable={false}
         />
 
