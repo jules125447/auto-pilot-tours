@@ -10,6 +10,7 @@ import {
   findClosestRouteIndex,
   getTrackingAnchorY,
   getTrackingZoom,
+  snapPositionToRoute,
 } from "@/lib/navigationMap";
 
 interface Stop {
@@ -414,14 +415,31 @@ const NavigationMap = ({
       return;
     }
 
+    // Snap-to-route: if user is within ~30 m of the polyline, render the arrow
+    // on the road instead of on the raw (noisy) GPS fix. This is what makes
+    // the cursor look "magnetised" to the route like Waze/Google Maps.
+    let displayPos: [number, number] = userPos;
+    let snappedSegIdx: number | null = null;
+    if (route.length > 1) {
+      const snap = snapPositionToRoute(route, userPos);
+      if (snap && snap.lateralDistanceM < 30) {
+        displayPos = [snap.lat, snap.lng];
+        snappedSegIdx = snap.segmentIndex;
+      }
+    }
+
     if (route.length > 1) {
       if (routeToStart && routeToStart.length > 1) {
         if (traveledLineRef.current) traveledLineRef.current.setLatLngs([]);
         if (remainingLineRef.current) remainingLineRef.current.setLatLngs(route);
       } else {
-        const closestIdx = findClosestRouteIndex(route, userPos);
-        const traveled = route.slice(0, closestIdx + 1).concat([userPos]);
-        const remaining = [userPos].concat(route.slice(closestIdx + 1));
+        // Use the snapped segment index when available so the split happens
+        // exactly where the user is on the road (not at the nearest vertex).
+        const splitIdx = snappedSegIdx !== null
+          ? snappedSegIdx
+          : findClosestRouteIndex(route, userPos);
+        const traveled = route.slice(0, splitIdx + 1).concat([displayPos]);
+        const remaining = [displayPos].concat(route.slice(splitIdx + 1));
 
         if (traveledLineRef.current) traveledLineRef.current.setLatLngs(traveled);
         if (remainingLineRef.current) remainingLineRef.current.setLatLngs(remaining);
@@ -450,12 +468,12 @@ const NavigationMap = ({
         iconSize: [64, 64],
         iconAnchor: [32, 32],
       });
-      userMarkerRef.current = L.marker(userPos, { icon, zIndexOffset: 1000 }).addTo(map);
+      userMarkerRef.current = L.marker(displayPos, { icon, zIndexOffset: 1000 }).addTo(map);
       // Enable smooth CSS transitions on marker element
       const el = userMarkerRef.current.getElement();
       if (el) el.style.transition = "transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1)";
     } else {
-      userMarkerRef.current.setLatLng(userPos);
+      userMarkerRef.current.setLatLng(displayPos);
     }
 
     const markerElement = userMarkerRef.current.getElement();
