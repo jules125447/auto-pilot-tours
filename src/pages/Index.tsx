@@ -33,7 +33,7 @@ const Index = () => {
       {/* Header — logo centered, bell right */}
       <header className="px-5 pt-6 pb-2 flex items-center justify-between">
         <div className="w-12" />
-        <img src={tiloLogo} alt="Tilo" className="h-14 w-auto" />
+        <img src={tiloLogo} alt="Tilo" className="h-20 w-auto" />
         <button className="relative w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center">
           <Bell className="w-5 h-5 text-foreground" strokeWidth={2.2} />
           <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary" />
