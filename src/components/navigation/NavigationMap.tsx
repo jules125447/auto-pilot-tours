@@ -450,7 +450,6 @@ const NavigationMap = ({
       const icon = L.divIcon({
         html: `
           <div class="waze-arrow-shell">
-            <div class="waze-arrow-pulse"></div>
             <div class="waze-arrow-icon">
               <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
                 <defs>
