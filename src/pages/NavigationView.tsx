@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Volume2, VolumeX, Play, Lock, Download } from "lucide-react";
+import { Loader2, Play, Lock, Download } from "lucide-react";
 import { useCircuit } from "@/hooks/useCircuits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
