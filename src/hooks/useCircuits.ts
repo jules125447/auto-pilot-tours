@@ -168,7 +168,7 @@ export function useCircuits() {
     queryKey: ["circuits"],
     queryFn: async () => {
       const [circuitsRes, stopsRes, audioRes, musicRes, soundRes, annotationsRes] = await Promise.all([
-        supabase.from("circuits").select("*").eq("published", true),
+        supabase.from("circuits").select("*").eq("published", true).order("created_at", { ascending: false }),
         supabase.from("circuit_stops").select("*"),
         supabase.from("audio_zones").select("*"),
         supabase.from("music_segments").select("*"),

@@ -7,8 +7,6 @@ import ConsentBanner from "@/components/ConsentBanner";
 import tiloLogo from "@/assets/tilo-logo.png";
 import tiloFox from "@/assets/tilo-fox.png";
 import heroMapBg from "@/assets/hero-map-bg.png";
-import imgVillages from "@/assets/circuit-villages-perches.jpg";
-import imgCote from "@/assets/circuit-cote-sauvage.jpg";
 
 const IconRoute = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 64 64" className={className} fill="none">
@@ -27,13 +25,15 @@ const Index = () => {
   }, [user]);
 
   const featured = circuits[0];
+  const recentCircuits = circuits.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background pb-28 font-sans">
-      {/* Header — logo + bell vertically centered */}
-      <header className="px-5 pt-4 pb-2 relative flex items-center justify-center min-h-[80px]">
-        <img src={tiloLogo} alt="Tilo" className="h-56 sm:h-64 w-auto -my-10" />
-        <button className="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
+      {/* Header — centered logo + balanced bell */}
+      <header className="px-5 pt-4 pb-2 grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center min-h-[96px]">
+        <div className="w-12 h-12" aria-hidden="true" />
+        <img src={tiloLogo} alt="Tilo" className="h-56 sm:h-64 w-auto -my-10 justify-self-center translate-x-[-6px]" />
+        <button className="relative w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
           <Bell className="w-5 h-5 text-foreground" strokeWidth={2.2} />
           <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary" />
         </button>
@@ -101,32 +101,34 @@ const Index = () => {
         </div>
 
         {/* Circuit du jour */}
-        <Link
-          to={featured ? `/circuit/${featured.id}` : "/"}
-          className="block rounded-3xl bg-white shadow-card overflow-hidden"
-        >
-          <div className="flex items-center gap-3 p-3">
-            <img src={imgVillages} alt="" className="w-[110px] h-[110px] rounded-2xl object-cover flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-primary text-[11px] font-bold uppercase tracking-wider">CIRCUIT DU JOUR</p>
-              <h3 className="font-display font-black text-foreground text-[18px] leading-tight mt-0.5">Les villages perchés</h3>
-              <div className="flex items-center gap-1 text-[13px] text-muted-foreground mt-1.5">
-                <MapPin className="w-3.5 h-3.5 text-primary fill-primary" strokeWidth={0} />
-                <span>Alpes de Haute-Provence</span>
+        {featured && (
+          <Link
+            to={`/circuit/${featured.id}`}
+            className="block rounded-3xl bg-white shadow-card overflow-hidden"
+          >
+            <div className="flex items-center gap-3 p-3">
+              <img src={featured.image} alt={featured.title} className="w-[110px] h-[110px] rounded-2xl object-cover flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-primary text-[11px] font-bold uppercase tracking-wider">CIRCUIT DU JOUR</p>
+                <h3 className="font-display font-black text-foreground text-[18px] leading-tight mt-0.5 line-clamp-2">{featured.title}</h3>
+                <div className="flex items-center gap-1 text-[13px] text-muted-foreground mt-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-primary fill-primary" strokeWidth={0} />
+                  <span className="truncate">{featured.region || "France"}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-[13px] text-foreground font-bold">
+                  <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-primary text-primary" />{(featured.rating || 0).toFixed(1).replace(".", ",")}</span>
+                  <span className="w-1 h-1 rounded-full bg-primary" />
+                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" strokeWidth={2.5} />{featured.duration || "—"}</span>
+                  <span className="w-1 h-1 rounded-full bg-primary" />
+                  <span className="flex items-center gap-1"><IconRoute className="w-3.5 h-3.5" />{featured.distance || "—"}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-2 text-[13px] text-foreground font-bold">
-                <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-primary text-primary" />4,8</span>
-                <span className="w-1 h-1 rounded-full bg-primary" />
-                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" strokeWidth={2.5} />3h15</span>
-                <span className="w-1 h-1 rounded-full bg-primary" />
-                <span className="flex items-center gap-1"><IconRoute className="w-3.5 h-3.5" />98 km</span>
+              <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 shadow-card">
+                <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
               </div>
             </div>
-            <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 shadow-card">
-              <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
-            </div>
-          </div>
-        </Link>
+          </Link>
+        )}
 
         {/* 3 action cards */}
         <div className="grid grid-cols-3 gap-2.5">
@@ -147,24 +149,29 @@ const Index = () => {
           ))}
         </div>
 
-        {/* Continuer l'écoute */}
+        {/* Nos circuits les plus aimés */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-black text-foreground text-[20px]">Continuer l'écoute</h3>
-            <Link to="/my-circuits" className="text-primary text-sm font-bold">Voir tout</Link>
+            <h3 className="font-display font-black text-foreground text-[20px]">Nos circuits les plus aimés</h3>
+            <Link to="/circuits" className="text-primary text-sm font-bold">Voir tout</Link>
           </div>
-          <div className="rounded-2xl bg-white shadow-card p-3 flex items-center gap-3">
-            <img src={imgCote} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="font-display font-black text-foreground text-[15px] truncate">La côte sauvage</p>
-              <p className="text-[12px] text-muted-foreground">Bretagne</p>
-              <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden">
-                <div className="h-full w-[40%] bg-primary rounded-full" />
-              </div>
-            </div>
-            <button className="w-12 h-12 rounded-full bg-white shadow-card border border-border/40 flex items-center justify-center flex-shrink-0">
-              <Play className="w-5 h-5 ml-0.5 fill-primary text-primary" />
-            </button>
+          <div className="space-y-3">
+            {recentCircuits.map((circuit) => (
+              <Link key={circuit.id} to={`/circuit/${circuit.id}`} className="rounded-2xl bg-white shadow-card p-3 flex items-center gap-3">
+                <img src={circuit.image} alt={circuit.title} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-display font-black text-foreground text-[15px] truncate">{circuit.title}</p>
+                  <p className="text-[12px] text-muted-foreground truncate">{circuit.region || "France"}</p>
+                  <div className="flex items-center gap-3 mt-2 text-[12px] text-foreground font-bold">
+                    <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-primary text-primary" />{(circuit.rating || 0).toFixed(1).replace(".", ",")}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" strokeWidth={2.4} />{circuit.duration || "—"}</span>
+                  </div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-white shadow-card border border-border/40 flex items-center justify-center flex-shrink-0">
+                  <ArrowRight className="w-5 h-5 text-primary" strokeWidth={2.5} />
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
 
@@ -186,7 +193,7 @@ const Index = () => {
           <div className="grid grid-cols-4">
             {[
               { icon: Home, label: "Accueil", to: "/", active: true },
-              { icon: Map, label: "Circuits", to: "/", active: false },
+              { icon: Map, label: "Circuits", to: "/circuits", active: false },
               { icon: Heart, label: "Favoris", to: "/my-circuits", active: false },
               { icon: UserIcon, label: "Profil", to: user ? "/my-circuits" : "/auth", active: false },
             ].map((t) => (
