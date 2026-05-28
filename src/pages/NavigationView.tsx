@@ -528,24 +528,20 @@ const NavigationView = () => {
 
   // Speed warning trigger — when going too fast on the circuit
   const lastSpeedWarnRef = useRef(0);
-  const lastSpeedWarnRef = useRef(0);
   useEffect(() => {
     if (!voiceEnabled || !hasReachedStart || speed === null) return;
     if (speed < 110) return;
     const now = Date.now();
     if (now - lastSpeedWarnRef.current < 90_000) return;
     lastSpeedWarnRef.current = now;
-    tiloRef.current.enqueue({ type: "speed_warning", speed: Math.round(speed) });
-  }, [speed, voiceEnabled, hasReachedStart]);
+    speak(`Attention, vous roulez à ${Math.round(speed)} km/h, ralentissez un peu.`);
+  }, [speed, voiceEnabled, hasReachedStart, speak]);
 
   // Idle banter — speak occasionally when nothing else happens
   useEffect(() => {
     if (!audioUnlocked || !voiceEnabled || !hasReachedStart) return;
     const interval = window.setInterval(() => {
-      const sinceLast = Date.now() - tiloRef.current.lastSpokeAt();
-      if (sinceLast < 180_000) return;
-      const pickJoke = Math.random() > 0.5;
-      tiloRef.current.enqueue(pickJoke ? { type: "joke" } : { type: "idle_banter" });
+      // Banter removed with Tilo
     }, 60_000);
     return () => window.clearInterval(interval);
   }, [audioUnlocked, voiceEnabled, hasReachedStart]);
