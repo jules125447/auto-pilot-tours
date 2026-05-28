@@ -80,11 +80,17 @@ export function centerMapOnAnchoredPoint(
 }
 
 export function findClosestRouteIndex(route: MapLatLng[], pos: MapLatLng): number {
+  // Equirectangular projection so longitude is properly scaled by cos(lat).
+  // Otherwise at mid/high latitudes a longitude-degree is much shorter than a
+  // latitude-degree and the "closest vertex" answer drifts.
+  const cosLat = Math.cos((pos[0] * Math.PI) / 180);
   let minDist = Infinity;
   let idx = 0;
 
   for (let i = 0; i < route.length; i++) {
-    const d = (route[i][0] - pos[0]) ** 2 + (route[i][1] - pos[1]) ** 2;
+    const dy = route[i][0] - pos[0];
+    const dx = (route[i][1] - pos[1]) * cosLat;
+    const d = dy * dy + dx * dx;
     if (d < minDist) {
       minDist = d;
       idx = i;
@@ -92,6 +98,62 @@ export function findClosestRouteIndex(route: MapLatLng[], pos: MapLatLng): numbe
   }
 
   return idx;
+}
+
+/**
+ * Snap a user position onto the polyline. Returns the closest point on any
+ * segment (not just the closest vertex) plus the segment index and lateral
+ * distance in meters. Use this for "stick the arrow to the road" rendering
+ * and for accurate polyline split between traveled/remaining.
+ */
+export function snapPositionToRoute(
+  route: MapLatLng[],
+  pos: MapLatLng
+): { lat: number; lng: number; segmentIndex: number; lateralDistanceM: number } | null {
+  if (route.length === 0) return null;
+  if (route.length === 1) {
+    return { lat: route[0][0], lng: route[0][1], segmentIndex: 0, lateralDistanceM: 0 };
+  }
+
+  const M_PER_DEG_LAT = 110574;
+  const M_PER_DEG_LNG = 111320 * Math.cos((pos[0] * Math.PI) / 180);
+
+  let bestSeg = 0;
+  let bestT = 0;
+  let bestDist2 = Infinity;
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const ax = (route[i][1] - pos[1]) * M_PER_DEG_LNG;
+    const ay = (route[i][0] - pos[0]) * M_PER_DEG_LAT;
+    const bx = (route[i + 1][1] - pos[1]) * M_PER_DEG_LNG;
+    const by = (route[i + 1][0] - pos[0]) * M_PER_DEG_LAT;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const segLen2 = dx * dx + dy * dy;
+    let t = 0;
+    if (segLen2 > 1e-9) {
+      t = -(ax * dx + ay * dy) / segLen2;
+      if (t < 0) t = 0;
+      else if (t > 1) t = 1;
+    }
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const d2 = px * px + py * py;
+    if (d2 < bestDist2) {
+      bestDist2 = d2;
+      bestSeg = i;
+      bestT = t;
+    }
+  }
+
+  const a = route[bestSeg];
+  const b = route[bestSeg + 1];
+  return {
+    lat: a[0] + (b[0] - a[0]) * bestT,
+    lng: a[1] + (b[1] - a[1]) * bestT,
+    segmentIndex: bestSeg,
+    lateralDistanceM: Math.sqrt(bestDist2),
+  };
 }
 
 export function getRouteBearing(route: MapLatLng[], pos: MapLatLng): number {
