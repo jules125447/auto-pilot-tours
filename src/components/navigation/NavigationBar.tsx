@@ -78,10 +78,17 @@ const NavigationBar = ({
   paused = false,
   onTogglePause,
   onShowSteps,
+  approachingStart = false,
+  distToStart = null,
+  etaToStartSeconds = null,
 }: NavigationBarProps) => {
-  const arrivalTime = formatArrivalTime(etaMinutes);
-  const dist = hasGps ? formatKm(distanceRemaining) : { value: "—", unit: "" };
-  const time = hasGps ? formatHM(etaMinutes) : { value: "—", unit: "" };
+  const effectiveDistance = approachingStart && distToStart != null ? distToStart : distanceRemaining;
+  const effectiveEtaMin =
+    approachingStart && etaToStartSeconds != null ? etaToStartSeconds / 60 : etaMinutes;
+
+  const arrivalTime = formatArrivalTime(effectiveEtaMin);
+  const dist = hasGps ? formatKm(effectiveDistance) : { value: "—", unit: "" };
+  const time = hasGps ? formatHM(effectiveEtaMin) : { value: "—", unit: "" };
   const spd = hasGps && speed != null && speed >= 0
     ? { value: String(Math.round(speed)), unit: "km/h" }
     : { value: "—", unit: "" };
@@ -95,13 +102,27 @@ const NavigationBar = ({
         className="absolute left-3 right-3 pointer-events-auto rounded-3xl bg-card shadow-elevated border border-primary/15 px-3 py-3.5 flex items-stretch"
         style={{ bottom: "calc(100% + 10px)" }}
       >
-        <Stat icon={Route} label="Distance restante" value={dist.value} unit={dist.unit} />
+        <Stat
+          icon={Route}
+          label={approachingStart ? "Distance départ" : "Distance restante"}
+          value={dist.value}
+          unit={dist.unit}
+        />
         <div className="w-px bg-border my-1" />
-        <Stat icon={Clock} label="Temps restant" value={time.value} unit={time.unit} />
+        <Stat
+          icon={Clock}
+          label={approachingStart ? "Temps départ" : "Temps restant"}
+          value={time.value}
+          unit={time.unit}
+        />
         <div className="w-px bg-border my-1" />
         <Stat icon={Gauge} label="Vitesse" value={spd.value} unit={spd.unit} />
         <div className="w-px bg-border my-1" />
-        <Stat icon={Flag} label="Arrivée" value={arrivalTime} />
+        <Stat
+          icon={Flag}
+          label={approachingStart ? "Arrivée départ" : "Arrivée"}
+          value={arrivalTime}
+        />
       </motion.div>
 
       {/* Action bar */}
