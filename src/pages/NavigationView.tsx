@@ -8,7 +8,6 @@ import NavigationMap from "@/components/navigation/NavigationMap";
 import NavigationBar from "@/components/navigation/NavigationBar";
 import DirectionBanner from "@/components/navigation/DirectionBanner";
 // AudioOverlay removed — TTS plays without popup
-import { AnimatePresence, motion } from "framer-motion";
 import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
@@ -17,8 +16,6 @@ import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 import SpeedBubble from "@/components/navigation/SpeedBubble";
 import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
-import TiloCompanion from "@/components/navigation/TiloCompanion";
-import { useTilo } from "@/hooks/useTilo";
 import {
   ensureLocationPermission,
   getCurrentPositionUnified,
