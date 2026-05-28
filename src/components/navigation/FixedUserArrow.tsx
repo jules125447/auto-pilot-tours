@@ -18,11 +18,11 @@ const FixedUserArrow = ({ anchorY, visible }: FixedUserArrowProps) => {
           <svg viewBox="0 0 48 48" width="56" height="56">
             <defs>
               <linearGradient id="arrowGradFixed" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FF9500" />
-                <stop offset="100%" stopColor="#FF9500" />
+                <stop offset="0%" stopColor="#F25C1C" />
+                <stop offset="100%" stopColor="#F25C1C" />
               </linearGradient>
               <filter id="arrowShadow" x="-30%" y="-30%" width="160%" height="160%">
-                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#FF9500" floodOpacity="0.4" />
+                <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#F25C1C" floodOpacity="0.4" />
               </filter>
             </defs>
             <polygon
