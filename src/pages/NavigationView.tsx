@@ -1087,6 +1087,8 @@ const NavigationView = () => {
           musicAudioRef.current = null;
         });
 
+        const track = (seg as any).track_name as string | undefined;
+        const artist = (seg as any).artist_name as string | undefined;
         if (voiceEnabled && track) {
           const line = artist
             ? `Petite ambiance musicale : ${track}, par ${artist}.`
