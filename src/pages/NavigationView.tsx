@@ -272,6 +272,8 @@ const NavigationView = () => {
   const [triggeredAudioZones, setTriggeredAudioZones] = useState<Set<string>>(new Set());
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
   const { preload, loading: preloading, progress: preloadProgress, done: preloadDone } = useCircuitPreload();
   const [calibrated, setCalibrated] = useState(false);
   const [participants, setParticipants] = useState<{ id: string; display_name: string | null; lat: number; lng: number }[]>([]);
@@ -1583,7 +1585,71 @@ const NavigationView = () => {
         approachingStart={!!routeToStart && !hasReachedStart}
         distToStart={routeToStartInfo?.distance ?? null}
         etaToStartSeconds={routeToStartInfo?.duration ?? null}
+        paused={isPaused}
+        onTogglePause={() => setIsPaused((p) => !p)}
+        onShowSteps={() => setShowSteps(true)}
       />
+
+      {showSteps && (
+        <div
+          className="fixed inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-3"
+          onClick={() => setShowSteps(false)}
+        >
+          <div
+            className="bg-card rounded-3xl shadow-elevated border border-primary/15 w-full max-w-md max-h-[75vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <h2 className="text-lg font-extrabold text-foreground">Étapes du circuit</h2>
+              <button
+                onClick={() => setShowSteps(false)}
+                className="w-9 h-9 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center"
+                aria-label="Fermer"
+              >
+                <span className="text-foreground text-lg leading-none">×</span>
+              </button>
+            </div>
+            <div className="overflow-y-auto px-3 py-3">
+              {circuit.stops.map((s, i) => {
+                const visited = visitedStops.has(i);
+                const isCurrent = i === currentStopIndex;
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl mb-1.5 ${
+                      isCurrent ? "bg-primary/10 border border-primary/30" : "bg-muted/40"
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${
+                        visited
+                          ? "bg-primary text-primary-foreground"
+                          : isCurrent
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-card border border-border text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{s.title}</p>
+                      {s.duration && (
+                        <p className="text-xs text-muted-foreground">{s.duration}</p>
+                      )}
+                    </div>
+                    {isCurrent && (
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                        En cours
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
