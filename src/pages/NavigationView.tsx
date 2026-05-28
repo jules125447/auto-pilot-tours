@@ -1162,16 +1162,11 @@ const NavigationView = () => {
     if (dist < 50 && !visitedStops.has(currentStopIndex)) {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
       if (voiceEnabled) {
-        // Tilo announces arrival with personality
-        tiloRef.current.enqueue({
-          type: "poi_arrival",
-          poiName: stop.title,
-          poiDescription: (stop as any).description || "",
-        });
+        speak(`Vous arrivez à ${stop.title}.`);
       }
       const isLast = currentStopIndex >= circuit.stops.length - 1;
       if (isLast && voiceEnabled) {
-        tiloRef.current.enqueue({ type: "trip_end", circuitName: circuit.title });
+        speak(`Vous avez terminé le circuit ${circuit.title}. Félicitations !`);
       }
       // Auto-advance to next stop after arrival
       if (currentStopIndex < circuit.stops.length - 1) {
@@ -1180,28 +1175,7 @@ const NavigationView = () => {
         }, 2000);
       }
     }
-  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled]);
-
-  // Speed-check stop proximity → trigger the speedometer stunt automatically
-  const triggeredSpeedChecksRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!userPos || !circuit || !voiceEnabled || !audioUnlocked) return;
-    const [lat, lng] = userPos;
-    for (const stop of circuit.stops) {
-      if ((stop as any).type !== "speed_check") continue;
-      const key = (stop as any).id ?? `${stop.lat},${stop.lng}`;
-      if (triggeredSpeedChecksRef.current.has(key)) continue;
-      const dist = haversine(lat, lng, stop.lat, stop.lng);
-      if (dist < 120) {
-        triggeredSpeedChecksRef.current.add(key);
-        // Make sure Tilo is on screen and force a stunt now
-        setTiloHidden(false);
-        if (stuntPhase === "idle" || stuntPhase === "done") {
-          setStuntPhase("reach");
-        }
-      }
-    }
-  }, [userPos, circuit, voiceEnabled, audioUnlocked, stuntPhase]);
+  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, speak]);
 
   // Off-route detection & recalculation
   useEffect(() => {
