@@ -78,10 +78,17 @@ const NavigationBar = ({
   paused = false,
   onTogglePause,
   onShowSteps,
+  approachingStart = false,
+  distToStart = null,
+  etaToStartSeconds = null,
 }: NavigationBarProps) => {
-  const arrivalTime = formatArrivalTime(etaMinutes);
-  const dist = hasGps ? formatKm(distanceRemaining) : { value: "—", unit: "" };
-  const time = hasGps ? formatHM(etaMinutes) : { value: "—", unit: "" };
+  const effectiveDistance = approachingStart && distToStart != null ? distToStart : distanceRemaining;
+  const effectiveEtaMin =
+    approachingStart && etaToStartSeconds != null ? etaToStartSeconds / 60 : etaMinutes;
+
+  const arrivalTime = formatArrivalTime(effectiveEtaMin);
+  const dist = hasGps ? formatKm(effectiveDistance) : { value: "—", unit: "" };
+  const time = hasGps ? formatHM(effectiveEtaMin) : { value: "—", unit: "" };
   const spd = hasGps && speed != null && speed >= 0
     ? { value: String(Math.round(speed)), unit: "km/h" }
     : { value: "—", unit: "" };
