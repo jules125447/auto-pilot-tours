@@ -33,7 +33,7 @@ const Index = () => {
       {/* Header — logo centered, bell right */}
       <header className="px-5 pt-4 pb-2 flex items-center justify-between">
         <div className="w-12 flex-shrink-0" />
-        <img src={tiloLogo} alt="Tilo" className="h-36 sm:h-40 w-auto -my-4" />
+        <img src={tiloLogo} alt="Tilo" className="h-56 sm:h-64 w-auto -my-10" />
         <button className="relative w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
           <Bell className="w-5 h-5 text-foreground" strokeWidth={2.2} />
           <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary" />
@@ -60,14 +60,21 @@ const Index = () => {
         </div>
 
         {/* Hero card — map bg + fox + text */}
-        <div className="relative rounded-3xl overflow-hidden shadow-card bg-[#fdf6ed] aspect-[16/10]">
-          <img src={heroMapBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="relative rounded-3xl shadow-card bg-[#fdf6ed] aspect-[16/10]">
+          <div className="absolute inset-0 rounded-3xl overflow-hidden">
+            <img
+              src={heroMapBg}
+              alt=""
+              className="absolute inset-y-0 left-0 w-full h-full object-cover object-center"
+              style={{ WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)", maskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)" }}
+            />
+          </div>
           <img
             src={tiloFox}
             alt="Tilo"
-            className="absolute right-[-6%] bottom-0 h-[110%] w-auto object-contain drop-shadow-xl pointer-events-none"
+            className="absolute right-[-6%] bottom-0 h-[125%] w-auto object-contain drop-shadow-xl pointer-events-none z-10"
           />
-          <div className="relative h-full p-5 flex flex-col justify-between">
+          <div className="relative h-full p-5 flex flex-col justify-between z-0">
             <div className="max-w-[55%]">
               <h2 className="font-display font-black text-foreground leading-[1.02] text-[1.5rem]">
                 Votre prochaine
