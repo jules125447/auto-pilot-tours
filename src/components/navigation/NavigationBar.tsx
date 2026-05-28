@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Pause, Play, List, X, Route, Clock, Gauge, Flag } from "lucide-react";
+import { Pause, Play, List, X, Route, Clock, Gauge, Flag, type LucideIcon } from "lucide-react";
 
 interface NavigationBarProps {
   currentStop?: {
@@ -54,7 +54,7 @@ const Stat = ({
   value,
   unit,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: LucideIcon;
   label: string;
   value: string;
   unit?: string;
