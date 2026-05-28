@@ -8,7 +8,6 @@ import NavigationMap from "@/components/navigation/NavigationMap";
 import NavigationBar from "@/components/navigation/NavigationBar";
 import DirectionBanner from "@/components/navigation/DirectionBanner";
 // AudioOverlay removed — TTS plays without popup
-import { AnimatePresence, motion } from "framer-motion";
 import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
@@ -17,8 +16,6 @@ import { getRoute } from "@/lib/routing";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 import SpeedBubble from "@/components/navigation/SpeedBubble";
 import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
-import TiloCompanion from "@/components/navigation/TiloCompanion";
-import { useTilo } from "@/hooks/useTilo";
 import {
   ensureLocationPermission,
   getCurrentPositionUnified,
@@ -527,174 +524,7 @@ const NavigationView = () => {
     setAudioUnlocked(true);
   }, []);
 
-  // Tilo companion orchestrator
-  const tilo = useTilo({
-    speak,
-    active: audioUnlocked,
-    isSpeakingExternal: isVoiceSpeaking,
-    personality: circuit?.tilo_personality,
-  });
-  // Stable ref so effects don't loop on hook re-creation
-  const tiloRef = useRef(tilo);
-  useEffect(() => { tiloRef.current = tilo; });
-
-  // ----- Tilo "speedometer" stunt -----
-  // ~10s after Tilo finishes talking, he grabs the speed bubble, judges the
-  // driver's speed (smile or throw), then exits screen. Re-appears on next speech.
-  type StuntPhase = "idle" | "reach" | "grab" | "verdict_ok" | "verdict_bad" | "exit" | "done";
-  const [stuntPhase, setStuntPhase] = useState<StuntPhase>("idle");
-  const [tiloHidden, setTiloHidden] = useState(false);
-  const [audioZoneMood, setAudioZoneMood] = useState<string | null>(null);
-  const lastSeenSpokeAtRef = useRef(0);
-  const speedRef = useRef<number | null>(null);
-  useEffect(() => { speedRef.current = speed; }, [speed]);
-
-  // Stunt-local message (Tilo's verdict line, shown + spoken without going through the queue)
-  const [stuntMessage, setStuntMessage] = useState<string | null>(null);
-
-  // Dancing mode for music segments
-  const [tiloDancing, setTiloDancing] = useState(false);
-  const [musicMessage, setMusicMessage] = useState<string | null>(null);
-  const dancingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Reset stunt when Tilo speaks again — but ignore the speech we trigger
-  // ourselves during the verdict (otherwise the bubble snaps back mid-animation).
-  const stuntActiveRef = useRef(false);
-  useEffect(() => {
-    if (!tilo.speaking) return;
-    if (stuntActiveRef.current) return;
-    setTiloHidden(false);
-    setStuntPhase("idle");
-    setStuntMessage(null);
-    lastSeenSpokeAtRef.current = Date.now();
-  }, [tilo.speaking]);
-
-  // Drive the stunt 10s after last speech
-  useEffect(() => {
-    if (!audioUnlocked || !voiceEnabled) return;
-    const interval = window.setInterval(() => {
-      if (stuntPhase !== "idle") return;
-      const lastSpoke = tiloRef.current.lastSpokeAt();
-      if (lastSpoke === 0) return;
-      const sinceSpoke = Date.now() - lastSpoke;
-      // On mobile the SpeechSynthesis end event sometimes never fires, which
-      // would leave `speaking` stuck true. We still wait for it normally, but
-      // after 20s force the stunt regardless so Tilo doesn't freeze on screen.
-      if (tiloRef.current.speaking && sinceSpoke < 20_000) return;
-      if (sinceSpoke < 10_000) return;
-      // Start with the reach so the user clearly sees the arm extend
-      setStuntPhase("reach");
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [audioUnlocked, voiceEnabled, stuntPhase]);
-
-  // Step the stunt through its phases
-  useEffect(() => {
-    if (stuntPhase === "idle" || stuntPhase === "done") {
-      stuntActiveRef.current = false;
-      return;
-    }
-    stuntActiveRef.current = true;
-    let timer: number;
-    if (stuntPhase === "reach") {
-      // Arm extends + eyes look down — give the magnetic "call" time to build
-      timer = window.setTimeout(() => setStuntPhase("grab"), 2200);
-    } else if (stuntPhase === "grab") {
-      // Cinematic 3.6s arc into the hand — wait until the bubble has truly landed
-      timer = window.setTimeout(() => {
-        const s = speedRef.current ?? 0;
-        const sRound = Math.round(s);
-        const tooFast = sRound > 110;
-        const fast = sRound > 90 && sRound <= 110;
-        const slow = sRound > 0 && sRound < 30;
-        const line = tooFast
-          ? `Oula… ${sRound} km/h, on est un peu pressé là, doucement !`
-          : fast
-          ? `${sRound} km/h, ça file bien, profite quand même du paysage !`
-          : slow
-          ? `${sRound} km/h, balade tranquille, j'aime bien ce rythme.`
-          : `${sRound} km/h, parfait rythme, on profite bien de la route.`;
-        setStuntMessage(line);
-        speak(line);
-        setStuntPhase(tooFast ? "verdict_bad" : "verdict_ok");
-      }, 3700);
-    } else if (stuntPhase === "verdict_ok") {
-      // Smile, then gently place the bubble back
-      timer = window.setTimeout(() => {
-        setStuntMessage(null);
-        setStuntPhase("exit");
-      }, 3200);
-    } else if (stuntPhase === "verdict_bad") {
-      // Angry, throw the bubble — needs more time to be readable
-      timer = window.setTimeout(() => {
-        setStuntMessage(null);
-        setStuntPhase("exit");
-      }, 3400);
-    } else if (stuntPhase === "exit") {
-      setTiloHidden(true);
-      // Slow walk off-screen
-      timer = window.setTimeout(() => {
-        stuntActiveRef.current = false;
-        setStuntPhase("done");
-      }, 1800);
-    }
-    return () => window.clearTimeout(timer);
-  }, [stuntPhase, speak]);
-
-  const speedBubbleStunt: "idle" | "grabbed" | "returning" | "thrown" =
-    stuntPhase === "grab"
-      ? "grabbed"
-      : stuntPhase === "verdict_ok"
-      ? "returning"
-      : stuntPhase === "verdict_bad"
-      ? "thrown"
-      : "idle";
-  const stuntDerivedMood: "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed" =
-    stuntPhase === "reach" || stuntPhase === "grab"
-      ? "surprised"
-      : stuntPhase === "verdict_bad"
-      ? "funny"
-      : stuntPhase === "verdict_ok"
-      ? ((speedRef.current ?? 0) < 30 ? "calm" : "happy")
-      : "idle";
-  // Priority: stunt override > audio zone mood > circuit dominant expression > idle
-  const validMoods = new Set(["idle", "happy", "angry", "surprised", "calm", "funny", "amazed"]);
-  const dominant = circuit?.tilo_personality?.dominant_expression;
-  const personalityMood = (dominant && validMoods.has(dominant) ? dominant : "happy") as
-    "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed";
-  const zoneMood = (audioZoneMood && validMoods.has(audioZoneMood) ? audioZoneMood : null) as
-    "idle" | "happy" | "angry" | "surprised" | "calm" | "funny" | "amazed" | null;
-  const tiloMood = stuntDerivedMood !== "idle" ? stuntDerivedMood : (zoneMood ?? personalityMood);
-  // Arm is extended/raised during reach + entire holding sequence
-  const tiloHolding =
-    stuntPhase === "reach" ||
-    stuntPhase === "grab" ||
-    stuntPhase === "verdict_ok" ||
-    stuntPhase === "verdict_bad";
-  const tiloReaching = stuntPhase === "reach";
-  const tiloLookingDown =
-    stuntPhase === "reach" ||
-    stuntPhase === "grab" ||
-    stuntPhase === "verdict_ok" ||
-    stuntPhase === "verdict_bad";
-  const tiloThrowing = stuntPhase === "verdict_bad";
-
-  // Welcome through Tilo
-  useEffect(() => {
-    if (!audioUnlocked || welcomeSpoken || !circuit || !voiceEnabled) return;
-    setWelcomeSpoken(true);
-    const userName = user?.email?.split("@")[0] || "Voyageur";
-    const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
-    tiloRef.current.enqueue(
-      {
-        type: "welcome",
-        userName: displayName,
-        circuitName: circuit.title,
-        circuitDescription: circuit.description || "",
-      },
-      { priority: true }
-    );
-  }, [audioUnlocked, welcomeSpoken, circuit, voiceEnabled, user]);
+  const speedBubbleStunt: "idle" | "grabbed" | "returning" | "thrown" = "idle";
 
   // Speed warning trigger — when going too fast on the circuit
   const lastSpeedWarnRef = useRef(0);
@@ -704,17 +534,14 @@ const NavigationView = () => {
     const now = Date.now();
     if (now - lastSpeedWarnRef.current < 90_000) return;
     lastSpeedWarnRef.current = now;
-    tiloRef.current.enqueue({ type: "speed_warning", speed: Math.round(speed) });
-  }, [speed, voiceEnabled, hasReachedStart]);
+    speak(`Attention, vous roulez à ${Math.round(speed)} km/h, ralentissez un peu.`);
+  }, [speed, voiceEnabled, hasReachedStart, speak]);
 
   // Idle banter — speak occasionally when nothing else happens
   useEffect(() => {
     if (!audioUnlocked || !voiceEnabled || !hasReachedStart) return;
     const interval = window.setInterval(() => {
-      const sinceLast = Date.now() - tiloRef.current.lastSpokeAt();
-      if (sinceLast < 180_000) return;
-      const pickJoke = Math.random() > 0.5;
-      tiloRef.current.enqueue(pickJoke ? { type: "joke" } : { type: "idle_banter" });
+      // Banter removed with Tilo
     }, 60_000);
     return () => window.clearInterval(interval);
   }, [audioUnlocked, voiceEnabled, hasReachedStart]);
@@ -1190,15 +1017,13 @@ const NavigationView = () => {
 
       if (shouldTrigger) {
         setTriggeredAudioZones((prev) => new Set(prev).add(zone.id));
-        const zoneMood = (zone as any).tilo_mood as string | null | undefined;
-        if (zoneMood) setAudioZoneMood(zoneMood);
 
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
           applyAudioElementHints(audio);
           audio.play().catch((e) => console.warn("Audio play failed:", e));
           setAudioPlaying(true);
-          const clear = () => { setAudioPlaying(false); setAudioZoneMood(null); };
+          const clear = () => { setAudioPlaying(false); };
           audio.onended = clear;
           audio.onerror = clear;
         } else if (zone.audio_text) {
@@ -1206,7 +1031,7 @@ const NavigationView = () => {
           if (voiceEnabled) announceAudioZone(zone.audio_text);
           const words = zone.audio_text.trim().split(/\s+/).length;
           const displayMs = Math.max(4000, (words / 150) * 60 * 1000);
-          setTimeout(() => { setAudioPlaying(false); setAudioZoneMood(null); }, displayMs);
+          setTimeout(() => { setAudioPlaying(false); }, displayMs);
         }
       }
     });
@@ -1262,22 +1087,14 @@ const NavigationView = () => {
           musicAudioRef.current = null;
         });
 
-        // 🎵 Tilo arrives with a boombox and announces the track
         const track = (seg as any).track_name as string | undefined;
         const artist = (seg as any).artist_name as string | undefined;
         if (voiceEnabled && track) {
           const line = artist
             ? `Petite ambiance musicale : ${track}, par ${artist}.`
             : `Petite ambiance musicale : ${track}.`;
-          setMusicMessage(line);
           speak(line);
         }
-        setTiloDancing(true);
-        if (dancingTimerRef.current) clearTimeout(dancingTimerRef.current);
-        dancingTimerRef.current = setTimeout(() => {
-          setTiloDancing(false);
-          setMusicMessage(null);
-        }, 30_000);
       }
 
       if (!isInside && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
@@ -1289,12 +1106,6 @@ const NavigationView = () => {
             activeMusicIdRef.current = null;
           }
         });
-        if (dancingTimerRef.current) {
-          clearTimeout(dancingTimerRef.current);
-          dancingTimerRef.current = null;
-        }
-        setTiloDancing(false);
-        setMusicMessage(null);
       }
     });
   }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute, calibrated, voiceEnabled, speak]);
@@ -1351,16 +1162,11 @@ const NavigationView = () => {
     if (dist < 50 && !visitedStops.has(currentStopIndex)) {
       setVisitedStops((prev) => new Set(prev).add(currentStopIndex));
       if (voiceEnabled) {
-        // Tilo announces arrival with personality
-        tiloRef.current.enqueue({
-          type: "poi_arrival",
-          poiName: stop.title,
-          poiDescription: (stop as any).description || "",
-        });
+        speak(`Vous arrivez à ${stop.title}.`);
       }
       const isLast = currentStopIndex >= circuit.stops.length - 1;
       if (isLast && voiceEnabled) {
-        tiloRef.current.enqueue({ type: "trip_end", circuitName: circuit.title });
+        speak(`Vous avez terminé le circuit ${circuit.title}. Félicitations !`);
       }
       // Auto-advance to next stop after arrival
       if (currentStopIndex < circuit.stops.length - 1) {
@@ -1369,28 +1175,7 @@ const NavigationView = () => {
         }, 2000);
       }
     }
-  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled]);
-
-  // Speed-check stop proximity → trigger the speedometer stunt automatically
-  const triggeredSpeedChecksRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!userPos || !circuit || !voiceEnabled || !audioUnlocked) return;
-    const [lat, lng] = userPos;
-    for (const stop of circuit.stops) {
-      if ((stop as any).type !== "speed_check") continue;
-      const key = (stop as any).id ?? `${stop.lat},${stop.lng}`;
-      if (triggeredSpeedChecksRef.current.has(key)) continue;
-      const dist = haversine(lat, lng, stop.lat, stop.lng);
-      if (dist < 120) {
-        triggeredSpeedChecksRef.current.add(key);
-        // Make sure Tilo is on screen and force a stunt now
-        setTiloHidden(false);
-        if (stuntPhase === "idle" || stuntPhase === "done") {
-          setStuntPhase("reach");
-        }
-      }
-    }
-  }, [userPos, circuit, voiceEnabled, audioUnlocked, stuntPhase]);
+  }, [userPos, circuit, currentStopIndex, visitedStops, voiceEnabled, speak]);
 
   // Off-route detection & recalculation
   useEffect(() => {
@@ -1561,10 +1346,7 @@ const NavigationView = () => {
       setRouteToStartSteps([]);
       setHasReachedStart(true);
       if (voiceEnabled && circuit) {
-        tiloRef.current.enqueue(
-          { type: "circuit_start", circuitName: circuit.title },
-          { priority: true }
-        );
+        speak(`C'est parti pour ${circuit.title} ! Bonne route.`);
       }
     }
   }, [circuitStartPoint, rawUserPos, userPos, currentStopIndex, hasReachedStart, voiceEnabled, circuit]);
@@ -1654,9 +1436,7 @@ const NavigationView = () => {
               backdropFilter: "blur(6px)",
             }}>
             {!preloading && !preloadDone && (
-              <motion.button
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+              <button
                 onClick={handleStartPreload}
                 className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated group hover:shadow-glow transition-all"
               >
@@ -1669,15 +1449,11 @@ const NavigationView = () => {
                     Télécharge les données pour fonctionner hors-ligne
                   </p>
                 </div>
-              </motion.button>
+              </button>
             )}
 
             {preloading && (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated w-[320px]"
-              >
+              <div className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated w-[320px]">
                 <div className="w-16 h-16 rounded-full bg-gradient-hero flex items-center justify-center">
                   <Loader2 className="w-8 h-8 animate-spin text-primary-foreground" />
                 </div>
@@ -1685,22 +1461,18 @@ const NavigationView = () => {
                   <h2 className="font-display text-lg font-bold text-foreground mb-1">Téléchargement…</h2>
                   <p className="text-xs text-muted-foreground mb-3">{preloadProgress.label}</p>
                   <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-hero rounded-full"
-                      initial={{ width: "0%" }}
-                      animate={{ width: `${preloadProgress.percent}%` }}
-                      transition={{ duration: 0.3 }}
+                    <div
+                      className="h-full bg-gradient-hero rounded-full transition-all duration-300"
+                      style={{ width: `${preloadProgress.percent}%` }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2 font-mono">{preloadProgress.percent}%</p>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {preloadDone && (
-              <motion.button
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+              <button
                 onClick={handleLaunch}
                 className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated group hover:shadow-glow transition-all"
               >
@@ -1711,7 +1483,7 @@ const NavigationView = () => {
                   <h2 className="font-display text-2xl font-bold text-foreground">Lancer la navigation</h2>
                   <p className="text-sm text-muted-foreground mt-2">Toutes les données sont prêtes ✅</p>
                 </div>
-              </motion.button>
+              </button>
             )}
           </div>
         </div>
@@ -1767,50 +1539,27 @@ const NavigationView = () => {
         </div>
 
         {/* Calibration / Recalculating indicator */}
-        <AnimatePresence>
-          {(!calibrated && userPos) && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-card/95 backdrop-blur-md shadow-elevated border border-border"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
-            >
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span className="text-xs font-medium text-foreground">Calibration GPS…</span>
-              </div>
-            </motion.div>
-          )}
-          {isRecalculating && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-gradient-hero shadow-glow"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
-            >
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span className="text-xs font-semibold text-white">Recalcul…</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {(!calibrated && userPos) && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-card/95 backdrop-blur-md shadow-elevated border border-border animate-fade-in"
+            style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-xs font-medium text-foreground">Calibration GPS…</span>
+            </div>
+          </div>
+        )}
+        {isRecalculating && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-gradient-hero shadow-glow animate-fade-in"
+            style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span className="text-xs font-semibold text-white">Recalcul…</span>
+            </div>
+          </div>
+        )}
         <SpeedBubble speed={speed} stunt={speedBubbleStunt} />
-        <TiloCompanion
-          visible={(tilo.visible && voiceEnabled && !tiloHidden) || tiloDancing}
-          speaking={tilo.speaking || !!stuntMessage || !!musicMessage}
-          message={musicMessage ?? stuntMessage ?? tilo.message}
-          lookDirection={tilo.lookDirection}
-          onClose={tilo.hide}
-          mood={tiloDancing ? "happy" : tiloMood}
-          holding={tiloHolding}
-          reaching={tiloReaching}
-          lookingDown={tiloLookingDown}
-          throwing={tiloThrowing}
-          dancing={tiloDancing}
-        />
       </div>
       <NavigationBar
         currentStop={currentStop}

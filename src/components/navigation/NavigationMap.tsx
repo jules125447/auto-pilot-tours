@@ -450,7 +450,6 @@ const NavigationMap = ({
       const icon = L.divIcon({
         html: `
           <div class="waze-arrow-shell">
-            <div class="waze-arrow-pulse"></div>
             <div class="waze-arrow-icon">
               <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
                 <defs>
@@ -590,10 +589,6 @@ const NavigationMap = ({
   return (
     <>
       <style>{`
-        @keyframes waze-pulse {
-          0% { transform: scale(0.8); opacity: 0.6; }
-          100% { transform: scale(2.8); opacity: 0; }
-        }
         .waze-user-marker,
         .poi-marker,
         .participant-marker {
@@ -608,18 +603,10 @@ const NavigationMap = ({
           align-items: center;
           justify-content: center;
         }
-        .waze-arrow-pulse {
-          position: absolute;
-          inset: 0;
-          border-radius: 9999px;
-          background: radial-gradient(circle, hsl(15 85% 55% / 0.25) 0%, transparent 70%);
-          animation: waze-pulse 2s ease-out infinite;
-        }
         .waze-arrow-icon {
           position: relative;
           z-index: 2;
           transform-origin: center center;
-          transition: transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1);
         }
         .waze-user-marker {
           transition: transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1) !important;
@@ -632,13 +619,6 @@ const NavigationMap = ({
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-        .waze-arrow-pulse-lg {
-          position: absolute;
-          inset: -4px;
-          border-radius: 9999px;
-          background: radial-gradient(circle, hsl(15 85% 55% / 0.2) 0%, hsl(42 95% 55% / 0.08) 50%, transparent 70%);
-          animation: waze-pulse 2.2s ease-out infinite;
         }
         .waze-arrow-icon-lg {
           position: relative;
