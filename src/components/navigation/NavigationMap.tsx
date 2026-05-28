@@ -173,14 +173,14 @@ const NavigationMap = ({
 
     if (route.length > 0) {
       L.polyline(route, {
-        color: "#FF9500",
+        color: "#F25C1C",
         weight: 18,
         opacity: 0.15,
         smoothFactor: 1,
       }).addTo(map);
 
       remainingLineRef.current = L.polyline(route, {
-        color: "#FF9500",
+        color: "#F25C1C",
         weight: 7,
         opacity: 0.85,
         smoothFactor: 1,
@@ -189,7 +189,7 @@ const NavigationMap = ({
       }).addTo(map);
 
       traveledLineRef.current = L.polyline([], {
-        color: "#FF9500",
+        color: "#F25C1C",
         weight: 7,
         opacity: 0.5,
         smoothFactor: 1,
@@ -206,7 +206,7 @@ const NavigationMap = ({
       const startIcon = L.divIcon({
         html: `
           <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
-            <div style="width:36px;height:36px;border-radius:50%;background:#FF9500;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(255,149,0,0.5);">🏁</div>
+            <div style="width:36px;height:36px;border-radius:50%;background:#F25C1C;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(242,92,28,0.5);">🏁</div>
           </div>
         `,
         className: "poi-marker",
@@ -325,7 +325,7 @@ const NavigationMap = ({
       } else {
         const icon = L.divIcon({
           html: `
-            <div style="width:32px;height:32px;border-radius:50%;background:#FF9500;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${(p.display_name || "?")[0].toUpperCase()}</div>
+            <div style="width:32px;height:32px;border-radius:50%;background:#F25C1C;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${(p.display_name || "?")[0].toUpperCase()}</div>
           `,
           className: "participant-marker",
           iconSize: [32, 32],
@@ -354,14 +354,14 @@ const NavigationMap = ({
 
     if (routeToStart && routeToStart.length > 1) {
       routeToStartGlowRef.current = L.polyline(routeToStart, {
-        color: "#FF9500",
+        color: "#F25C1C",
         weight: 16,
         opacity: 0.15,
         smoothFactor: 1,
       }).addTo(map);
 
       routeToStartLineRef.current = L.polyline(routeToStart, {
-        color: "#FF9500",
+        color: "#F25C1C",
         weight: 6,
         opacity: 0.9,
         smoothFactor: 1,
@@ -389,14 +389,14 @@ const NavigationMap = ({
 
     if (recalculatedRoute && recalculatedRoute.length > 1) {
       recalcGlowRef.current = L.polyline(recalculatedRoute, {
-        color: "#FF9500",
+        color: "#F25C1C",
         weight: 14,
         opacity: 0.2,
         smoothFactor: 1,
       }).addTo(map);
 
       recalcLineRef.current = L.polyline(recalculatedRoute, {
-        color: "#FF9500",
+        color: "#F25C1C",
         weight: 5,
         opacity: 0.9,
         smoothFactor: 1,
@@ -454,8 +454,8 @@ const NavigationMap = ({
               <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
                 <defs>
                   <linearGradient id="arrowGradMap" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#FF9500" />
-                    <stop offset="100%" stop-color="#FF9500" />
+                    <stop offset="0%" stop-color="#F25C1C" />
+                    <stop offset="100%" stop-color="#F25C1C" />
                   </linearGradient>
                 </defs>
                 <polygon points="24,4 9,40 24,32 39,40" fill="url(#arrowGradMap)" stroke="white" stroke-width="3" stroke-linejoin="round"/>
