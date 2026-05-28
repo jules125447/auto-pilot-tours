@@ -1,21 +1,21 @@
 import { motion } from "framer-motion";
-import { MapPin, X, Navigation } from "lucide-react";
+import { Pause, Play, List, X, Route, Clock, Gauge, Flag } from "lucide-react";
 
 interface NavigationBarProps {
-  currentStop: {
+  currentStop?: {
     id: string;
     title: string;
     type: string;
     duration: string | null;
-  } | undefined;
-  currentStopIndex: number;
-  totalStops: number;
+  };
+  currentStopIndex?: number;
+  totalStops?: number;
   distanceRemaining: number;
   etaMinutes: number;
-  distToNextStop: number;
-  etaNextStop: number;
-  onNext: () => void;
-  onPrev: () => void;
+  distToNextStop?: number;
+  etaNextStop?: number;
+  onNext?: () => void;
+  onPrev?: () => void;
   hasGps: boolean;
   isLastStopDone?: boolean;
   speed?: number | null;
@@ -23,11 +23,9 @@ interface NavigationBarProps {
   approachingStart?: boolean;
   distToStart?: number | null;
   etaToStartSeconds?: number | null;
-}
-
-function formatDist(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${Math.round(meters)} m`;
+  paused?: boolean;
+  onTogglePause?: () => void;
+  onShowSteps?: () => void;
 }
 
 function formatArrivalTime(etaMinutes: number): string {
@@ -36,186 +34,109 @@ function formatArrivalTime(etaMinutes: number): string {
   return arrival.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatEta(minutes: number): string {
-  if (!minutes || minutes <= 0) return "—";
-  if (minutes < 60) return `${Math.round(minutes)} min`;
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return m > 0 ? `${h} h ${m}` : `${h} h`;
+function formatKm(meters: number): { value: string; unit: string } {
+  if (!meters || meters <= 0) return { value: "—", unit: "" };
+  if (meters >= 1000) return { value: String(Math.round(meters / 1000)), unit: "km" };
+  return { value: String(Math.round(meters)), unit: "m" };
 }
 
-function formatSeconds(seconds: number): string {
-  if (!seconds || seconds <= 0) return "—";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min`;
+function formatHM(minutes: number): { value: string; unit: string } {
+  if (!minutes || minutes <= 0) return { value: "—", unit: "" };
+  if (minutes < 60) return { value: String(Math.round(minutes)), unit: "min" };
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
-  return m > 0 ? `${h} h ${m}` : `${h} h`;
+  return { value: m > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`, unit: "" };
 }
+
+const Stat = ({
+  icon: Icon,
+  label,
+  value,
+  unit,
+}: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  label: string;
+  value: string;
+  unit?: string;
+}) => (
+  <div className="flex-1 flex flex-col items-center text-center gap-1.5 px-1">
+    <Icon className="w-5 h-5 text-primary" strokeWidth={2.5} />
+    <p className="text-[10px] text-muted-foreground font-medium leading-none">{label}</p>
+    <p className="leading-none">
+      <span className="text-lg font-extrabold text-foreground tabular-nums tracking-tight">{value}</span>
+      {unit && <span className="text-xs font-semibold text-muted-foreground ml-1">{unit}</span>}
+    </p>
+  </div>
+);
 
 const NavigationBar = ({
-  currentStop,
-  currentStopIndex,
-  totalStops,
   distanceRemaining,
   etaMinutes,
-  distToNextStop,
-  etaNextStop,
-  onNext,
-  onPrev,
   hasGps,
-  isLastStopDone = false,
   speed,
   onStop,
-  approachingStart = false,
-  distToStart = null,
-  etaToStartSeconds = null,
+  paused = false,
+  onTogglePause,
+  onShowSteps,
 }: NavigationBarProps) => {
   const arrivalTime = formatArrivalTime(etaMinutes);
+  const dist = hasGps ? formatKm(distanceRemaining) : { value: "—", unit: "" };
+  const time = hasGps ? formatHM(etaMinutes) : { value: "—", unit: "" };
+  const spd = hasGps && speed != null && speed >= 0
+    ? { value: String(Math.round(speed)), unit: "km/h" }
+    : { value: "—", unit: "" };
 
   return (
     <div className="relative z-[1000] pointer-events-none">
-      {/* Approaching start — show distance/time to departure point */}
-      {approachingStart && distToStart !== null && (
-        <motion.div
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="absolute left-3 right-3 pointer-events-auto"
-          style={{ bottom: "calc(100% + 8px)" }}
-        >
-          <div className="rounded-2xl bg-card/95 backdrop-blur-xl shadow-elevated flex items-center gap-3 px-4 py-3 border border-primary/20">
-            <div className="w-9 h-9 rounded-full bg-gradient-hero flex items-center justify-center flex-shrink-0 shadow-glow">
-              <Navigation className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-primary/70 font-semibold uppercase tracking-wider">Vers le départ</p>
-              <p className="text-sm font-bold text-foreground">Rejoindre le point de départ</p>
-            </div>
-            <div className="flex flex-col items-end flex-shrink-0">
-              <span className="text-sm font-extrabold text-primary tabular-nums">
-                {formatDist(distToStart)}
-              </span>
-              <span className="text-[10px] text-muted-foreground tabular-nums">
-                ~{etaToStartSeconds !== null ? formatSeconds(etaToStartSeconds) : "—"}
-              </span>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Next POI floating card — only when not approaching start */}
-      {!approachingStart && currentStop && !isLastStopDone && (
-        <motion.div
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="absolute left-3 right-3 pointer-events-auto"
-          style={{ bottom: "calc(100% + 8px)" }}
-        >
-          <div className="rounded-2xl bg-card/95 backdrop-blur-xl shadow-elevated flex items-center gap-3 px-4 py-3 border border-primary/15">
-            <div className="w-9 h-9 rounded-full bg-gradient-hero flex items-center justify-center flex-shrink-0 shadow-glow">
-              <MapPin className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-primary/70 font-semibold uppercase tracking-wider">Prochain arrêt</p>
-              <p className="text-sm font-bold text-foreground truncate">{currentStop.title}</p>
-            </div>
-            <div className="flex flex-col items-end flex-shrink-0">
-              <span className="text-sm font-extrabold text-primary tabular-nums">
-                {hasGps ? formatDist(distToNextStop) : "—"}
-              </span>
-              <span className="text-[10px] text-muted-foreground tabular-nums">
-                ~{hasGps && etaNextStop > 0 ? formatEta(etaNextStop) : "—"}
-              </span>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Main bottom bar */}
-      <div
-        className="pointer-events-auto bg-card/95 backdrop-blur-xl border-t-2 border-primary/20"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)" }}
+      {/* Stats card */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="absolute left-3 right-3 pointer-events-auto rounded-3xl bg-card shadow-elevated border border-primary/15 px-3 py-3.5 flex items-stretch"
+        style={{ bottom: "calc(100% + 10px)" }}
       >
-        {/* Progress dots */}
-        <div className="flex items-center justify-center gap-1.5 pt-3 pb-2">
-          {Array.from({ length: totalStops }).map((_, i) => (
-            <div
-              key={i}
-              className={`rounded-full transition-all duration-500 ${
-                i < currentStopIndex
-                  ? "w-2 h-2 bg-primary"
-                  : i === currentStopIndex
-                  ? "w-6 h-2 bg-accent rounded-full"
-                  : "w-2 h-2 bg-muted"
-              }`}
-            />
-          ))}
-        </div>
+        <Stat icon={Route} label="Distance restante" value={dist.value} unit={dist.unit} />
+        <div className="w-px bg-border my-1" />
+        <Stat icon={Clock} label="Temps restant" value={time.value} unit={time.unit} />
+        <div className="w-px bg-border my-1" />
+        <Stat icon={Gauge} label="Vitesse" value={spd.value} unit={spd.unit} />
+        <div className="w-px bg-border my-1" />
+        <Stat icon={Flag} label="Arrivée" value={arrivalTime} />
+      </motion.div>
 
-        <div className="flex items-center px-4 pb-3">
-          {/* Left: ETA / approaching start info */}
-          <div className="flex-1">
-            {approachingStart && distToStart !== null ? (
-              <>
-                <p className="text-[11px] text-primary/60 uppercase tracking-wider font-semibold">Jusqu'au départ</p>
-                <p className="text-2xl font-bold text-foreground leading-none tabular-nums tracking-tight mt-0.5">
-                  {formatDist(distToStart)}
-                </p>
-              </>
+      {/* Action bar */}
+      <div
+        className="pointer-events-auto px-3"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", paddingTop: 6 }}
+      >
+        <div className="flex items-stretch gap-2">
+          <button
+            onClick={onTogglePause}
+            className="flex-1 h-12 rounded-2xl bg-card shadow-card border border-primary/15 flex items-center justify-center gap-2 active:scale-95 transition-all"
+          >
+            {paused ? (
+              <Play className="w-4 h-4 text-primary" strokeWidth={2.8} fill="currentColor" />
             ) : (
-              <>
-                <p className="text-[11px] text-primary/60 uppercase tracking-wider font-semibold">Arrivée</p>
-                <p className="text-2xl font-bold text-foreground leading-none tabular-nums tracking-tight mt-0.5">
-                  {arrivalTime}
-                </p>
-              </>
+              <Pause className="w-4 h-4 text-primary" strokeWidth={2.8} fill="currentColor" />
             )}
-          </div>
+            <span className="text-sm font-bold text-foreground">{paused ? "Reprendre" : "Pause"}</span>
+          </button>
 
-          {/* Center: distance + time remaining */}
-          <div className="flex items-center gap-4">
-            {approachingStart && etaToStartSeconds !== null ? (
-              <>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-primary tabular-nums leading-none">
-                    {formatSeconds(etaToStartSeconds)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">au départ</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-foreground tabular-nums leading-none">
-                    {hasGps ? formatDist(distanceRemaining) : "—"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">restant</p>
-                </div>
-                <div className="w-px h-8 bg-border" />
-                <div className="text-center">
-                  <p className="text-lg font-bold text-primary tabular-nums leading-none">
-                    {hasGps && etaMinutes > 0 ? formatEta(etaMinutes) : "—"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">durée</p>
-                </div>
-              </>
-            )}
-          </div>
+          <button
+            onClick={onShowSteps}
+            className="flex-1 h-12 rounded-2xl bg-card shadow-card border border-primary/15 flex items-center justify-center gap-2 active:scale-95 transition-all"
+          >
+            <List className="w-4 h-4 text-foreground" strokeWidth={2.5} />
+            <span className="text-sm font-bold text-foreground">Étapes</span>
+          </button>
 
-          {/* Right: stop button */}
-          <div className="flex-1 flex justify-end">
-            {onStop ? (
-              <button
-                onClick={onStop}
-                className="w-11 h-11 rounded-full bg-destructive/10 border border-destructive/25 flex items-center justify-center active:scale-90 transition-all"
-                aria-label="Arrêter"
-              >
-                <X className="w-5 h-5 text-destructive" strokeWidth={2.5} />
-              </button>
-            ) : (
-              <div className="w-11" />
-            )}
-          </div>
+          <button
+            onClick={onStop}
+            className="flex-1 h-12 rounded-2xl bg-card shadow-card border border-destructive/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+          >
+            <X className="w-4 h-4 text-destructive" strokeWidth={2.8} />
+            <span className="text-sm font-bold text-destructive">Quitter</span>
+          </button>
         </div>
       </div>
     </div>
