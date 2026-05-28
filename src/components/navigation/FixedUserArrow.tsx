@@ -14,7 +14,6 @@ const FixedUserArrow = ({ anchorY, visible }: FixedUserArrowProps) => {
       style={{ top: `${anchorY * 100}%`, transform: "translate(-50%, -50%)" }}
     >
       <div className="waze-arrow-shell-lg">
-        <div className="waze-arrow-pulse-lg" />
         <div className="waze-arrow-icon-lg">
           <svg viewBox="0 0 48 48" width="56" height="56">
             <defs>
