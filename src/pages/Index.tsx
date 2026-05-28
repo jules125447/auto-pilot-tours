@@ -60,39 +60,37 @@ const Index = () => {
         </div>
 
         {/* Hero card — map bg + fox + text */}
-        <div className="relative rounded-3xl overflow-hidden shadow-card bg-white aspect-[16/13]">
+        <div className="relative rounded-3xl overflow-hidden shadow-card bg-[#fdf6ed] aspect-[16/10]">
           <img src={heroMapBg} alt="" className="absolute inset-0 w-full h-full object-cover" />
           <img
             src={tiloFox}
             alt="Tilo"
-            className="absolute right-[-4%] bottom-0 h-[95%] w-auto object-contain drop-shadow-xl"
+            className="absolute right-[-6%] bottom-0 h-[110%] w-auto object-contain drop-shadow-xl pointer-events-none"
           />
           <div className="relative h-full p-5 flex flex-col justify-between">
-            <div className="max-w-[58%]">
-              <h2 className="font-display font-black text-foreground leading-[1.05] text-[1.6rem]">
+            <div className="max-w-[55%]">
+              <h2 className="font-display font-black text-foreground leading-[1.02] text-[1.5rem]">
                 Votre prochaine
               </h2>
-              <h2 className="font-display font-black text-primary leading-[1.05] text-[1.95rem] -mt-0.5">
+              <h2 className="font-display font-black text-primary leading-[1.02] text-[2.2rem] -mt-1">
                 aventure
               </h2>
-              <h2 className="font-display font-black text-foreground leading-[1.05] text-[1.6rem] -mt-0.5">
+              <h2 className="font-display font-black text-foreground leading-[1.02] text-[1.5rem] -mt-0.5">
                 commence ici.
               </h2>
-            </div>
-            <div className="max-w-[58%]">
-              <div className="flex items-center gap-2 text-primary font-bold text-[15px]">
+              <div className="mt-3 flex items-center gap-2 text-primary font-bold text-[15px]">
                 <Headphones className="w-5 h-5" strokeWidth={2.5} />
                 Audio géolocalisé
               </div>
-              <p className="text-muted-foreground text-[12px] mt-1">Histoires et conseils à chaque étape.</p>
-              <Link
-                to={featured ? `/navigate/${featured.id}` : "/"}
-                className="mt-3 inline-flex items-center justify-center w-16 h-16 rounded-full bg-white text-primary shadow-elevated ring-[6px] ring-primary/20"
-                aria-label="Démarrer"
-              >
-                <Play className="w-7 h-7 ml-1 fill-current" />
-              </Link>
+              <p className="text-muted-foreground text-[12px] mt-1 leading-snug">Histoires et conseils à chaque étape.</p>
             </div>
+            <Link
+              to={featured ? `/navigate/${featured.id}` : "/"}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white text-primary shadow-elevated ring-[6px] ring-primary/20 self-start"
+              aria-label="Démarrer"
+            >
+              <Play className="w-7 h-7 ml-1 fill-current" />
+            </Link>
           </div>
         </div>
 
