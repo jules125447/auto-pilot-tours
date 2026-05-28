@@ -7,8 +7,6 @@ import ConsentBanner from "@/components/ConsentBanner";
 import tiloLogo from "@/assets/tilo-logo.png";
 import tiloFox from "@/assets/tilo-fox.png";
 import heroMapBg from "@/assets/hero-map-bg.png";
-import imgVillages from "@/assets/circuit-villages-perches.jpg";
-import imgCote from "@/assets/circuit-cote-sauvage.jpg";
 
 const IconRoute = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 64 64" className={className} fill="none">
@@ -27,13 +25,15 @@ const Index = () => {
   }, [user]);
 
   const featured = circuits[0];
+  const recentCircuits = circuits.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background pb-28 font-sans">
-      {/* Header — logo + bell vertically centered */}
-      <header className="px-5 pt-4 pb-2 relative flex items-center justify-center min-h-[80px]">
-        <img src={tiloLogo} alt="Tilo" className="h-56 sm:h-64 w-auto -my-10" />
-        <button className="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
+      {/* Header — centered logo + balanced bell */}
+      <header className="px-5 pt-4 pb-2 grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center min-h-[96px]">
+        <div className="w-12 h-12" aria-hidden="true" />
+        <img src={tiloLogo} alt="Tilo" className="h-56 sm:h-64 w-auto -my-10 justify-self-center translate-x-[-6px]" />
+        <button className="relative w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
           <Bell className="w-5 h-5 text-foreground" strokeWidth={2.2} />
           <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary" />
         </button>
