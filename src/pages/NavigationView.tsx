@@ -1017,15 +1017,13 @@ const NavigationView = () => {
 
       if (shouldTrigger) {
         setTriggeredAudioZones((prev) => new Set(prev).add(zone.id));
-        const zoneMood = (zone as any).tilo_mood as string | null | undefined;
-        if (zoneMood) setAudioZoneMood(zoneMood);
 
         if (zone.audio_url) {
           const audio = new Audio(zone.audio_url);
           applyAudioElementHints(audio);
           audio.play().catch((e) => console.warn("Audio play failed:", e));
           setAudioPlaying(true);
-          const clear = () => { setAudioPlaying(false); setAudioZoneMood(null); };
+          const clear = () => { setAudioPlaying(false); };
           audio.onended = clear;
           audio.onerror = clear;
         } else if (zone.audio_text) {
@@ -1033,7 +1031,7 @@ const NavigationView = () => {
           if (voiceEnabled) announceAudioZone(zone.audio_text);
           const words = zone.audio_text.trim().split(/\s+/).length;
           const displayMs = Math.max(4000, (words / 150) * 60 * 1000);
-          setTimeout(() => { setAudioPlaying(false); setAudioZoneMood(null); }, displayMs);
+          setTimeout(() => { setAudioPlaying(false); }, displayMs);
         }
       }
     });
