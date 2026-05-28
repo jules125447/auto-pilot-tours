@@ -173,14 +173,14 @@ const NavigationMap = ({
 
     if (route.length > 0) {
       L.polyline(route, {
-        color: "hsl(15, 85%, 55%)",
+        color: "#FF9500",
         weight: 18,
         opacity: 0.15,
         smoothFactor: 1,
       }).addTo(map);
 
       remainingLineRef.current = L.polyline(route, {
-        color: "hsl(15, 85%, 55%)",
+        color: "#FF9500",
         weight: 7,
         opacity: 0.85,
         smoothFactor: 1,
@@ -189,7 +189,7 @@ const NavigationMap = ({
       }).addTo(map);
 
       traveledLineRef.current = L.polyline([], {
-        color: "hsl(42, 95%, 55%)",
+        color: "#FF9500",
         weight: 7,
         opacity: 0.5,
         smoothFactor: 1,
@@ -389,14 +389,14 @@ const NavigationMap = ({
 
     if (recalculatedRoute && recalculatedRoute.length > 1) {
       recalcGlowRef.current = L.polyline(recalculatedRoute, {
-        color: "#FF6B35",
+        color: "#FF9500",
         weight: 14,
         opacity: 0.2,
         smoothFactor: 1,
       }).addTo(map);
 
       recalcLineRef.current = L.polyline(recalculatedRoute, {
-        color: "#FF6B35",
+        color: "#FF9500",
         weight: 5,
         opacity: 0.9,
         smoothFactor: 1,
@@ -454,8 +454,8 @@ const NavigationMap = ({
               <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
                 <defs>
                   <linearGradient id="arrowGradMap" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="hsl(15,85%,55%)" />
-                    <stop offset="100%" stop-color="hsl(42,95%,55%)" />
+                    <stop offset="0%" stop-color="#FF9500" />
+                    <stop offset="100%" stop-color="#FF9500" />
                   </linearGradient>
                 </defs>
                 <polygon points="24,4 9,40 24,32 39,40" fill="url(#arrowGradMap)" stroke="white" stroke-width="3" stroke-linejoin="round"/>
@@ -624,7 +624,7 @@ const NavigationMap = ({
           position: relative;
           z-index: 2;
           transform-origin: center center;
-          filter: drop-shadow(0 3px 8px hsl(15 85% 55% / 0.35));
+          filter: drop-shadow(0 3px 8px rgba(255,149,0,0.35));
         }
         .poi-tooltip-nav {
           background: hsl(var(--card)) !important;
