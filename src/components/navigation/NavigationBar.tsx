@@ -102,13 +102,27 @@ const NavigationBar = ({
         className="absolute left-3 right-3 pointer-events-auto rounded-3xl bg-card shadow-elevated border border-primary/15 px-3 py-3.5 flex items-stretch"
         style={{ bottom: "calc(100% + 10px)" }}
       >
-        <Stat icon={Route} label="Distance restante" value={dist.value} unit={dist.unit} />
+        <Stat
+          icon={Route}
+          label={approachingStart ? "Distance départ" : "Distance restante"}
+          value={dist.value}
+          unit={dist.unit}
+        />
         <div className="w-px bg-border my-1" />
-        <Stat icon={Clock} label="Temps restant" value={time.value} unit={time.unit} />
+        <Stat
+          icon={Clock}
+          label={approachingStart ? "Temps départ" : "Temps restant"}
+          value={time.value}
+          unit={time.unit}
+        />
         <div className="w-px bg-border my-1" />
         <Stat icon={Gauge} label="Vitesse" value={spd.value} unit={spd.unit} />
         <div className="w-px bg-border my-1" />
-        <Stat icon={Flag} label="Arrivée" value={arrivalTime} />
+        <Stat
+          icon={Flag}
+          label={approachingStart ? "Arrivée départ" : "Arrivée"}
+          value={arrivalTime}
+        />
       </motion.div>
 
       {/* Action bar */}
