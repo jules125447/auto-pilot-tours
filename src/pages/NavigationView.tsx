@@ -1087,22 +1087,12 @@ const NavigationView = () => {
           musicAudioRef.current = null;
         });
 
-        // 🎵 Tilo arrives with a boombox and announces the track
-        const track = (seg as any).track_name as string | undefined;
-        const artist = (seg as any).artist_name as string | undefined;
         if (voiceEnabled && track) {
           const line = artist
             ? `Petite ambiance musicale : ${track}, par ${artist}.`
             : `Petite ambiance musicale : ${track}.`;
-          setMusicMessage(line);
           speak(line);
         }
-        setTiloDancing(true);
-        if (dancingTimerRef.current) clearTimeout(dancingTimerRef.current);
-        dancingTimerRef.current = setTimeout(() => {
-          setTiloDancing(false);
-          setMusicMessage(null);
-        }, 30_000);
       }
 
       if (!isInside && activeMusicIdRef.current === seg.id && musicAudioRef.current) {
@@ -1114,12 +1104,6 @@ const NavigationView = () => {
             activeMusicIdRef.current = null;
           }
         });
-        if (dancingTimerRef.current) {
-          clearTimeout(dancingTimerRef.current);
-          dancingTimerRef.current = null;
-        }
-        setTiloDancing(false);
-        setMusicMessage(null);
       }
     });
   }, [userPos, circuit, fadeAudio, audioUnlocked, projectOnRoute, calibrated, voiceEnabled, speak]);
