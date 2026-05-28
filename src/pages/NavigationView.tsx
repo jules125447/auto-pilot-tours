@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import NavigationMap from "@/components/navigation/NavigationMap";
 import NavigationBar from "@/components/navigation/NavigationBar";
 import DirectionBanner from "@/components/navigation/DirectionBanner";
+import NavigationTopHeader from "@/components/navigation/NavigationTopHeader";
 // AudioOverlay removed — TTS plays without popup
 import { extractTurns, findNextTurn, haversine } from "@/lib/turnDetection";
 import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
@@ -1525,18 +1526,22 @@ const NavigationView = () => {
           recalculatedRoute={recalculatedRoute}
           annotations={circuit.map_annotations}
         />
-        <DirectionBanner direction={currentDirection} distanceMeters={currentDistToTurn} streetName={currentStreetName} nextDirection={turnInfo?.afterTurn?.direction} nextDistanceMeters={turnInfo?.distAfter} roundaboutExit={turnInfo?.turn.roundaboutExit} />
+        <NavigationTopHeader
+          onBack={() => navigate(`/circuit/${circuit.id}`)}
+          voiceEnabled={voiceEnabled}
+          onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
+        />
+        <DirectionBanner
+          direction={currentDirection}
+          distanceMeters={currentDistToTurn}
+          streetName={currentStreetName}
+          nextDirection={turnInfo?.afterTurn?.direction}
+          nextDistanceMeters={turnInfo?.distAfter}
+          roundaboutExit={turnInfo?.turn.roundaboutExit}
+          nextStopTitle={currentStop?.title}
+          distToNextStop={navInfo.distToNextStop}
+        />
 
-        {/* Right-side floating controls */}
-        <div className="absolute right-3 z-[1002] flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>
-          <button
-            onClick={() => setVoiceEnabled(!voiceEnabled)}
-            className="w-12 h-12 rounded-full bg-card/95 shadow-elevated border border-primary/20 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-all"
-            aria-label="Voix"
-          >
-            {voiceEnabled ? <Volume2 className="w-5 h-5 text-primary" /> : <VolumeX className="w-5 h-5 text-muted-foreground" />}
-          </button>
-        </div>
 
         {/* Calibration / Recalculating indicator */}
         {(!calibrated && userPos) && (
