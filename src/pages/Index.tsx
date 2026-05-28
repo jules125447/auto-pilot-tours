@@ -30,11 +30,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-28 font-sans">
-      {/* Header — logo centered, bell right */}
-      <header className="px-5 pt-4 pb-2 flex items-center justify-between">
-        <div className="w-12 flex-shrink-0" />
+      {/* Header — logo + bell vertically centered */}
+      <header className="px-5 pt-4 pb-2 relative flex items-center justify-center min-h-[80px]">
         <img src={tiloLogo} alt="Tilo" className="h-56 sm:h-64 w-auto -my-10" />
-        <button className="relative w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
+        <button className="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
           <Bell className="w-5 h-5 text-foreground" strokeWidth={2.2} />
           <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary" />
         </button>
