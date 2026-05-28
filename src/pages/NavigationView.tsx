@@ -1436,9 +1436,7 @@ const NavigationView = () => {
               backdropFilter: "blur(6px)",
             }}>
             {!preloading && !preloadDone && (
-              <motion.button
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+              <button
                 onClick={handleStartPreload}
                 className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated group hover:shadow-glow transition-all"
               >
@@ -1451,15 +1449,11 @@ const NavigationView = () => {
                     Télécharge les données pour fonctionner hors-ligne
                   </p>
                 </div>
-              </motion.button>
+              </button>
             )}
 
             {preloading && (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated w-[320px]"
-              >
+              <div className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated w-[320px]">
                 <div className="w-16 h-16 rounded-full bg-gradient-hero flex items-center justify-center">
                   <Loader2 className="w-8 h-8 animate-spin text-primary-foreground" />
                 </div>
@@ -1467,22 +1461,18 @@ const NavigationView = () => {
                   <h2 className="font-display text-lg font-bold text-foreground mb-1">Téléchargement…</h2>
                   <p className="text-xs text-muted-foreground mb-3">{preloadProgress.label}</p>
                   <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-hero rounded-full"
-                      initial={{ width: "0%" }}
-                      animate={{ width: `${preloadProgress.percent}%` }}
-                      transition={{ duration: 0.3 }}
+                    <div
+                      className="h-full bg-gradient-hero rounded-full transition-all duration-300"
+                      style={{ width: `${preloadProgress.percent}%` }}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2 font-mono">{preloadProgress.percent}%</p>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {preloadDone && (
-              <motion.button
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+              <button
                 onClick={handleLaunch}
                 className="flex flex-col items-center gap-5 p-10 rounded-3xl glass-card border border-primary/15 shadow-elevated group hover:shadow-glow transition-all"
               >
@@ -1493,7 +1483,7 @@ const NavigationView = () => {
                   <h2 className="font-display text-2xl font-bold text-foreground">Lancer la navigation</h2>
                   <p className="text-sm text-muted-foreground mt-2">Toutes les données sont prêtes ✅</p>
                 </div>
-              </motion.button>
+              </button>
             )}
           </div>
         </div>
@@ -1549,50 +1539,27 @@ const NavigationView = () => {
         </div>
 
         {/* Calibration / Recalculating indicator */}
-        <AnimatePresence>
-          {(!calibrated && userPos) && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-card/95 backdrop-blur-md shadow-elevated border border-border"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
-            >
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span className="text-xs font-medium text-foreground">Calibration GPS…</span>
-              </div>
-            </motion.div>
-          )}
-          {isRecalculating && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-gradient-hero shadow-glow"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
-            >
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span className="text-xs font-semibold text-white">Recalcul…</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {(!calibrated && userPos) && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-card/95 backdrop-blur-md shadow-elevated border border-border animate-fade-in"
+            style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-xs font-medium text-foreground">Calibration GPS…</span>
+            </div>
+          </div>
+        )}
+        {isRecalculating && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-[1003] px-4 py-2 rounded-full bg-gradient-hero shadow-glow animate-fade-in"
+            style={{ top: "calc(env(safe-area-inset-top, 0px) + 80px)" }}
+          >
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span className="text-xs font-semibold text-white">Recalcul…</span>
+            </div>
+          </div>
+        )}
         <SpeedBubble speed={speed} stunt={speedBubbleStunt} />
-        <TiloCompanion
-          visible={(tilo.visible && voiceEnabled && !tiloHidden) || tiloDancing}
-          speaking={tilo.speaking || !!stuntMessage || !!musicMessage}
-          message={musicMessage ?? stuntMessage ?? tilo.message}
-          lookDirection={tilo.lookDirection}
-          onClose={tilo.hide}
-          mood={tiloDancing ? "happy" : tiloMood}
-          holding={tiloHolding}
-          reaching={tiloReaching}
-          lookingDown={tiloLookingDown}
-          throwing={tiloThrowing}
-          dancing={tiloDancing}
-        />
       </div>
       <NavigationBar
         currentStop={currentStop}
