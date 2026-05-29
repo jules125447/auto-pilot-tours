@@ -209,33 +209,10 @@ const CircuitDetail = () => {
           </button>
         ) : null}
 
-        {/* Description */}
-        {circuit.description && (
-          <section className="bg-white rounded-2xl p-5 shadow-card">
-            <p className="text-sm text-muted-foreground leading-relaxed">{circuit.description}</p>
-          </section>
-        )}
-
-        {/* Promo code (only if not yet purchased and paid) */}
-        {!hasAccess && circuit.price > 0 && (
-          <section className="bg-white rounded-2xl p-5 shadow-card">
-            <div className="flex items-center gap-2 mb-3">
-              <Tag className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold text-foreground">Code promo</span>
-            </div>
-            <input
-              type="text"
-              placeholder="Entrez votre code"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              className="w-full px-4 py-3 rounded-xl bg-[#fbf1e6] text-foreground text-sm border border-border/50 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          </section>
-        )}
 
         {/* J'ai une clé card with fox */}
         {!hasAccess && (
-          <section className="relative bg-white rounded-2xl p-5 pr-32 shadow-card overflow-hidden">
+        <section className="relative bg-white rounded-2xl p-5 pr-32 shadow-card overflow-hidden">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-full border-2 border-primary/40 flex items-center justify-center shrink-0">
                 <Key className="w-5 h-5 text-primary" />
