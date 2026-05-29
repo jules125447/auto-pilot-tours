@@ -459,18 +459,21 @@ const NavigationMap = ({
       return;
     }
 
-    // Snap-to-route: if user is within ~30 m of the polyline, render the arrow
+    // Snap-to-route: if user is within ~45 m of the polyline, render the arrow
     // on the road instead of on the raw (noisy) GPS fix. This is what makes
     // the cursor look "magnetised" to the route like Waze/Google Maps.
+    // 45 m is more forgiving than 30 m for native GPS in urban canyons where
+    // accuracy commonly reports 25–50 m even with a real GPS chip.
     let displayPos: [number, number] = userPos;
     let snappedSegIdx: number | null = null;
     if (route.length > 1) {
       const snap = snapPositionToRoute(route, userPos);
-      if (snap && snap.lateralDistanceM < 30) {
+      if (snap && snap.lateralDistanceM < 45) {
         displayPos = [snap.lat, snap.lng];
         snappedSegIdx = snap.segmentIndex;
       }
     }
+
 
     if (route.length > 1) {
       if (routeToStart && routeToStart.length > 1) {
