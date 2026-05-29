@@ -182,7 +182,7 @@ const Profile = () => {
             {[
               { icon: Home, label: "Accueil", to: "/", active: false },
               { icon: MapIcon, label: "Circuits", to: "/circuits", active: false },
-              { icon: Heart, label: "Favoris", to: "/my-circuits", active: false },
+              { icon: Heart, label: "Favoris", to: "/favorites", active: false },
               { icon: UserIcon, label: "Profil", to: "/profile", active: true },
             ].map((t) => (
               <Link
