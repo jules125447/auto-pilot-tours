@@ -212,7 +212,7 @@ const CircuitDetail = () => {
 
         {/* J'ai une clé card with fox */}
         {!hasAccess && (
-          <section className="relative bg-white rounded-2xl p-5 pr-32 shadow-card overflow-hidden">
+        <section className="relative bg-white rounded-2xl p-5 pr-32 shadow-card overflow-hidden">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-full border-2 border-primary/40 flex items-center justify-center shrink-0">
                 <Key className="w-5 h-5 text-primary" />
