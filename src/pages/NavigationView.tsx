@@ -1324,13 +1324,28 @@ const NavigationView = () => {
     const [lat, lng] = userPos;
     const nextStop = circuit.stops[currentStopIndex];
     const distToNextStop = nextStop ? haversine(lat, lng, nextStop.lat, nextStop.lng) : 0;
-    let totalRemaining = distToNextStop;
-    for (let i = currentStopIndex; i < circuit.stops.length - 1; i++) {
-      const a = circuit.stops[i]; const b = circuit.stops[i + 1];
-      totalRemaining += haversine(a.lat, a.lng, b.lat, b.lng);
+
+    // Prefer route-polyline-based remaining distance (more accurate than haversine between POIs)
+    let totalRemaining = 0;
+    const routeCoords = circuit.route as [number, number][] | undefined;
+    if (routeCoords && routeCoords.length > 1) {
+      const proj = projectClosestPointOnRoute(lat, lng, routeCoords);
+      totalRemaining = Math.max(0, proj.total - proj.cumulative);
+    } else {
+      totalRemaining = distToNextStop;
+      for (let i = currentStopIndex; i < circuit.stops.length - 1; i++) {
+        const a = circuit.stops[i]; const b = circuit.stops[i + 1];
+        totalRemaining += haversine(a.lat, a.lng, b.lat, b.lng);
+      }
     }
+
     const avgSpeedMs = (40 * 1000) / 3600;
-    return { distanceRemaining: totalRemaining, etaMinutes: Math.round(totalRemaining / avgSpeedMs / 60), distToNextStop, etaNextStop: Math.round(distToNextStop / avgSpeedMs / 60) };
+    return {
+      distanceRemaining: totalRemaining,
+      etaMinutes: Math.round(totalRemaining / avgSpeedMs / 60),
+      distToNextStop,
+      etaNextStop: Math.round(distToNextStop / avgSpeedMs / 60),
+    };
   }, [circuit, userPos, currentStopIndex]);
 
   const navInfo = getNavInfo();
