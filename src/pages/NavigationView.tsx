@@ -175,21 +175,22 @@ function getPositionSmoothingFactor(
   accuracy: number | null,
   stationary: boolean
 ) {
-  if (stationary) return 0.14;
-  if (speedKmh === null) return accuracy !== null && accuracy <= 10 ? 0.5 : 0.38;
-  if (speedKmh >= 80) return 0.78;
-  if (speedKmh >= 50) return 0.68;
-  if (speedKmh >= 25) return 0.56;
-  return accuracy !== null && accuracy <= 10 ? 0.44 : 0.34;
+  // Smaller factor = more smoothing (the displayed position glides instead of jumping).
+  if (stationary) return 0.08;
+  if (speedKmh === null) return accuracy !== null && accuracy <= 10 ? 0.32 : 0.24;
+  if (speedKmh >= 80) return 0.55;
+  if (speedKmh >= 50) return 0.45;
+  if (speedKmh >= 25) return 0.36;
+  return accuracy !== null && accuracy <= 10 ? 0.28 : 0.22;
 }
 
 function getHeadingSmoothingFactor(speedKmh: number | null, stationary: boolean) {
-  if (stationary) return 0.12;
-  if (speedKmh === null) return 0.24;
-  if (speedKmh >= 80) return 0.42;
-  if (speedKmh >= 50) return 0.34;
-  if (speedKmh >= 20) return 0.28;
-  return 0.2;
+  if (stationary) return 0.08;
+  if (speedKmh === null) return 0.16;
+  if (speedKmh >= 80) return 0.3;
+  if (speedKmh >= 50) return 0.24;
+  if (speedKmh >= 20) return 0.2;
+  return 0.14;
 }
 
 function isLikelyOutlier(
