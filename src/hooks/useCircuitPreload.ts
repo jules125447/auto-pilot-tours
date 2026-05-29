@@ -67,36 +67,69 @@ export function useCircuitPreload() {
       const lng2tile = (lng: number, z: number) =>
         Math.floor(((lng + 180) / 360) * Math.pow(2, z));
 
-      // Match Leaflet maxNativeZoom: we cache reliable z13-z16 tiles, then
-      // Leaflet upscales z16 while zoomed in instead of requesting blank z17+.
-      const zoomLevels = [13, 14, 15, 16];
-      const MAX_TILES_PER_ZOOM = 400; // safety cap per zoom level
-      let tileIndex = 0;
-
-      for (const z of zoomLevels) {
-        const xMin = lng2tile(minLng, z);
-        const xMax = lng2tile(maxLng, z);
-        const yMin = lat2tile(maxLat, z);
-        const yMax = lat2tile(minLat, z);
-        const count = (xMax - xMin + 1) * (yMax - yMin + 1);
-        if (count > MAX_TILES_PER_ZOOM) continue;
-        for (let x = xMin; x <= xMax; x++) {
-          for (let y = yMin; y <= yMax; y++) {
-            const sub = ["a", "b", "c"][tileIndex % 3];
-            const subCarto = ["a", "b", "c", "d"][tileIndex % 4];
-            tileIndex++;
-            // CartoDB Positron (primary sober basemap)
-            urls.push({
-              url: `https://${subCarto}.basemaps.cartocdn.com/light_all/${z}/${x}/${y}.png`,
-              label: "Carte",
-            });
-            // OSM fallback tiles
-            urls.push({
-              url: `https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`,
-              label: "Carte",
-            });
+      // Vector tiles for MapLibre + OpenFreeMap Positron.
+      // We fetch the style JSON to discover the current tile URL template
+      // (planet snapshot version changes over time).
+      try {
+        const styleRes = await fetch("https://tiles.openfreemap.org/styles/positron");
+        const style = await styleRes.json();
+        // Pre-cache sprite + glyphs so labels render offline
+        if (style.sprite) {
+          urls.push({ url: `${style.sprite}.json`, label: "Style" });
+          urls.push({ url: `${style.sprite}.png`, label: "Style" });
+          urls.push({ url: `${style.sprite}@2x.json`, label: "Style" });
+          urls.push({ url: `${style.sprite}@2x.png`, label: "Style" });
+        }
+        if (style.glyphs) {
+          // Pre-cache common Latin glyph ranges
+          const fontStacks = ["Noto Sans Regular", "Noto Sans Bold", "Noto Sans Italic"];
+          for (const stack of fontStacks) {
+            for (const range of ["0-255", "256-511"]) {
+              urls.push({
+                url: style.glyphs.replace("{fontstack}", encodeURIComponent(stack)).replace("{range}", range),
+                label: "Police",
+              });
+            }
           }
         }
+        // Extract vector tile template from the first vector source
+        const sources = style.sources || {};
+        let tileTemplate: string | null = null;
+        for (const key of Object.keys(sources)) {
+          const src = sources[key];
+          if (src.type === "vector" && Array.isArray(src.tiles) && src.tiles[0]) {
+            tileTemplate = src.tiles[0];
+            break;
+          }
+        }
+
+        if (tileTemplate) {
+          // OpenFreeMap serves vector tiles up to z14; clients use overzoom for higher levels
+          const zoomLevels = [12, 13, 14];
+          const MAX_TILES_PER_ZOOM = 300;
+          for (const z of zoomLevels) {
+            const xMin = lng2tile(minLng, z);
+            const xMax = lng2tile(maxLng, z);
+            const yMin = lat2tile(maxLat, z);
+            const yMax = lat2tile(minLat, z);
+            const count = (xMax - xMin + 1) * (yMax - yMin + 1);
+            if (count > MAX_TILES_PER_ZOOM) continue;
+            for (let x = xMin; x <= xMax; x++) {
+              for (let y = yMin; y <= yMax; y++) {
+                urls.push({
+                  url: tileTemplate
+                    .replace("{z}", String(z))
+                    .replace("{x}", String(x))
+                    .replace("{y}", String(y)),
+                  label: "Carte",
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[Preload] Could not pre-cache vector tiles:", err);
       }
     }
 

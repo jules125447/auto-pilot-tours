@@ -1,13 +1,13 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 const MIN_SPLASH_MS = 1200;
 const startedAt = performance.now();
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Dismiss the instant splash once React has mounted (with a min display time)
 requestAnimationFrame(() => {
   const splash = document.getElementById("tilo-splash");
   if (!splash) return;
