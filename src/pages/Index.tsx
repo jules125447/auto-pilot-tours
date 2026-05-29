@@ -194,8 +194,8 @@ const Index = () => {
             {[
               { icon: Home, label: "Accueil", to: "/", active: true },
               { icon: Map, label: "Circuits", to: "/circuits", active: false },
-              { icon: Heart, label: "Favoris", to: "/my-circuits", active: false },
-              { icon: UserIcon, label: "Profil", to: user ? "/my-circuits" : "/auth", active: false },
+              { icon: Heart, label: "Favoris", to: "/favorites", active: false },
+              { icon: UserIcon, label: "Profil", to: user ? "/profile" : "/auth", active: false },
             ].map((t) => (
               <Link
                 key={t.label}
