@@ -14,6 +14,7 @@ import CircuitCreator from "./pages/CircuitCreator";
 import ProDashboard from "./pages/ProDashboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import AdminDashboard from "./pages/AdminDashboard";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
