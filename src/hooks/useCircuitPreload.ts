@@ -82,9 +82,9 @@ export function useCircuitPreload() {
           for (let y = yMin; y <= yMax; y++) {
             const sub = ["a", "b", "c"][tileIndex % 3];
             tileIndex++;
-            // CartoDB Voyager (primary tiles used by NavigationMap)
+            // Esri World Street Map (primary tiles used by NavigationMap)
             urls.push({
-              url: `https://${sub}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`,
+              url: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${z}/${y}/${x}`,
               label: "Carte",
             });
             // OSM fallback tiles
