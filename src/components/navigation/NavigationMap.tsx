@@ -562,7 +562,11 @@ const NavigationMap = ({
       const targetZoom = nearAnnotation ? Math.min(baseZoom, 15.5) : baseZoom;
       const zoomChanging = Math.abs(map.getZoom() - targetZoom) > 0.3;
       
-      centerMapOnAnchoredPoint(map, userPos, anchorY, targetZoom, mapHeading, zoomChanging);
+      // Center the camera on the SNAPPED position (`displayPos`) instead of the
+      // raw GPS fix. Otherwise the fixed overlay arrow (always at screen center)
+      // ends up visually offset from the highlighted road segment.
+      centerMapOnAnchoredPoint(map, displayPos, anchorY, targetZoom, mapHeading, zoomChanging);
+
     } else {
       // Reset rotation when user is panning manually
       mapContainer.style.transform = "none";
