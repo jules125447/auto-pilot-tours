@@ -9,20 +9,31 @@ interface TileSource {
   url: string;
 }
 
+const TRANSPARENT_TILE =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
 export const MAP_TILE_SOURCES: TileSource[] = [
   {
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
     options: {
       detectRetina: false,
       keepBuffer: 8,
-      maxZoom: 19,
-      // Some providers return empty tiles at street-level zooms in mobile
-      // WebViews. Keep requesting reliable z16 tiles and let Leaflet upscale
-      // them when the user zooms in, instead of fetching blank z18/z19 tiles.
+      maxZoom: 20,
       maxNativeZoom: 16,
-      // Tiny transparent PNG so failed tiles render blank instead of broken-image.
-      errorTileUrl:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      subdomains: "abcd",
+      errorTileUrl: TRANSPARENT_TILE,
+      updateWhenIdle: true,
+      updateWhenZooming: false,
+    },
+  },
+  {
+    url: "https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+    options: {
+      detectRetina: false,
+      keepBuffer: 6,
+      maxZoom: 19,
+      maxNativeZoom: 16,
+      errorTileUrl: TRANSPARENT_TILE,
       updateWhenIdle: true,
       updateWhenZooming: false,
     },
@@ -35,22 +46,7 @@ export const MAP_TILE_SOURCES: TileSource[] = [
       maxZoom: 19,
       maxNativeZoom: 16,
       subdomains: "abc",
-      errorTileUrl:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-      updateWhenIdle: true,
-      updateWhenZooming: false,
-    },
-  },
-  {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    options: {
-      detectRetina: false,
-      keepBuffer: 4,
-      maxZoom: 20,
-      maxNativeZoom: 16,
-      subdomains: "abcd",
-      errorTileUrl:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      errorTileUrl: TRANSPARENT_TILE,
       updateWhenIdle: true,
       updateWhenZooming: false,
     },
