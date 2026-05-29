@@ -30,11 +30,12 @@ const RouteMap = ({ route, stops = [], className = "", interactive = true }: Rou
       attributionControl: false,
     });
 
-    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
       detectRetina: false,
       keepBuffer: 6,
-      maxZoom: 19,
+      maxZoom: 20,
       maxNativeZoom: 16,
+      subdomains: "abcd",
     }).addTo(map);
 
     if (route.length > 0) {
