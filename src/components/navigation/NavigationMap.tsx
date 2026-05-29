@@ -112,6 +112,12 @@ const NavigationMap = ({
     syncMapSize();
   }, [syncMapSize]);
 
+  // -------- Mount-only map initialization --------
+  // IMPORTANT: this effect must run exactly once for the lifetime of the
+  // component. Previously its deps included `route` and `stops`, which made
+  // the whole Leaflet instance get destroyed + rebuilt every time the parent
+  // re-rendered with a new route array — that's the main cause of "tuiles
+  // vides" / flickers, because tile downloads were aborted mid-flight.
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -137,32 +143,42 @@ const NavigationMap = ({
 
     const attachTileLayer = (sourceIndex: number) => {
       const tileLayer = createBaseTileLayer(MAP_TILE_SOURCES[sourceIndex]);
-      let resolved = false;
+      let fellBack = false;
+      let tileLoads = 0;
       let tileErrors = 0;
 
-      const fallbackToNextSource = () => {
-        if (resolved || sourceIndex >= MAP_TILE_SOURCES.length - 1) return;
-
-        resolved = true;
+      const fallbackToNextSource = (reason: string) => {
+        if (fellBack || sourceIndex >= MAP_TILE_SOURCES.length - 1) return;
+        fellBack = true;
         clearTileFallbackTimeout();
-        map.removeLayer(tileLayer);
-        tileLayerRef.current = attachTileLayer(sourceIndex + 1);
+        // Defer removal to next tick so Leaflet finishes its current paint.
+        setTimeout(() => {
+          try { map.removeLayer(tileLayer); } catch {}
+          tileLayerRef.current = attachTileLayer(sourceIndex + 1);
+          // eslint-disable-next-line no-console
+          console.warn(`[Map] Tile fallback → source ${sourceIndex + 1} (${reason})`);
+        }, 0);
       };
 
+      // Hard timeout: if no tile loaded at all within 6s, switch source.
       tileFallbackTimeoutRef.current = window.setTimeout(() => {
-        fallbackToNextSource();
-      }, 4500);
+        if (tileLoads === 0) fallbackToNextSource("no-tiles-loaded-6s");
+      }, 6000);
 
       tileLayer.on("tileload", () => {
-        if (resolved) return;
-        resolved = true;
-        clearTileFallbackTimeout();
+        tileLoads += 1;
+        // First successful load: cancel the "no tiles" watchdog but keep
+        // monitoring error ratio (don't lock fellBack forever).
+        if (tileLoads === 1) clearTileFallbackTimeout();
       });
 
       tileLayer.on("tileerror", () => {
         tileErrors += 1;
-        if (tileErrors < 2) return;
-        fallbackToNextSource();
+        const total = tileLoads + tileErrors;
+        // Switch source when failure ratio is too high on a meaningful sample.
+        if (total >= 8 && tileErrors / total > 0.4) {
+          fallbackToNextSource(`error-ratio ${tileErrors}/${total}`);
+        }
       });
 
       tileLayer.addTo(map);
@@ -170,73 +186,6 @@ const NavigationMap = ({
     };
 
     tileLayerRef.current = attachTileLayer(0);
-
-    if (route.length > 0) {
-      L.polyline(route, {
-        color: "#F25C1C",
-        weight: 18,
-        opacity: 0.15,
-        smoothFactor: 1,
-      }).addTo(map);
-
-      remainingLineRef.current = L.polyline(route, {
-        color: "#F25C1C",
-        weight: 7,
-        opacity: 0.85,
-        smoothFactor: 1,
-        lineCap: "round",
-        lineJoin: "round",
-      }).addTo(map);
-
-      traveledLineRef.current = L.polyline([], {
-        color: "#F25C1C",
-        weight: 7,
-        opacity: 0.5,
-        smoothFactor: 1,
-        lineCap: "round",
-        lineJoin: "round",
-      }).addTo(map);
-
-      const polyline = L.polyline(route);
-      map.fitBounds(polyline.getBounds(), { padding: [80, 80] });
-    }
-
-    // Add flag marker at route start point
-    if (route.length > 0) {
-      const startIcon = L.divIcon({
-        html: `
-          <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
-            <div style="width:36px;height:36px;border-radius:50%;background:#F25C1C;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(242,92,28,0.5);">🏁</div>
-          </div>
-        `,
-        className: "poi-marker",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-      });
-      L.marker([route[0][0], route[0][1]], { icon: startIcon, zIndexOffset: 900 }).addTo(map);
-    }
-
-    stops.forEach((stop) => {
-      const icon = L.divIcon({
-        html: `
-          <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-            <div style="width:32px;height:32px;border-radius:50%;background:white;border:2.5px solid hsl(15,85%,55%);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 12px rgba(234,88,12,0.25);">${poiEmoji[stop.type] || "📍"}</div>
-          </div>
-        `,
-        className: "poi-marker",
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      });
-
-      const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map);
-      marker.bindTooltip(stop.title, {
-        permanent: false,
-        direction: "top",
-        className: "poi-tooltip-nav",
-        offset: [0, -20],
-      });
-      stopMarkersRef.current.push(marker);
-    });
 
     const invalidateMapSize = () => {
       requestAnimationFrame(() => {
@@ -304,7 +253,102 @@ const NavigationMap = ({
       setMapSize({ width: 0, height: 0 });
       setMapReady(false);
     };
-  }, [route, stops, syncMapSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // -------- Route polylines (re-runs when route changes) --------
+  const routeBaseLineRef = useRef<L.Polyline | null>(null);
+  const startFlagMarkerRef = useRef<L.Marker | null>(null);
+  const hasFitInitialBoundsRef = useRef(false);
+
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || !mapReady) return;
+
+    // Clear previous route layers
+    if (routeBaseLineRef.current) { map.removeLayer(routeBaseLineRef.current); routeBaseLineRef.current = null; }
+    if (remainingLineRef.current) { map.removeLayer(remainingLineRef.current); remainingLineRef.current = null; }
+    if (traveledLineRef.current) { map.removeLayer(traveledLineRef.current); traveledLineRef.current = null; }
+    if (startFlagMarkerRef.current) { map.removeLayer(startFlagMarkerRef.current); startFlagMarkerRef.current = null; }
+
+    if (route.length === 0) return;
+
+    routeBaseLineRef.current = L.polyline(route, {
+      color: "#F25C1C",
+      weight: 18,
+      opacity: 0.15,
+      smoothFactor: 1,
+    }).addTo(map);
+
+    remainingLineRef.current = L.polyline(route, {
+      color: "#F25C1C",
+      weight: 7,
+      opacity: 0.85,
+      smoothFactor: 1,
+      lineCap: "round",
+      lineJoin: "round",
+    }).addTo(map);
+
+    traveledLineRef.current = L.polyline([], {
+      color: "#F25C1C",
+      weight: 7,
+      opacity: 0.5,
+      smoothFactor: 1,
+      lineCap: "round",
+      lineJoin: "round",
+    }).addTo(map);
+
+    const startIcon = L.divIcon({
+      html: `
+        <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#F25C1C;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(242,92,28,0.5);">🏁</div>
+        </div>
+      `,
+      className: "poi-marker",
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+    startFlagMarkerRef.current = L.marker([route[0][0], route[0][1]], { icon: startIcon, zIndexOffset: 900 }).addTo(map);
+
+    if (!hasFitInitialBoundsRef.current) {
+      const polyline = L.polyline(route);
+      map.fitBounds(polyline.getBounds(), { padding: [80, 80] });
+      hasFitInitialBoundsRef.current = true;
+    }
+  }, [route, mapReady]);
+
+  // -------- Stop markers (re-runs when stops change) --------
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || !mapReady) return;
+
+    // Clear previous stop markers
+    stopMarkersRef.current.forEach((m) => map.removeLayer(m));
+    stopMarkersRef.current = [];
+
+    stops.forEach((stop) => {
+      const icon = L.divIcon({
+        html: `
+          <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+            <div style="width:32px;height:32px;border-radius:50%;background:white;border:2.5px solid hsl(15,85%,55%);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 12px rgba(234,88,12,0.25);">${poiEmoji[stop.type] || "📍"}</div>
+          </div>
+        `,
+        className: "poi-marker",
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+
+      const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map);
+      marker.bindTooltip(stop.title, {
+        permanent: false,
+        direction: "top",
+        className: "poi-tooltip-nav",
+        offset: [0, -20],
+      });
+      stopMarkersRef.current.push(marker);
+    });
+  }, [stops, mapReady]);
+
 
   useEffect(() => {
     if (!mapInstance.current) return;
