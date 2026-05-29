@@ -32,7 +32,7 @@ const Circuits = () => {
   const { data: circuits = [], isLoading } = useCircuits();
 
   const featured = circuits[0];
-  const recommended = circuits.slice(1, 4);
+  const otherCircuits = circuits.slice(1);
 
   return (
     <div className="relative min-h-screen bg-background pb-28 font-sans overflow-hidden">
@@ -150,19 +150,16 @@ const Circuits = () => {
             </div>
           )}
 
-          {/* Recommended */}
+          {/* All circuits */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display font-black text-foreground text-[20px]">Circuits recommandés</h3>
-              <Link to="/circuits" className="text-primary text-sm font-bold flex items-center gap-0.5">
-                Voir tout <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
-              </Link>
+              <h3 className="font-display font-black text-foreground text-[20px]">Circuits</h3>
             </div>
             <div className="space-y-3">
               {isLoading && (
                 <div className="rounded-2xl bg-white shadow-card p-5 text-muted-foreground">Chargement...</div>
               )}
-              {recommended.map((c) => (
+              {otherCircuits.map((c) => (
                 <Link
                   key={c.id}
                   to={`/circuit/${c.id}`}
