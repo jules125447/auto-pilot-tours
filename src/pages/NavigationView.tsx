@@ -1592,8 +1592,8 @@ const NavigationView = () => {
         <NavigationMap
           route={circuit.route}
           stops={circuit.stops}
-          userPos={userPos}
-          heading={heading}
+          userPos={displayPos ?? userPos}
+          heading={displayHeading}
           currentStopIndex={currentStopIndex}
           participants={participants}
           routeToStart={routeToStart}
