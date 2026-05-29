@@ -67,7 +67,9 @@ export function useCircuitPreload() {
       const lng2tile = (lng: number, z: number) =>
         Math.floor(((lng + 180) / 360) * Math.pow(2, z));
 
-      const zoomLevels = [13, 14, 15, 16, 17];
+      // Match Leaflet maxNativeZoom: we cache reliable z13-z16 tiles, then
+      // Leaflet upscales z16 while zoomed in instead of requesting blank z17+.
+      const zoomLevels = [13, 14, 15, 16];
       const MAX_TILES_PER_ZOOM = 400; // safety cap per zoom level
       let tileIndex = 0;
 
