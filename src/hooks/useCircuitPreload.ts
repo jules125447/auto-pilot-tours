@@ -83,10 +83,11 @@ export function useCircuitPreload() {
         for (let x = xMin; x <= xMax; x++) {
           for (let y = yMin; y <= yMax; y++) {
             const sub = ["a", "b", "c"][tileIndex % 3];
+            const subCarto = ["a", "b", "c", "d"][tileIndex % 4];
             tileIndex++;
-            // Esri World Street Map (primary tiles used by NavigationMap)
+            // CartoDB Positron (primary sober basemap)
             urls.push({
-              url: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${z}/${y}/${x}`,
+              url: `https://${subCarto}.basemaps.cartocdn.com/light_all/${z}/${x}/${y}.png`,
               label: "Carte",
             });
             // OSM fallback tiles
