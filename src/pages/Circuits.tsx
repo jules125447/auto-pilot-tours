@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Search, MapPin, Star, Clock, ArrowRight, Home, Map, Heart, User as UserIcon, Mountain, Castle, Waves, Users, Sun, Trees } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCircuits } from "@/hooks/useCircuits";
+import { useFavorites } from "@/hooks/useFavorites";
 import ConsentBanner from "@/components/ConsentBanner";
 import tiloLogo from "@/assets/tilo-logo.png";
 import circuitsBg from "@/assets/circuits-bg.png";
@@ -30,9 +31,16 @@ const ambiances = [
 const Circuits = () => {
   const { user } = useAuth();
   const { data: circuits = [], isLoading } = useCircuits();
+  const { isFavorite, toggle } = useFavorites();
 
   const featured = circuits[0];
   const otherCircuits = circuits.slice(1);
+
+  const handleFav = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle(id);
+  };
 
   return (
     <div className="relative min-h-screen bg-background pb-28 font-sans overflow-hidden">
@@ -109,9 +117,21 @@ const Circuits = () => {
                   </span>
                 </div>
                 <div className="p-4 flex flex-col">
-                  <h3 className="font-display font-black text-foreground text-[22px] leading-tight line-clamp-2">
-                    {featured.title}
-                  </h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-display font-black text-foreground text-[22px] leading-tight line-clamp-2">
+                      {featured.title}
+                    </h3>
+                    <button
+                      aria-label="Ajouter aux favoris"
+                      onClick={(e) => handleFav(e, featured.id)}
+                      className="flex-shrink-0 -mt-0.5 -mr-0.5 w-9 h-9 flex items-center justify-center"
+                    >
+                      <Heart
+                        className={`w-6 h-6 ${isFavorite(featured.id) ? "fill-primary text-primary" : "text-foreground/40"}`}
+                        strokeWidth={2.2}
+                      />
+                    </button>
+                  </div>
                   <div className="flex items-center gap-1.5 text-[13px] text-foreground mt-1.5">
                     <MapPin className="w-4 h-4 text-primary fill-primary" strokeWidth={0} />
                     <span className="truncate">{featured.region || "France"}</span>
@@ -189,6 +209,16 @@ const Circuits = () => {
                       </span>
                     </div>
                   </div>
+                  <button
+                    aria-label="Ajouter aux favoris"
+                    onClick={(e) => handleFav(e, c.id)}
+                    className="w-10 h-10 flex items-center justify-center flex-shrink-0"
+                  >
+                    <Heart
+                      className={`w-6 h-6 ${isFavorite(c.id) ? "fill-primary text-primary" : "text-foreground/40"}`}
+                      strokeWidth={2.2}
+                    />
+                  </button>
                   <div className="w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 shadow-card">
                     <ArrowRight className="w-5 h-5" strokeWidth={2.5} />
                   </div>
@@ -225,7 +255,7 @@ const Circuits = () => {
             {[
               { icon: Home, label: "Accueil", to: "/", active: false },
               { icon: Map, label: "Circuits", to: "/circuits", active: true },
-              { icon: Heart, label: "Favoris", to: "/my-circuits", active: false },
+              { icon: Heart, label: "Favoris", to: "/favorites", active: false },
               { icon: UserIcon, label: "Profil", to: user ? "/profile" : "/auth", active: false },
             ].map((t) => (
               <Link
