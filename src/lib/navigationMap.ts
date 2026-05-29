@@ -16,7 +16,10 @@ export const MAP_TILE_SOURCES: TileSource[] = [
       detectRetina: false,
       keepBuffer: 8,
       maxZoom: 19,
-      maxNativeZoom: 19,
+      // Some providers return empty tiles at street-level zooms in mobile
+      // WebViews. Keep requesting reliable z16 tiles and let Leaflet upscale
+      // them when the user zooms in, instead of fetching blank z18/z19 tiles.
+      maxNativeZoom: 16,
       // Tiny transparent PNG so failed tiles render blank instead of broken-image.
       errorTileUrl:
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
@@ -30,7 +33,7 @@ export const MAP_TILE_SOURCES: TileSource[] = [
       detectRetina: false,
       keepBuffer: 6,
       maxZoom: 19,
-      maxNativeZoom: 19,
+      maxNativeZoom: 16,
       subdomains: "abc",
       errorTileUrl:
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
@@ -44,7 +47,7 @@ export const MAP_TILE_SOURCES: TileSource[] = [
       detectRetina: false,
       keepBuffer: 4,
       maxZoom: 20,
-      maxNativeZoom: 19,
+      maxNativeZoom: 16,
       subdomains: "abcd",
       errorTileUrl:
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
