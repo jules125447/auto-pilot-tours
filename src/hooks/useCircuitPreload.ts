@@ -41,28 +41,58 @@ export function useCircuitPreload() {
       if (s.photo_url) urls.push({ url: s.photo_url, label: "Photo" });
     });
 
-    // Pre-cache map tiles along route (sample key points)
+    // Pre-cache map tiles covering the full bounding box of the route so the
+    // map keeps working offline across the entire circuit.
     const routeCoords = circuit.route;
     if (routeCoords.length > 0) {
-      // Cache tiles at zoom levels 13-16 for a selection of route points
-      const sampleCount = Math.min(routeCoords.length, 20);
-      const step = Math.max(1, Math.floor(routeCoords.length / sampleCount));
-      const zoomLevels = [14, 15, 16];
+      let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+      for (const [lat, lng] of routeCoords) {
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+      }
+      // ~500m padding around the route
+      const padLat = 0.005;
+      const padLng = 0.005 / Math.max(0.2, Math.cos(((minLat + maxLat) / 2) * Math.PI / 180));
+      minLat -= padLat; maxLat += padLat;
+      minLng -= padLng; maxLng += padLng;
 
-      for (let i = 0; i < routeCoords.length; i += step) {
-        const [lat, lng] = routeCoords[i];
-        for (const z of zoomLevels) {
-          const x = Math.floor(((lng + 180) / 360) * Math.pow(2, z));
-          const latRad = (lat * Math.PI) / 180;
-          const y = Math.floor(
-            ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * Math.pow(2, z)
-          );
-          // Use multiple subdomains for parallel loading
-          const sub = ["a", "b", "c"][i % 3];
-          urls.push({
-            url: `https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`,
-            label: "Carte",
-          });
+      const lat2tile = (lat: number, z: number) => {
+        const latRad = (lat * Math.PI) / 180;
+        return Math.floor(
+          ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * Math.pow(2, z)
+        );
+      };
+      const lng2tile = (lng: number, z: number) =>
+        Math.floor(((lng + 180) / 360) * Math.pow(2, z));
+
+      const zoomLevels = [13, 14, 15, 16, 17];
+      const MAX_TILES_PER_ZOOM = 400; // safety cap per zoom level
+      let tileIndex = 0;
+
+      for (const z of zoomLevels) {
+        const xMin = lng2tile(minLng, z);
+        const xMax = lng2tile(maxLng, z);
+        const yMin = lat2tile(maxLat, z);
+        const yMax = lat2tile(minLat, z);
+        const count = (xMax - xMin + 1) * (yMax - yMin + 1);
+        if (count > MAX_TILES_PER_ZOOM) continue;
+        for (let x = xMin; x <= xMax; x++) {
+          for (let y = yMin; y <= yMax; y++) {
+            const sub = ["a", "b", "c"][tileIndex % 3];
+            tileIndex++;
+            // CartoDB Voyager (primary tiles used by NavigationMap)
+            urls.push({
+              url: `https://${sub}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`,
+              label: "Carte",
+            });
+            // OSM fallback tiles
+            urls.push({
+              url: `https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`,
+              label: "Carte",
+            });
+          }
         }
       }
     }
