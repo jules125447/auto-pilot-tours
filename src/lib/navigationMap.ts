@@ -13,34 +13,45 @@ export const MAP_TILE_SOURCES: TileSource[] = [
   {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     options: {
-      crossOrigin: true,
+      // "anonymous" is the only valid string for the crossOrigin tile option.
+      // Passing `true` produces an invalid <img crossorigin="true"> attribute
+      // which makes WebKit / Capacitor WebView silently drop some tiles.
+      crossOrigin: "anonymous",
       detectRetina: true,
       keepBuffer: 6,
       maxZoom: 19,
       subdomains: "abcd",
+      // Tiny transparent PNG so failed tiles render blank instead of broken-image.
+      errorTileUrl:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
     },
   },
   {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     options: {
-      crossOrigin: true,
+      crossOrigin: "anonymous",
       detectRetina: true,
       keepBuffer: 6,
       maxZoom: 19,
       subdomains: "abc",
+      errorTileUrl:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
     },
   },
   {
     url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     options: {
-      crossOrigin: true,
+      crossOrigin: "anonymous",
       detectRetina: true,
       keepBuffer: 4,
       maxZoom: 20,
       subdomains: "abcd",
+      errorTileUrl:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
     },
   },
 ];
+
 
 export function createBaseTileLayer(source: TileSource) {
   return L.tileLayer(source.url, source.options);
