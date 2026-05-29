@@ -34,7 +34,7 @@ const RouteMap = ({ route, stops = [], className = "", interactive = true }: Rou
       detectRetina: false,
       keepBuffer: 6,
       maxZoom: 19,
-      maxNativeZoom: 19,
+      maxNativeZoom: 16,
     }).addTo(map);
 
     if (route.length > 0) {
