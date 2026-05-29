@@ -1,17 +1,18 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { Locate } from "lucide-react";
 import FixedUserArrow from "@/components/navigation/FixedUserArrow";
 import {
-  MAP_TILE_SOURCES,
-  centerMapOnAnchoredPoint,
-  createBaseTileLayer,
-  findClosestRouteIndex,
-  getTrackingAnchorY,
+  DEFAULT_MAP_STYLE,
+  TRACKING_ANCHOR_Y,
+  computeBounds,
+  emptyLineGeoJSON,
   getTrackingZoom,
-  snapPositionToRoute,
-} from "@/lib/navigationMap";
+  paddingForAnchor,
+  routeToLineGeoJSON,
+} from "@/lib/mapLibreConfig";
+import { findClosestRouteIndex, snapPositionToRoute } from "@/lib/navigationMap";
 
 interface Stop {
   id: string;
@@ -47,6 +48,8 @@ const poiEmoji: Record<string, string> = {
   site: "🏛️",
 };
 
+const ROUTE_COLOR = "#F25C1C";
+
 const NavigationMap = ({
   route,
   stops,
@@ -58,306 +61,220 @@ const NavigationMap = ({
   recalculatedRoute,
   annotations = [],
 }: NavigationMapProps) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
-  const userMarkerRef = useRef<L.Marker | null>(null);
-  const stopMarkersRef = useRef<L.Marker[]>([]);
-  const participantMarkersRef = useRef<Map<string, L.Marker>>(new Map());
-  const traveledLineRef = useRef<L.Polyline | null>(null);
-  const remainingLineRef = useRef<L.Polyline | null>(null);
-  const routeToStartLineRef = useRef<L.Polyline | null>(null);
-  const routeToStartGlowRef = useRef<L.Polyline | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const tileFallbackTimeoutRef = useRef<number | null>(null);
-  const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const [tracking, setTracking] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
+  const [tracking, setTracking] = useState(true);
   const userInteractingRef = useRef(false);
-  const activeRoute = useMemo(() => {
-    if (routeToStart && routeToStart.length > 1) return routeToStart;
-    return route;
-  }, [route, routeToStart]);
+  const hasFitInitialBoundsRef = useRef(false);
 
-  const mapHeading = useMemo(() => {
-    if (!Number.isFinite(heading)) return 0;
-    return heading;
-  }, [heading]);
+  const stopMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const participantMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const annotationMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const startFlagRef = useRef<maplibregl.Marker | null>(null);
 
-  const syncMapSize = useCallback(() => {
-    const map = mapInstance.current;
-    if (!map) return;
-
-    const size = map.getSize();
-    setMapSize((prev) =>
-      prev.width === size.x && prev.height === size.y
-        ? prev
-        : { width: size.x, height: size.y }
-    );
-  }, []);
-
-  const trackingAnchorY = useMemo(
-    () =>
-      getTrackingAnchorY(
-        mapSize.width || (typeof window === "undefined" ? 1024 : window.innerWidth),
-        mapSize.height || (typeof window === "undefined" ? 768 : window.innerHeight)
-      ),
-    [mapSize]
-  );
+  const mapHeading = useMemo(() => (Number.isFinite(heading) ? heading : 0), [heading]);
 
   const handleRecenter = useCallback(() => {
     userInteractingRef.current = false;
     setTracking(true);
-    mapInstance.current?.invalidateSize({ pan: false });
-    syncMapSize();
-  }, [syncMapSize]);
+  }, []);
 
-  // -------- Mount-only map initialization --------
-  // IMPORTANT: this effect must run exactly once for the lifetime of the
-  // component. Previously its deps included `route` and `stops`, which made
-  // the whole Leaflet instance get destroyed + rebuilt every time the parent
-  // re-rendered with a new route array — that's the main cause of "tuiles
-  // vides" / flickers, because tile downloads were aborted mid-flight.
+  // -------- Init map --------
   useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
+    if (!containerRef.current || mapRef.current) return;
 
-    const map = L.map(mapRef.current, {
-      zoomControl: false,
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: DEFAULT_MAP_STYLE,
+      center: [2.35, 48.85],
+      zoom: 13,
+      pitch: 0,
+      bearing: 0,
       attributionControl: false,
-      scrollWheelZoom: true,
-      dragging: true,
-      doubleClickZoom: true,
-      touchZoom: true,
-      preferCanvas: true,
-      fadeAnimation: false,
-      zoomAnimation: false,
-      markerZoomAnimation: false,
+      // Disable rotation gestures so the user can't fight our programmatic bearing
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
     });
 
-    const clearTileFallbackTimeout = () => {
-      if (tileFallbackTimeoutRef.current !== null) {
-        window.clearTimeout(tileFallbackTimeoutRef.current);
-        tileFallbackTimeoutRef.current = null;
-      }
-    };
+    map.on("load", () => {
+      // Empty sources for dynamic data
+      map.addSource("route-full", { type: "geojson", data: emptyLineGeoJSON() });
+      map.addSource("route-remaining", { type: "geojson", data: emptyLineGeoJSON() });
+      map.addSource("route-traveled", { type: "geojson", data: emptyLineGeoJSON() });
+      map.addSource("route-to-start", { type: "geojson", data: emptyLineGeoJSON() });
+      map.addSource("route-recalc", { type: "geojson", data: emptyLineGeoJSON() });
 
-    const attachTileLayer = (sourceIndex: number) => {
-      const tileLayer = createBaseTileLayer(MAP_TILE_SOURCES[sourceIndex]);
-      let fellBack = false;
-      let tileLoads = 0;
-      let tileErrors = 0;
-
-      const fallbackToNextSource = (reason: string) => {
-        if (fellBack || sourceIndex >= MAP_TILE_SOURCES.length - 1) return;
-        fellBack = true;
-        clearTileFallbackTimeout();
-        // Defer removal to next tick so Leaflet finishes its current paint.
-        setTimeout(() => {
-          try { map.removeLayer(tileLayer); } catch {}
-          tileLayerRef.current = attachTileLayer(sourceIndex + 1);
-          // eslint-disable-next-line no-console
-          console.warn(`[Map] Tile fallback → source ${sourceIndex + 1} (${reason})`);
-        }, 0);
-      };
-
-      // Hard timeout: if no tile loaded at all within 6s, switch source.
-      tileFallbackTimeoutRef.current = window.setTimeout(() => {
-        if (tileLoads === 0) fallbackToNextSource("no-tiles-loaded-6s");
-      }, 6000);
-
-      tileLayer.on("tileload", () => {
-        tileLoads += 1;
-        // First successful load: cancel the "no tiles" watchdog but keep
-        // monitoring error ratio (don't lock fellBack forever).
-        if (tileLoads === 1) clearTileFallbackTimeout();
+      // Base glow halo behind the route
+      map.addLayer({
+        id: "route-glow",
+        type: "line",
+        source: "route-full",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ROUTE_COLOR, "line-width": 18, "line-opacity": 0.15 },
+      });
+      // Traveled portion (dimmed)
+      map.addLayer({
+        id: "route-traveled-line",
+        type: "line",
+        source: "route-traveled",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ROUTE_COLOR, "line-width": 7, "line-opacity": 0.5 },
+      });
+      // Remaining portion (bright)
+      map.addLayer({
+        id: "route-remaining-line",
+        type: "line",
+        source: "route-remaining",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ROUTE_COLOR, "line-width": 7, "line-opacity": 0.9 },
+      });
+      // Route to start (dashed) — glow + line
+      map.addLayer({
+        id: "route-to-start-glow",
+        type: "line",
+        source: "route-to-start",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ROUTE_COLOR, "line-width": 16, "line-opacity": 0.15 },
+      });
+      map.addLayer({
+        id: "route-to-start-line",
+        type: "line",
+        source: "route-to-start",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": ROUTE_COLOR,
+          "line-width": 6,
+          "line-opacity": 0.9,
+          "line-dasharray": [2, 1.2],
+        },
+      });
+      // Recalculated route (dashed)
+      map.addLayer({
+        id: "route-recalc-glow",
+        type: "line",
+        source: "route-recalc",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ROUTE_COLOR, "line-width": 14, "line-opacity": 0.2 },
+      });
+      map.addLayer({
+        id: "route-recalc-line",
+        type: "line",
+        source: "route-recalc",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": ROUTE_COLOR,
+          "line-width": 5,
+          "line-opacity": 0.9,
+          "line-dasharray": [2, 1.2],
+        },
       });
 
-      tileLayer.on("tileerror", () => {
-        tileErrors += 1;
-        const total = tileLoads + tileErrors;
-        // Switch source when failure ratio is too high on a meaningful sample.
-        if (total >= 8 && tileErrors / total > 0.4) {
-          fallbackToNextSource(`error-ratio ${tileErrors}/${total}`);
-        }
-      });
-
-      tileLayer.addTo(map);
-      return tileLayer;
-    };
-
-    tileLayerRef.current = attachTileLayer(0);
-
-    const invalidateMapSize = () => {
-      requestAnimationFrame(() => {
-        map.invalidateSize({ pan: false });
-        syncMapSize();
-      });
-    };
-
-    map.whenReady(() => {
-      invalidateMapSize();
-      syncMapSize();
       setMapReady(true);
     });
-    window.addEventListener("resize", invalidateMapSize);
 
-    if (typeof ResizeObserver !== "undefined") {
-      resizeObserverRef.current = new ResizeObserver(invalidateMapSize);
-      resizeObserverRef.current.observe(mapRef.current);
-    }
-
-    // Detect user interaction to break tracking
-    const mapContainer = map.getContainer();
-    const markUserInteraction = () => {
-      userInteractingRef.current = true;
-    };
+    // User interaction → drop tracking
     const onDragStart = () => {
       userInteractingRef.current = true;
       setTracking(false);
     };
-    const onMoveStart = () => {
-      if (userInteractingRef.current) {
-        setTracking(false);
-      }
-    };
-
-    mapContainer.addEventListener("pointerdown", markUserInteraction, { passive: true });
-    mapContainer.addEventListener("wheel", markUserInteraction, { passive: true });
     map.on("dragstart", onDragStart);
-    map.on("movestart", onMoveStart);
-    map.on("zoomstart", () => {
-      if (userInteractingRef.current) {
+    map.on("touchmove", onDragStart);
+    map.getContainer().addEventListener(
+      "wheel",
+      () => {
+        userInteractingRef.current = true;
         setTracking(false);
-      }
-    });
+      },
+      { passive: true }
+    );
 
-    mapInstance.current = map;
+    mapRef.current = map;
 
     return () => {
-      mapContainer.removeEventListener("pointerdown", markUserInteraction);
-      mapContainer.removeEventListener("wheel", markUserInteraction);
-      window.removeEventListener("resize", invalidateMapSize);
-      resizeObserverRef.current?.disconnect();
-      map.off("dragstart", onDragStart);
-      map.off("movestart", onMoveStart);
-      clearTileFallbackTimeout();
-      tileLayerRef.current = null;
-      map.remove();
-      mapInstance.current = null;
       stopMarkersRef.current = [];
       participantMarkersRef.current.clear();
-      traveledLineRef.current = null;
-      remainingLineRef.current = null;
-      routeToStartGlowRef.current = null;
-      routeToStartLineRef.current = null;
-      setMapSize({ width: 0, height: 0 });
+      annotationMarkersRef.current = [];
+      userMarkerRef.current = null;
+      startFlagRef.current = null;
+      map.remove();
+      mapRef.current = null;
       setMapReady(false);
+      hasFitInitialBoundsRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // -------- Route polylines (re-runs when route changes) --------
-  const routeBaseLineRef = useRef<L.Polyline | null>(null);
-  const startFlagMarkerRef = useRef<L.Marker | null>(null);
-  const hasFitInitialBoundsRef = useRef(false);
-
+  // -------- Route geometry --------
   useEffect(() => {
-    const map = mapInstance.current;
+    const map = mapRef.current;
     if (!map || !mapReady) return;
 
-    // Clear previous route layers
-    if (routeBaseLineRef.current) { map.removeLayer(routeBaseLineRef.current); routeBaseLineRef.current = null; }
-    if (remainingLineRef.current) { map.removeLayer(remainingLineRef.current); remainingLineRef.current = null; }
-    if (traveledLineRef.current) { map.removeLayer(traveledLineRef.current); traveledLineRef.current = null; }
-    if (startFlagMarkerRef.current) { map.removeLayer(startFlagMarkerRef.current); startFlagMarkerRef.current = null; }
+    const fullSrc = map.getSource("route-full") as maplibregl.GeoJSONSource | undefined;
+    const remainingSrc = map.getSource("route-remaining") as maplibregl.GeoJSONSource | undefined;
+    const traveledSrc = map.getSource("route-traveled") as maplibregl.GeoJSONSource | undefined;
 
-    if (route.length === 0) return;
+    if (route.length === 0) {
+      fullSrc?.setData(emptyLineGeoJSON());
+      remainingSrc?.setData(emptyLineGeoJSON());
+      traveledSrc?.setData(emptyLineGeoJSON());
+      return;
+    }
 
-    routeBaseLineRef.current = L.polyline(route, {
-      color: "#F25C1C",
-      weight: 18,
-      opacity: 0.15,
-      smoothFactor: 1,
-    }).addTo(map);
+    fullSrc?.setData(routeToLineGeoJSON(route));
+    remainingSrc?.setData(routeToLineGeoJSON(route));
+    traveledSrc?.setData(emptyLineGeoJSON());
 
-    remainingLineRef.current = L.polyline(route, {
-      color: "#F25C1C",
-      weight: 7,
-      opacity: 0.85,
-      smoothFactor: 1,
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(map);
-
-    traveledLineRef.current = L.polyline([], {
-      color: "#F25C1C",
-      weight: 7,
-      opacity: 0.5,
-      smoothFactor: 1,
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(map);
-
-    const startIcon = L.divIcon({
-      html: `
-        <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
-          <div style="width:36px;height:36px;border-radius:50%;background:#F25C1C;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(242,92,28,0.5);">🏁</div>
-        </div>
-      `,
-      className: "poi-marker",
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
-    startFlagMarkerRef.current = L.marker([route[0][0], route[0][1]], { icon: startIcon, zIndexOffset: 900 }).addTo(map);
+    // Start flag marker
+    if (startFlagRef.current) {
+      startFlagRef.current.remove();
+      startFlagRef.current = null;
+    }
+    const flagEl = document.createElement("div");
+    flagEl.innerHTML = `<div style="width:36px;height:36px;border-radius:50%;background:${ROUTE_COLOR};border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(242,92,28,0.5);">🏁</div>`;
+    startFlagRef.current = new maplibregl.Marker({ element: flagEl })
+      .setLngLat([route[0][1], route[0][0]])
+      .addTo(map);
 
     if (!hasFitInitialBoundsRef.current) {
-      const polyline = L.polyline(route);
-      map.fitBounds(polyline.getBounds(), { padding: [80, 80] });
+      const bounds = computeBounds(route);
+      if (bounds) {
+        map.fitBounds(bounds, { padding: 80, animate: false });
+      }
       hasFitInitialBoundsRef.current = true;
     }
   }, [route, mapReady]);
 
-  // -------- Stop markers (re-runs when stops change) --------
+  // -------- Stop markers --------
   useEffect(() => {
-    const map = mapInstance.current;
+    const map = mapRef.current;
     if (!map || !mapReady) return;
 
-    // Clear previous stop markers
-    stopMarkersRef.current.forEach((m) => map.removeLayer(m));
+    stopMarkersRef.current.forEach((m) => m.remove());
     stopMarkersRef.current = [];
 
-    stops.forEach((stop) => {
-      const icon = L.divIcon({
-        html: `
-          <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-            <div style="width:32px;height:32px;border-radius:50%;background:white;border:2.5px solid hsl(15,85%,55%);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 12px rgba(234,88,12,0.25);">${poiEmoji[stop.type] || "📍"}</div>
-          </div>
-        `,
-        className: "poi-marker",
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      });
-
-      const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map);
-      marker.bindTooltip(stop.title, {
-        permanent: false,
-        direction: "top",
-        className: "poi-tooltip-nav",
-        offset: [0, -20],
-      });
+    stops.forEach((stop, i) => {
+      const el = document.createElement("div");
+      const highlight = i === currentStopIndex;
+      el.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:white;border:2.5px solid hsl(15,85%,55%);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 12px rgba(234,88,12,${highlight ? "0.4" : "0.15"});">${poiEmoji[stop.type] || "📍"}</div>`;
+      el.title = stop.title;
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([stop.lng, stop.lat])
+        .addTo(map);
       stopMarkersRef.current.push(marker);
     });
-  }, [stops, mapReady]);
+  }, [stops, mapReady, currentStopIndex]);
 
-
+  // -------- Participants --------
   useEffect(() => {
-    if (!mapInstance.current) return;
-    const map = mapInstance.current;
-    const currentIds = new Set(participants.map((p) => p.id));
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
 
+    const currentIds = new Set(participants.map((p) => p.id));
     participantMarkersRef.current.forEach((marker, id) => {
       if (!currentIds.has(id)) {
-        map.removeLayer(marker);
+        marker.remove();
         participantMarkersRef.current.delete(id);
       }
     });
@@ -365,105 +282,77 @@ const NavigationMap = ({
     participants.forEach((p) => {
       const existing = participantMarkersRef.current.get(p.id);
       if (existing) {
-        existing.setLatLng([p.lat, p.lng]);
+        existing.setLngLat([p.lng, p.lat]);
       } else {
-        const icon = L.divIcon({
-          html: `
-            <div style="width:32px;height:32px;border-radius:50%;background:#F25C1C;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${(p.display_name || "?")[0].toUpperCase()}</div>
-          `,
-          className: "participant-marker",
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-        });
-        const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: 500 }).addTo(map);
+        const el = document.createElement("div");
+        el.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${ROUTE_COLOR};border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${(p.display_name || "?")[0].toUpperCase()}</div>`;
+        const marker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(map);
         participantMarkersRef.current.set(p.id, marker);
       }
     });
-  }, [participants]);
+  }, [participants, mapReady]);
 
-  // Draw orange route-to-start polyline
+  // -------- Route to start --------
   useEffect(() => {
-    if (!mapInstance.current) return;
-    const map = mapInstance.current;
-
-    if (routeToStartGlowRef.current) {
-      map.removeLayer(routeToStartGlowRef.current);
-      routeToStartGlowRef.current = null;
-    }
-
-    if (routeToStartLineRef.current) {
-      map.removeLayer(routeToStartLineRef.current);
-      routeToStartLineRef.current = null;
-    }
-
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const src = map.getSource("route-to-start") as maplibregl.GeoJSONSource | undefined;
     if (routeToStart && routeToStart.length > 1) {
-      routeToStartGlowRef.current = L.polyline(routeToStart, {
-        color: "#F25C1C",
-        weight: 16,
-        opacity: 0.15,
-        smoothFactor: 1,
-      }).addTo(map);
-
-      routeToStartLineRef.current = L.polyline(routeToStart, {
-        color: "#F25C1C",
-        weight: 6,
-        opacity: 0.9,
-        smoothFactor: 1,
-        lineCap: "round",
-        lineJoin: "round",
-        dashArray: "12 8",
-      }).addTo(map);
-
+      src?.setData(routeToLineGeoJSON(routeToStart));
       if (!userPos) {
-        map.fitBounds(routeToStartLineRef.current.getBounds(), { padding: [80, 80] });
+        const bounds = computeBounds(routeToStart);
+        if (bounds) map.fitBounds(bounds, { padding: 80, animate: false });
       }
+    } else {
+      src?.setData(emptyLineGeoJSON());
     }
-  }, [routeToStart, userPos]);
+  }, [routeToStart, userPos, mapReady]);
 
-  // Recalculated route (off-route recovery)
-  const recalcLineRef = useRef<L.Polyline | null>(null);
-  const recalcGlowRef = useRef<L.Polyline | null>(null);
-
+  // -------- Recalculated route --------
   useEffect(() => {
-    if (!mapInstance.current) return;
-    const map = mapInstance.current;
-
-    if (recalcGlowRef.current) { map.removeLayer(recalcGlowRef.current); recalcGlowRef.current = null; }
-    if (recalcLineRef.current) { map.removeLayer(recalcLineRef.current); recalcLineRef.current = null; }
-
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const src = map.getSource("route-recalc") as maplibregl.GeoJSONSource | undefined;
     if (recalculatedRoute && recalculatedRoute.length > 1) {
-      recalcGlowRef.current = L.polyline(recalculatedRoute, {
-        color: "#F25C1C",
-        weight: 14,
-        opacity: 0.2,
-        smoothFactor: 1,
-      }).addTo(map);
-
-      recalcLineRef.current = L.polyline(recalculatedRoute, {
-        color: "#F25C1C",
-        weight: 5,
-        opacity: 0.9,
-        smoothFactor: 1,
-        lineCap: "round",
-        lineJoin: "round",
-        dashArray: "10 6",
-      }).addTo(map);
+      src?.setData(routeToLineGeoJSON(recalculatedRoute));
+    } else {
+      src?.setData(emptyLineGeoJSON());
     }
-  }, [recalculatedRoute]);
+  }, [recalculatedRoute, mapReady]);
 
+  // -------- Annotations --------
   useEffect(() => {
-    if (!mapInstance.current) return;
-    const map = mapInstance.current;
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
 
-    if (!userPos) {
-      return;
-    }
+    annotationMarkersRef.current.forEach((m) => m.remove());
+    annotationMarkersRef.current = [];
 
-    // Snap-to-route: if user is within ~45 m of the polyline, render the arrow
-    // on the road instead of on the raw (noisy) GPS fix. This is what makes
-    // the cursor look "magnetised" to the route like Waze/Google Maps.
-    // 45 m is more forgiving than 30 m for native GPS in urban canyons where
-    // accuracy commonly reports 25–50 m even with a real GPS chip.
+    annotations.forEach((ann) => {
+      const sizeMap: Record<string, number> = { small: 36, medium: 52, large: 72 };
+      const px = sizeMap[ann.size] || 52;
+      const hasImage = !!ann.image_url;
+      const el = document.createElement("div");
+      el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;">
+        <div style="width:${px}px;height:${px}px;border-radius:12px;border:2.5px solid hsl(15,85%,55%);overflow:hidden;background:white;box-shadow:0 3px 16px rgba(234,88,12,0.3);display:flex;align-items:center;justify-content:center;">
+          ${hasImage ? `<img src="${ann.image_url}" style="width:100%;height:100%;object-fit:cover;" />` : `<span style="font-size:${px * 0.4}px;">🖼</span>`}
+        </div>
+        ${ann.caption ? `<div style="max-width:${px + 60}px;background:white;border-radius:8px;padding:3px 8px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,0.12);color:#1a1a1a;">${ann.caption}</div>` : ""}
+      </div>`;
+      // rotationAlignment 'viewport' keeps the marker screen-aligned regardless of map bearing
+      const marker = new maplibregl.Marker({ element: el, rotationAlignment: "viewport" })
+        .setLngLat([ann.lng, ann.lat])
+        .addTo(map);
+      annotationMarkersRef.current.push(marker);
+    });
+  }, [annotations, mapReady]);
+
+  // -------- User position, snap-to-route, traveled split, camera tracking --------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !userPos) return;
+
+    // Snap to route within 45 m
     let displayPos: [number, number] = userPos;
     let snappedSegIdx: number | null = null;
     if (route.length > 1) {
@@ -474,225 +363,69 @@ const NavigationMap = ({
       }
     }
 
-
+    // Update traveled/remaining split
     if (route.length > 1) {
+      const remainingSrc = map.getSource("route-remaining") as maplibregl.GeoJSONSource | undefined;
+      const traveledSrc = map.getSource("route-traveled") as maplibregl.GeoJSONSource | undefined;
+
       if (routeToStart && routeToStart.length > 1) {
-        if (traveledLineRef.current) traveledLineRef.current.setLatLngs([]);
-        if (remainingLineRef.current) remainingLineRef.current.setLatLngs(route);
+        traveledSrc?.setData(emptyLineGeoJSON());
+        remainingSrc?.setData(routeToLineGeoJSON(route));
       } else {
-        // Use the snapped segment index when available so the split happens
-        // exactly where the user is on the road (not at the nearest vertex).
-        const splitIdx = snappedSegIdx !== null
-          ? snappedSegIdx
-          : findClosestRouteIndex(route, userPos);
+        const splitIdx = snappedSegIdx !== null ? snappedSegIdx : findClosestRouteIndex(route, userPos);
         const traveled = route.slice(0, splitIdx + 1).concat([displayPos]);
         const remaining = [displayPos].concat(route.slice(splitIdx + 1));
-
-        if (traveledLineRef.current) traveledLineRef.current.setLatLngs(traveled);
-        if (remainingLineRef.current) remainingLineRef.current.setLatLngs(remaining);
+        traveledSrc?.setData(routeToLineGeoJSON(traveled));
+        remainingSrc?.setData(routeToLineGeoJSON(remaining));
       }
     }
 
+    // User position marker (hidden while tracking, visible when user panned)
     if (!userMarkerRef.current) {
-      const icon = L.divIcon({
-        html: `
-          <div class="waze-arrow-shell">
-            <div class="waze-arrow-icon">
-              <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
-                <defs>
-                  <linearGradient id="arrowGradMap" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#F25C1C" />
-                    <stop offset="100%" stop-color="#F25C1C" />
-                  </linearGradient>
-                </defs>
-                <polygon points="24,4 9,40 24,32 39,40" fill="url(#arrowGradMap)" stroke="white" stroke-width="3" stroke-linejoin="round"/>
-              </svg>
-            </div>
+      const el = document.createElement("div");
+      el.className = "ml-user-marker";
+      el.innerHTML = `
+        <div class="waze-arrow-shell">
+          <div class="waze-arrow-icon">
+            <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
+              <polygon points="24,4 9,40 24,32 39,40" fill="${ROUTE_COLOR}" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+            </svg>
           </div>
-        `,
-        className: "waze-user-marker",
-        iconSize: [64, 64],
-        iconAnchor: [32, 32],
-      });
-      userMarkerRef.current = L.marker(displayPos, { icon, zIndexOffset: 1000 }).addTo(map);
-      // Enable smooth CSS transitions on marker element
-      const el = userMarkerRef.current.getElement();
-      if (el) el.style.transition = "transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1)";
+        </div>`;
+      userMarkerRef.current = new maplibregl.Marker({
+        element: el,
+        rotationAlignment: "map",
+      })
+        .setLngLat([displayPos[1], displayPos[0]])
+        .addTo(map);
     } else {
-      userMarkerRef.current.setLatLng(displayPos);
+      userMarkerRef.current.setLngLat([displayPos[1], displayPos[0]]);
     }
+    userMarkerRef.current.setRotation(mapHeading);
+    const userEl = userMarkerRef.current.getElement();
+    userEl.style.opacity = tracking ? "0" : "1";
 
-    const markerElement = userMarkerRef.current.getElement();
-    // When tracking, the Leaflet marker is hidden (the fixed overlay arrow is shown instead)
-    if (markerElement) {
-      markerElement.style.opacity = tracking ? "0" : "1";
-    }
-    // When not tracking, rotate the marker arrow to match bearing
-    const arrowIcon = markerElement?.querySelector(".waze-arrow-icon") as HTMLElement | null;
-    if (arrowIcon) {
-      arrowIcon.style.transform = tracking ? "rotate(0deg)" : `rotate(${mapHeading}deg)`;
-    }
-
-    // Rotate the entire map container so the real heading faces "up" (like Waze/Google Maps)
-    const mapContainer = map.getContainer();
     if (tracking) {
       userInteractingRef.current = false;
+      const size = map.getCanvas();
+      const padding = paddingForAnchor(size.height / (window.devicePixelRatio || 1), TRACKING_ANCHOR_Y);
+      const targetZoom = getTrackingZoom(size.width / (window.devicePixelRatio || 1), map.getZoom());
 
-      // Apply rotation: negative heading so the direction of travel points up
-      mapContainer.style.transformOrigin = "center center";
-      mapContainer.style.transition = "transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1)";
-      // Scale up slightly to hide corners during rotation
-      const diagonal = Math.sqrt(mapContainer.offsetWidth ** 2 + mapContainer.offsetHeight ** 2);
-      const maxDim = Math.max(mapContainer.offsetWidth, mapContainer.offsetHeight);
-      const scale = diagonal / maxDim;
-      mapContainer.style.transform = `rotate(${-mapHeading}deg) scale(${scale})`;
-
-      const currentMapSize = map.getSize();
-      const anchorY = getTrackingAnchorY(currentMapSize.x, currentMapSize.y);
-      
-      // Check if user is near any annotation — zoom out gently to show it
-      const ANNOTATION_PROXIMITY = 150; // meters
-      const nearAnnotation = annotations.length > 0 && annotations.some((ann) => {
-        const dLat = (ann.lat - userPos[0]) * 111320;
-        const dLng = (ann.lng - userPos[1]) * 111320 * Math.cos(userPos[0] * Math.PI / 180);
-        return Math.sqrt(dLat * dLat + dLng * dLng) < ANNOTATION_PROXIMITY;
+      map.easeTo({
+        center: [displayPos[1], displayPos[0]],
+        zoom: targetZoom,
+        bearing: mapHeading,
+        pitch: 0,
+        padding,
+        duration: 600,
+        essential: true,
       });
-      
-      const baseZoom = getTrackingZoom(currentMapSize.x, map.getZoom());
-      const targetZoom = nearAnnotation ? Math.min(baseZoom, 15.5) : baseZoom;
-      const zoomChanging = Math.abs(map.getZoom() - targetZoom) > 0.3;
-      
-      // Center the camera on the SNAPPED position (`displayPos`) instead of the
-      // raw GPS fix. Otherwise the fixed overlay arrow (always at screen center)
-      // ends up visually offset from the highlighted road segment.
-      centerMapOnAnchoredPoint(map, displayPos, anchorY, targetZoom, mapHeading, zoomChanging);
-
-    } else {
-      // Reset rotation when user is panning manually
-      mapContainer.style.transform = "none";
-      mapContainer.style.transition = "transform 300ms ease-out";
     }
-  }, [userPos, mapHeading, route, tracking, routeToStart, annotations]);
-
-  useEffect(() => {
-    stopMarkersRef.current.forEach((marker, i) => {
-      const el = marker.getElement();
-      if (!el) return;
-      const inner = el.querySelector("div[style*='border']") as HTMLElement;
-      if (!inner) return;
-
-      if (i === currentStopIndex) {
-        inner.style.borderColor = "hsl(15,85%,55%)";
-        inner.style.boxShadow = "0 2px 12px rgba(234,88,12,0.4)";
-      } else {
-        inner.style.borderColor = "hsl(15,85%,55%)";
-        inner.style.boxShadow = "0 2px 8px rgba(234,88,12,0.15)";
-      }
-    });
-  }, [currentStopIndex]);
-
-  // Annotation markers
-  const annotationMarkersRef = useRef<L.Marker[]>([]);
-  useEffect(() => {
-    if (!mapInstance.current) return;
-    const map = mapInstance.current;
-    annotationMarkersRef.current.forEach((m) => map.removeLayer(m));
-    annotationMarkersRef.current = [];
-
-    annotations.forEach((ann) => {
-      const sizeMap: Record<string, number> = { small: 36, medium: 52, large: 72 };
-      const px = sizeMap[ann.size] || 52;
-      const hasImage = !!ann.image_url;
-
-      const icon = L.divIcon({
-        html: `<div class="annotation-counter-rotate" style="display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;transition:transform 600ms cubic-bezier(0.25,0.1,0.25,1);">
-          <div style="width:${px}px;height:${px}px;border-radius:12px;border:2.5px solid hsl(15,85%,55%);overflow:hidden;background:white;box-shadow:0 3px 16px rgba(234,88,12,0.3);display:flex;align-items:center;justify-content:center;">
-            ${hasImage ? `<img src="${ann.image_url}" style="width:100%;height:100%;object-fit:cover;" />` : `<span style="font-size:${px * 0.4}px;">🖼</span>`}
-          </div>
-          ${ann.caption ? `<div style="max-width:${px + 60}px;background:white;border-radius:8px;padding:3px 8px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.01em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,0.12);color:#1a1a1a;">${ann.caption}</div>` : ""}
-        </div>`,
-        className: "poi-marker",
-        iconSize: [px + 20, px + (ann.caption ? 26 : 0)],
-        iconAnchor: [(px + 20) / 2, (px + (ann.caption ? 26 : 0)) / 2],
-      });
-
-      const marker = L.marker([ann.lat, ann.lng], { icon, zIndexOffset: 800 }).addTo(map);
-      if (ann.caption) {
-        marker.bindTooltip(ann.caption, { permanent: false, direction: "top", offset: [0, -px / 2 - 4], className: "poi-tooltip-nav" });
-      }
-      annotationMarkersRef.current.push(marker);
-    });
-  }, [annotations]);
-
-  // Counter-rotate annotations to keep them horizontal when map rotates
-  useEffect(() => {
-    const rotation = tracking ? mapHeading : 0;
-    annotationMarkersRef.current.forEach((m) => {
-      const el = m.getElement();
-      if (!el) return;
-      const inner = el.querySelector(".annotation-counter-rotate") as HTMLElement;
-      if (inner) {
-        inner.style.transform = `rotate(${rotation}deg)`;
-      }
-    });
-  }, [mapHeading, tracking]);
+  }, [userPos, mapHeading, route, tracking, routeToStart, mapReady]);
 
   return (
     <>
       <style>{`
-        .waze-user-marker,
-        .poi-marker,
-        .participant-marker {
-          background: none !important;
-          border: none !important;
-        }
-        .waze-arrow-shell {
-          width: 64px;
-          height: 64px;
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .waze-arrow-icon {
-          position: relative;
-          z-index: 2;
-          transform-origin: center center;
-        }
-        .waze-user-marker {
-          transition: transform 500ms cubic-bezier(0.25, 0.1, 0.25, 1) !important;
-        }
-        /* Large fixed overlay arrow */
-        .waze-arrow-shell-lg {
-          width: 72px;
-          height: 72px;
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .waze-arrow-icon-lg {
-          position: relative;
-          z-index: 2;
-          transform-origin: center center;
-          filter: drop-shadow(0 3px 8px rgba(255,149,0,0.35));
-        }
-        .poi-tooltip-nav {
-          background: hsl(var(--card)) !important;
-          color: hsl(var(--foreground)) !important;
-          border: 1px solid hsl(var(--border)) !important;
-          border-radius: 12px !important;
-          padding: 5px 12px !important;
-          font-size: 12px !important;
-          font-weight: 600 !important;
-          box-shadow: 0 4px 16px hsl(var(--foreground) / 0.08) !important;
-        }
-        .poi-tooltip-nav::before {
-          border-top-color: hsl(var(--card)) !important;
-        }
-        .leaflet-container {
-          background: hsl(var(--background));
-        }
         .nav-map-shell {
           width: 100%;
           height: 100%;
@@ -703,17 +436,42 @@ const NavigationMap = ({
         .nav-map-canvas {
           width: 100%;
           height: 100%;
-          will-change: transform;
+        }
+        .ml-user-marker {
+          transition: opacity 200ms ease;
+        }
+        .waze-arrow-shell {
+          width: 52px;
+          height: 52px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .waze-arrow-shell-lg {
+          width: 72px;
+          height: 72px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .waze-arrow-icon,
+        .waze-arrow-icon-lg {
+          transform-origin: center center;
+        }
+        .waze-arrow-icon-lg {
+          filter: drop-shadow(0 3px 8px rgba(255,149,0,0.35));
+        }
+        .maplibregl-canvas {
+          outline: none;
         }
       `}</style>
       <div className="nav-map-shell">
-        <div ref={mapRef} className="nav-map-canvas" />
+        <div ref={containerRef} className="nav-map-canvas" />
         <FixedUserArrow
-          anchorY={trackingAnchorY}
+          anchorY={TRACKING_ANCHOR_Y}
           bearing={mapHeading}
           visible={tracking && !!userPos && mapReady}
         />
-        {/* Recenter button — shown when user has panned away */}
         {!tracking && userPos && (
           <button
             onClick={handleRecenter}
