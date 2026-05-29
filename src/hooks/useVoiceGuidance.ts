@@ -17,12 +17,12 @@ import { speakUnified, stopSpeakingUnified } from "@/lib/nativeTts";
 
 export type AnnouncementTier = "far" | "mid" | "near" | "imminent" | "now";
 
+// Reduced to 3 tiers to avoid spammy / overlapping announcements.
+// Each turn now triggers at most: a single prep ~350 m, an imminent ~80 m, and "now" at the apex.
 const TIERS: { tier: AnnouncementTier; min: number; max: number }[] = [
-  { tier: "far", min: 800, max: 1100 },
-  { tier: "mid", min: 400, max: 600 },
-  { tier: "near", min: 200, max: 320 },
-  { tier: "imminent", min: 80, max: 150 },
-  { tier: "now", min: 0, max: 50 },
+  { tier: "mid", min: 250, max: 450 },
+  { tier: "imminent", min: 70, max: 130 },
+  { tier: "now", min: 0, max: 35 },
 ];
 
 function shortDir(dir: TurnDirection): string {

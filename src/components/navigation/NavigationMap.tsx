@@ -380,30 +380,34 @@ const NavigationMap = ({
       }
     }
 
-    // User position marker (hidden while tracking, visible when user panned)
-    if (!userMarkerRef.current) {
-      const el = document.createElement("div");
-      el.className = "ml-user-marker";
-      el.innerHTML = `
-        <div class="waze-arrow-shell">
-          <div class="waze-arrow-icon">
-            <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
-              <polygon points="24,4 9,40 24,32 39,40" fill="${ROUTE_COLOR}" stroke="white" stroke-width="3" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </div>`;
-      userMarkerRef.current = new maplibregl.Marker({
-        element: el,
-        rotationAlignment: "map",
-      })
-        .setLngLat([displayPos[1], displayPos[0]])
-        .addTo(map);
-    } else {
-      userMarkerRef.current.setLngLat([displayPos[1], displayPos[0]]);
+    // User position marker — ONLY shown when user has panned away from tracking.
+    // While tracking, the FixedUserArrow overlay at screen center is the single arrow.
+    if (!tracking) {
+      if (!userMarkerRef.current) {
+        const el = document.createElement("div");
+        el.className = "ml-user-marker";
+        el.innerHTML = `
+          <div class="waze-arrow-shell">
+            <div class="waze-arrow-icon">
+              <svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
+                <polygon points="24,4 9,40 24,32 39,40" fill="${ROUTE_COLOR}" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>`;
+        userMarkerRef.current = new maplibregl.Marker({
+          element: el,
+          rotationAlignment: "map",
+        })
+          .setLngLat([displayPos[1], displayPos[0]])
+          .addTo(map);
+      } else {
+        userMarkerRef.current.setLngLat([displayPos[1], displayPos[0]]);
+      }
+      userMarkerRef.current.setRotation(mapHeading);
+    } else if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
     }
-    userMarkerRef.current.setRotation(mapHeading);
-    const userEl = userMarkerRef.current.getElement();
-    userEl.style.opacity = tracking ? "0" : "1";
 
     if (tracking) {
       userInteractingRef.current = false;
@@ -411,13 +415,14 @@ const NavigationMap = ({
       const padding = paddingForAnchor(size.height / (window.devicePixelRatio || 1), TRACKING_ANCHOR_Y);
       const targetZoom = getTrackingZoom(size.width / (window.devicePixelRatio || 1), map.getZoom());
 
+      // Short, snappy follow — long durations make the arrow feel laggy
       map.easeTo({
         center: [displayPos[1], displayPos[0]],
         zoom: targetZoom,
         bearing: mapHeading,
         pitch: 0,
         padding,
-        duration: 600,
+        duration: 220,
         essential: true,
       });
     }

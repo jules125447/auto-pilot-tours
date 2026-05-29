@@ -301,8 +301,8 @@ const NavigationView = () => {
   const [hasReachedStart, setHasReachedStart] = useState(false);
 
   // Off-route recalculation
-  const OFF_ROUTE_THRESHOLD_METERS = 100;
-  const OFF_ROUTE_CONFIRM_COUNT = 3; // consecutive fixes off-route before recalculating
+  const OFF_ROUTE_THRESHOLD_METERS = 60;
+  const OFF_ROUTE_CONFIRM_COUNT = 2; // consecutive fixes off-route before recalculating
   const offRouteCountRef = useRef(0);
   const recalcAbortRef = useRef<AbortController | null>(null);
   const lastRecalcTimeRef = useRef(0);
@@ -420,7 +420,7 @@ const NavigationView = () => {
           lastPushedPos = target;
           setDisplayPos(target);
         } else {
-          const rate = 4.5; // ~0.07 alpha at 60fps
+          const rate = 9; // snappy follow (~0.14 alpha at 60fps) — minimal lag behind real GPS
           const a = 1 - Math.exp(-rate * dt);
           const next: [number, number] = [
             current[0] + (target[0] - current[0]) * a,
@@ -444,7 +444,7 @@ const NavigationView = () => {
       let delta = tH - cur;
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;
-      const aH = 1 - Math.exp(-5 * dt);
+      const aH = 1 - Math.exp(-9 * dt);
       const nextH = (cur + delta * aH + 360) % 360;
       displayHeadingRef.current = nextH;
       let pushDelta = nextH - lastPushedHeading;
