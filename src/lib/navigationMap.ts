@@ -11,43 +11,45 @@ interface TileSource {
 
 export const MAP_TILE_SOURCES: TileSource[] = [
   {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
     options: {
-      // "anonymous" is the only valid string for the crossOrigin tile option.
-      // Passing `true` produces an invalid <img crossorigin="true"> attribute
-      // which makes WebKit / Capacitor WebView silently drop some tiles.
-      crossOrigin: "anonymous",
-      detectRetina: true,
-      keepBuffer: 6,
+      detectRetina: false,
+      keepBuffer: 8,
       maxZoom: 19,
-      subdomains: "abcd",
+      maxNativeZoom: 19,
       // Tiny transparent PNG so failed tiles render blank instead of broken-image.
       errorTileUrl:
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      updateWhenIdle: true,
+      updateWhenZooming: false,
     },
   },
   {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     options: {
-      crossOrigin: "anonymous",
-      detectRetina: true,
+      detectRetina: false,
       keepBuffer: 6,
       maxZoom: 19,
+      maxNativeZoom: 19,
       subdomains: "abc",
       errorTileUrl:
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      updateWhenIdle: true,
+      updateWhenZooming: false,
     },
   },
   {
     url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     options: {
-      crossOrigin: "anonymous",
-      detectRetina: true,
+      detectRetina: false,
       keepBuffer: 4,
       maxZoom: 20,
+      maxNativeZoom: 19,
       subdomains: "abcd",
       errorTileUrl:
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      updateWhenIdle: true,
+      updateWhenZooming: false,
     },
   },
 ];
