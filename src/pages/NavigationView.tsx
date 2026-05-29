@@ -390,6 +390,77 @@ const NavigationView = () => {
 
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
+  // Continuously tweened display values for the map so the arrow/map glide
+  // smoothly between GPS fixes instead of jumping each second.
+  const [displayPos, setDisplayPos] = useState<[number, number] | null>(null);
+  const [displayHeading, setDisplayHeading] = useState(0);
+  const displayPosRef = useRef<[number, number] | null>(null);
+  const displayHeadingRef = useRef(0);
+  const targetPosRef = useRef<[number, number] | null>(null);
+  const targetHeadingRef = useRef(0);
+
+  useEffect(() => { targetPosRef.current = userPos; }, [userPos]);
+  useEffect(() => { targetHeadingRef.current = heading; }, [heading]);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    let lastPushedPos: [number, number] | null = null;
+    let lastPushedHeading = 0;
+    const tick = (now: number) => {
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+
+      // Position: exponential damp toward target (frame-rate independent).
+      const target = targetPosRef.current;
+      if (target) {
+        const current = displayPosRef.current;
+        if (!current) {
+          displayPosRef.current = target;
+          lastPushedPos = target;
+          setDisplayPos(target);
+        } else {
+          const rate = 4.5; // ~0.07 alpha at 60fps
+          const a = 1 - Math.exp(-rate * dt);
+          const next: [number, number] = [
+            current[0] + (target[0] - current[0]) * a,
+            current[1] + (target[1] - current[1]) * a,
+          ];
+          displayPosRef.current = next;
+          if (
+            !lastPushedPos ||
+            Math.abs(next[0] - lastPushedPos[0]) > 5e-7 ||
+            Math.abs(next[1] - lastPushedPos[1]) > 5e-7
+          ) {
+            lastPushedPos = next;
+            setDisplayPos(next);
+          }
+        }
+      }
+
+      // Heading: shortest-arc damped lerp.
+      const tH = targetHeadingRef.current;
+      const cur = displayHeadingRef.current;
+      let delta = tH - cur;
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+      const aH = 1 - Math.exp(-5 * dt);
+      const nextH = (cur + delta * aH + 360) % 360;
+      displayHeadingRef.current = nextH;
+      let pushDelta = nextH - lastPushedHeading;
+      if (pushDelta > 180) pushDelta -= 360;
+      if (pushDelta < -180) pushDelta += 360;
+      if (Math.abs(pushDelta) > 0.4) {
+        lastPushedHeading = nextH;
+        setDisplayHeading(nextH);
+      }
+
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const activeSnapRoute = useMemo<[number, number][] | null>(() => {
     if (!hasReachedStart && currentStopIndex === 0 && routeToStart && routeToStart.length > 1) {
       return routeToStart;
