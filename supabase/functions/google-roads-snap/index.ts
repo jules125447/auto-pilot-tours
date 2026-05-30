@@ -1,9 +1,8 @@
-// Snap-to-road via Google Roads API, routed through the Lovable
-// Google Maps Platform connector gateway. Browser keys are not authorized
-// for the Roads API, so we proxy server-side.
+// Snap-to-road via Google Roads API, appelée directement avec une clé serveur
+// dédiée (GOOGLE_MAPS_SERVER_KEY). Cette clé doit avoir Roads API activée
+// dans Google Cloud Console et être restreinte par IP (ou non restreinte
+// si appelée depuis edge functions Supabase).
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/google_maps';
 
 interface Body {
   path: Array<[number, number]>; // [lat, lng][]
@@ -24,15 +23,9 @@ function isLatLng(p: unknown): p is [number, number] {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
-  if (!LOVABLE_API_KEY) {
-    return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY missing' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (!GOOGLE_MAPS_API_KEY) {
-    return new Response(JSON.stringify({ error: 'GOOGLE_MAPS_API_KEY (connector) missing' }), {
+  const GOOGLE_MAPS_SERVER_KEY = Deno.env.get('GOOGLE_MAPS_SERVER_KEY');
+  if (!GOOGLE_MAPS_SERVER_KEY) {
+    return new Response(JSON.stringify({ error: 'GOOGLE_MAPS_SERVER_KEY missing' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -58,22 +51,17 @@ Deno.serve(async (req) => {
   }
 
   const pathParam = body.path.map(([la, ln]) => `${la},${ln}`).join('|');
-  const url = `${GATEWAY_URL}/roads/v1/snapToRoads?interpolate=${body.interpolate ? 'true' : 'false'}&path=${encodeURIComponent(pathParam)}`;
+  const url = `https://roads.googleapis.com/v1/snapToRoads?interpolate=${body.interpolate ? 'true' : 'false'}&path=${encodeURIComponent(pathParam)}&key=${GOOGLE_MAPS_SERVER_KEY}`;
 
   try {
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'X-Connection-Api-Key': GOOGLE_MAPS_API_KEY,
-      },
-    });
+    const res = await fetch(url);
     const text = await res.text();
     return new Response(text, {
       status: res.status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: `Gateway error: ${(e as Error).message}` }), {
+    return new Response(JSON.stringify({ error: `Google Roads error: ${(e as Error).message}` }), {
       status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

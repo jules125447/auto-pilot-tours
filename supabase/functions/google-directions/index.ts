@@ -1,9 +1,7 @@
-// Directions via Google Routes API (v2 computeRoutes), routed through
-// the Lovable Google Maps Platform connector gateway. Legacy Directions
-// API is deprecated on this connector — we use routes/directions/v2:computeRoutes.
+// Directions via Google Routes API (v2 computeRoutes), appelée directement
+// avec la clé serveur GOOGLE_MAPS_SERVER_KEY (Routes API doit être activée
+// dans Google Cloud Console).
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/google_maps';
 
 interface Body {
   waypoints: Array<[number, number]>; // [lat, lng][], 2..25
@@ -22,7 +20,6 @@ function isLatLng(p: unknown): p is [number, number] {
   );
 }
 
-// Polyline decoder (Google encoded polyline algorithm)
 function decodePolyline(encoded: string): Array<[number, number]> {
   const points: Array<[number, number]> = [];
   let index = 0, lat = 0, lng = 0;
@@ -57,15 +54,9 @@ function mapManeuver(g?: string): { type: string; modifier?: string } {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY');
-  if (!LOVABLE_API_KEY) {
-    return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY missing' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  if (!GOOGLE_MAPS_API_KEY) {
-    return new Response(JSON.stringify({ error: 'GOOGLE_MAPS_API_KEY (connector) missing' }), {
+  const GOOGLE_MAPS_SERVER_KEY = Deno.env.get('GOOGLE_MAPS_SERVER_KEY');
+  if (!GOOGLE_MAPS_SERVER_KEY) {
+    return new Response(JSON.stringify({ error: 'GOOGLE_MAPS_SERVER_KEY missing' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -110,11 +101,10 @@ Deno.serve(async (req) => {
   };
 
   try {
-    const res = await fetch(`${GATEWAY_URL}/routes/directions/v2:computeRoutes`, {
+    const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'X-Connection-Api-Key': GOOGLE_MAPS_API_KEY,
+        'X-Goog-Api-Key': GOOGLE_MAPS_SERVER_KEY,
         'Content-Type': 'application/json',
         'X-Goog-FieldMask':
           'routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.navigationInstruction,routes.legs.steps.startLocation,routes.legs.steps.endLocation',
@@ -170,7 +160,7 @@ Deno.serve(async (req) => {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: `Gateway error: ${(e as Error).message}` }), {
+    return new Response(JSON.stringify({ error: `Google Routes error: ${(e as Error).message}` }), {
       status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
