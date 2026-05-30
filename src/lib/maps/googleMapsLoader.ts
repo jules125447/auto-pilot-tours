@@ -1,12 +1,11 @@
 import { GOOGLE_MAPS_API_KEY, HAS_GOOGLE_MAPS_KEY } from "./platform";
 
-let loaderPromise: Promise<typeof google> | null = null;
+// Use a permissive type to avoid coupling the loader to the global namespace
+// types — google.maps types are loaded via tsconfig but at runtime we just
+// resolve with whatever the script attaches to window.google.
+type GoogleNs = any;
 
-declare global {
-  interface Window {
-    __tiloGmapsCallback?: () => void;
-  }
-}
+let loaderPromise: Promise<GoogleNs> | null = null;
 
 /**
  * Async loader for the Google Maps JavaScript API.
@@ -15,22 +14,23 @@ declare global {
  */
 export function loadGoogleMapsJs(
   libraries: string[] = ["geometry"]
-): Promise<typeof google> {
+): Promise<GoogleNs> {
   if (!HAS_GOOGLE_MAPS_KEY) {
     return Promise.reject(new Error("Missing VITE_GOOGLE_MAPS_API_KEY"));
   }
   if (typeof window === "undefined") {
     return Promise.reject(new Error("Not in browser"));
   }
-  if (typeof window.google !== "undefined" && window.google.maps) {
-    return Promise.resolve(window.google);
+  const w = window as any;
+  if (w.google?.maps) {
+    return Promise.resolve(w.google);
   }
   if (loaderPromise) return loaderPromise;
 
   loaderPromise = new Promise((resolve, reject) => {
     const cbName = "__tiloGmapsCallback";
-    window[cbName] = () => {
-      if (window.google?.maps) resolve(window.google);
+    w[cbName] = () => {
+      if (w.google?.maps) resolve(w.google);
       else reject(new Error("Google Maps loaded but namespace missing"));
     };
 
