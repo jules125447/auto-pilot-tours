@@ -30,6 +30,10 @@ const config: CapacitorConfig = {
       backgroundTitle: "Navigation Tilo en cours",
     },
     KeepAwake: {},
+    GoogleMaps: {
+      // Configure native API keys via google-services.json (Android) and
+      // AppDelegate.swift (iOS). The web build reads VITE_GOOGLE_MAPS_API_KEY.
+    },
   },
   ios: {
     contentInset: "always",

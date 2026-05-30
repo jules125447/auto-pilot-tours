@@ -32,6 +32,20 @@ export async function getRoute(
 ): Promise<RouteResult | null> {
   if (waypoints.length < 2) return null;
 
+  // Try Google Directions first if a key is configured. Falls back to OSRM
+  // on any failure (quota, network, REQUEST_DENIED, etc.).
+  try {
+    const { HAS_GOOGLE_MAPS_KEY } = await import("./maps/platform");
+    if (HAS_GOOGLE_MAPS_KEY) {
+      const { fetchGoogleDirections } = await import("./maps/googleDirectionsApi");
+      const g = await fetchGoogleDirections(waypoints, options);
+      if (g) return g;
+    }
+  } catch {
+    /* fall through to OSRM */
+  }
+
+
   // OSRM expects lng,lat format
   const coords = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(";");
   const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=true`;
