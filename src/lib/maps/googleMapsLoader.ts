@@ -1,4 +1,4 @@
-import { GOOGLE_MAPS_API_KEY, HAS_GOOGLE_MAPS_KEY } from "./platform";
+import { GOOGLE_MAPS_API_KEY, GOOGLE_MAPS_TRACKING_ID, HAS_GOOGLE_MAPS_KEY } from "./platform";
 
 // Use a permissive type to avoid coupling the loader to the global namespace
 // types — google.maps types are loaded via tsconfig but at runtime we just
@@ -44,6 +44,7 @@ export function loadGoogleMapsJs(
       region: "FR",
       v: "weekly",
     });
+    if (GOOGLE_MAPS_TRACKING_ID) params.set("channel", GOOGLE_MAPS_TRACKING_ID);
     script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
     script.async = true;
     script.defer = true;
