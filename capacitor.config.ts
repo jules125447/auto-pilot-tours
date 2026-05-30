@@ -30,10 +30,9 @@ const config: CapacitorConfig = {
       backgroundTitle: "Navigation Tilo en cours",
     },
     KeepAwake: {},
-    GoogleMaps: {
-      // Configure native API keys via google-services.json (Android) and
-      // AppDelegate.swift (iOS). The web build reads VITE_GOOGLE_MAPS_API_KEY.
-    },
+    // Google Maps runs via the JavaScript API inside the WebView (Option 1).
+    // The native @capacitor/google-maps plugin is intentionally NOT installed
+    // because it caused a startup crash on Android.
   },
   ios: {
     contentInset: "always",
