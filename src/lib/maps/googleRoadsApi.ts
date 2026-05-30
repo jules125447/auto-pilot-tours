@@ -1,12 +1,10 @@
-import { GOOGLE_MAPS_API_KEY, HAS_GOOGLE_MAPS_KEY } from "./platform";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Snap a series of GPS points to the most likely roads using Google Roads API.
- * Returns the snapped lat/lng of the LAST point (the user's current position
- * corrected on the road network).
+ * Snap a series of GPS points to the most likely roads using Google Roads API
+ * via our Supabase edge function (server-side gateway call).
  *
- * Quota notice: 1 request per snap, throttle aggressively (>= 1.5s between calls).
- * Max 100 points per request.
+ * Quota notice: throttled to 1 call / 1.2s. Max 100 points per request.
  */
 
 export interface SnapResult {
@@ -14,35 +12,32 @@ export interface SnapResult {
   placeId: string | null;
 }
 
-const ENDPOINT = "https://roads.googleapis.com/v1/snapToRoads";
-
 let lastCallAt = 0;
 const MIN_INTERVAL_MS = 1200;
+
+interface SnappedPoint {
+  location: { latitude: number; longitude: number };
+  originalIndex?: number;
+  placeId?: string;
+}
 
 export async function snapToRoad(
   path: [number, number][]
 ): Promise<SnapResult | null> {
-  if (!HAS_GOOGLE_MAPS_KEY || path.length === 0) return null;
+  if (path.length === 0) return null;
 
   const now = Date.now();
   if (now - lastCallAt < MIN_INTERVAL_MS) return null;
   lastCallAt = now;
 
   const trimmed = path.slice(-100);
-  const pathParam = trimmed.map(([lat, lng]) => `${lat},${lng}`).join("|");
-  const url = `${ENDPOINT}?interpolate=false&path=${encodeURIComponent(
-    pathParam
-  )}&key=${GOOGLE_MAPS_API_KEY}`;
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const points: Array<{
-      location: { latitude: number; longitude: number };
-      originalIndex?: number;
-      placeId?: string;
-    }> = data.snappedPoints || [];
+    const { data, error } = await supabase.functions.invoke("google-roads-snap", {
+      body: { path: trimmed, interpolate: false },
+    });
+    if (error || !data) return null;
+    const points: SnappedPoint[] = data.snappedPoints || [];
     if (points.length === 0) return null;
     const last = points[points.length - 1];
     return {
@@ -54,21 +49,16 @@ export async function snapToRoad(
   }
 }
 
-/**
- * Nearest road for a single point (fallback when not enough history yet).
- */
-const NEAREST_ENDPOINT = "https://roads.googleapis.com/v1/nearestRoads";
-
 export async function nearestRoad(
   point: [number, number]
 ): Promise<SnapResult | null> {
-  if (!HAS_GOOGLE_MAPS_KEY) return null;
-  const url = `${NEAREST_ENDPOINT}?points=${point[0]},${point[1]}&key=${GOOGLE_MAPS_API_KEY}`;
+  // Use single-point snap (path of 1)
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const p = data.snappedPoints?.[0];
+    const { data, error } = await supabase.functions.invoke("google-roads-snap", {
+      body: { path: [point], interpolate: false },
+    });
+    if (error || !data) return null;
+    const p: SnappedPoint | undefined = data.snappedPoints?.[0];
     if (!p) return null;
     return {
       snapped: [p.location.latitude, p.location.longitude],
