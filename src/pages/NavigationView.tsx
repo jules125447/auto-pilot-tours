@@ -14,6 +14,7 @@ import { useVoiceGuidance } from "@/hooks/useVoiceGuidance";
 import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/lib/ambientSounds";
 import { useCircuitPreload } from "@/hooks/useCircuitPreload";
 import { getRoute } from "@/lib/routing";
+import { matchPosition, prepareRoute, type MatcherState, type PreparedRoute } from "@/lib/mapMatcher";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 import SpeedBubble from "@/components/navigation/SpeedBubble";
 import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
@@ -481,66 +482,76 @@ const NavigationView = () => {
       : "circuit-route";
   }, [activeSnapRoute, hasReachedStart, currentStopIndex, routeToStart]);
 
+  // ---- Map matcher state ----
+  const preparedRouteRef = useRef<PreparedRoute | null>(null);
+  const matcherStateRef = useRef<MatcherState | null>(null);
+  const lastMatchTimeRef = useRef<number>(0);
+
+  // Reset matcher when the active route changes (entering circuit, recalculation, etc.)
   useEffect(() => {
+    matcherStateRef.current = null;
+    lastMatchTimeRef.current = 0;
     routeProgressRef.current = null;
-  }, [activeSnapRouteKey, circuit?.id]);
+    if (activeSnapRoute && activeSnapRoute.length >= 2) {
+      preparedRouteRef.current = prepareRoute(activeSnapRoute);
+    } else {
+      preparedRouteRef.current = null;
+    }
+  }, [activeSnapRoute, activeSnapRouteKey, circuit?.id]);
 
   useEffect(() => {
     if (!rawUserPos) {
       setUserPos(null);
-      routeProgressRef.current = null;
       return;
     }
 
-    if (!activeSnapRoute || activeSnapRoute.length < 2) {
+    const prepared = preparedRouteRef.current;
+    if (!prepared) {
       setUserPos(rawUserPos);
-      routeProgressRef.current = null;
       return;
     }
 
-    const projected = projectClosestPointOnRoute(rawUserPos[0], rawUserPos[1], activeSnapRoute);
-    const accuracyMeters = gpsAccuracy ?? 30;
+    const accuracyMeters = gpsAccuracy ?? 25;
+    const now = Date.now();
+    const prevTime = lastMatchTimeRef.current || now;
+    const dtSeconds = Math.max(0.1, Math.min(5, (now - prevTime) / 1000));
+    lastMatchTimeRef.current = now;
+
+    const state = matchPosition(
+      {
+        route: prepared.route,
+        raw: rawUserPos,
+        headingDeg: Number.isFinite(heading) ? heading : null,
+        speedKmh: speed,
+        accuracyMeters,
+        dtSeconds,
+        prev: matcherStateRef.current,
+      },
+      prepared
+    );
+    matcherStateRef.current = state;
+    routeProgressRef.current = state.progressMeters;
+
     const isApproachRoute = activeSnapRouteKey === "route-to-start";
-    const maxSnapDistance = isApproachRoute
-      ? Math.min(70, Math.max(20, accuracyMeters * 1.15))
-      : Math.min(45, Math.max(12, accuracyMeters * 0.9));
+    const maxLateral = isApproachRoute
+      ? Math.min(80, Math.max(25, accuracyMeters * 1.4))
+      : Math.min(55, Math.max(15, accuracyMeters * 1.1));
 
-    if (projected.distance > maxSnapDistance) {
+    // If we're clearly off-route or low-confidence, show raw GPS.
+    // Recalculation logic (further down) will handle redrawing the route.
+    if (state.lateralMeters > maxLateral || state.confidence < 0.2) {
       setUserPos(rawUserPos);
-      routeProgressRef.current = null;
       return;
     }
 
-    const previousProgress = routeProgressRef.current;
-    let nextProgress = projected.cumulative;
-
-    if (previousProgress !== null) {
-      const speedMs = speed ? speed / 3.6 : 0;
-      const maxBackwardStep = isApproachRoute ? 14 : 10;
-      const maxForwardStep = Math.max(isApproachRoute ? 28 : 42, speedMs * 4.5);
-      const clampedProgress = Math.max(
-        Math.max(0, previousProgress - maxBackwardStep),
-        Math.min(projected.total, Math.min(projected.cumulative, previousProgress + maxForwardStep))
-      );
-
-      nextProgress = previousProgress + (clampedProgress - previousProgress) * (isApproachRoute ? 0.72 : 0.6);
-    }
-
-    routeProgressRef.current = nextProgress;
-    const snappedPoint = interpolateRoutePoint(activeSnapRoute, nextProgress);
-    const blendFactor = isApproachRoute
-      ? 0.9
-      : accuracyMeters <= 12
-        ? 0.8
-        : accuracyMeters <= 25
-          ? 0.65
-          : 0.45;
-
+    // Blend matched vs raw position by confidence — fully snapped when we're sure.
+    const blend = isApproachRoute ? 0.92 : Math.max(0.55, Math.min(0.95, state.confidence));
+    const target = state.displayPos;
     setUserPos([
-      rawUserPos[0] + (snappedPoint[0] - rawUserPos[0]) * blendFactor,
-      rawUserPos[1] + (snappedPoint[1] - rawUserPos[1]) * blendFactor,
+      rawUserPos[0] + (target[0] - rawUserPos[0]) * blend,
+      rawUserPos[1] + (target[1] - rawUserPos[1]) * blend,
     ]);
-  }, [rawUserPos, activeSnapRoute, activeSnapRouteKey, gpsAccuracy, speed]);
+  }, [rawUserPos, heading, gpsAccuracy, speed, activeSnapRouteKey]);
 
   // Fetch OSRM steps for roundabout detection
   useEffect(() => {
