@@ -44,6 +44,7 @@ export function loadGoogleMapsJs(
       region: "FR",
       v: "weekly",
     });
+    if (GOOGLE_MAPS_TRACKING_ID) params.set("channel", GOOGLE_MAPS_TRACKING_ID);
     script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
     script.async = true;
     script.defer = true;
