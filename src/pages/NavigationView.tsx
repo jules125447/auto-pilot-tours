@@ -15,6 +15,8 @@ import { startAmbientSound, stopAmbientSound, type AmbientSoundType } from "@/li
 import { useCircuitPreload } from "@/hooks/useCircuitPreload";
 import { getRoute } from "@/lib/routing";
 import { matchPosition, prepareRoute, type MatcherState, type PreparedRoute } from "@/lib/mapMatcher";
+import { snapToRoad } from "@/lib/maps/googleRoadsApi";
+import { HAS_GOOGLE_MAPS_KEY } from "@/lib/maps/platform";
 import type { TurnDirection } from "@/components/navigation/DirectionBanner";
 import SpeedBubble from "@/components/navigation/SpeedBubble";
 import { startSession, endSession, trackGpsPing, addDistance, hasAnalyticsConsent } from "@/lib/analytics";
@@ -486,6 +488,10 @@ const NavigationView = () => {
   const preparedRouteRef = useRef<PreparedRoute | null>(null);
   const matcherStateRef = useRef<MatcherState | null>(null);
   const lastMatchTimeRef = useRef<number>(0);
+  // Google Roads API snap-to-road state
+  const gpsBufferRef = useRef<[number, number][]>([]);
+  const googleSnapRef = useRef<{ pos: [number, number]; at: number } | null>(null);
+  const snapInflightRef = useRef(false);
 
   // Reset matcher when the active route changes (entering circuit, recalculation, etc.)
   useEffect(() => {
