@@ -538,19 +538,47 @@ const NavigationView = () => {
     matcherStateRef.current = state;
     routeProgressRef.current = state.progressMeters;
 
+    // Google Roads API snap-to-road: push raw fix into buffer, fire snap.
+    // When fresh (< 2.5s old) we trust Google over the local matcher.
+    if (HAS_GOOGLE_MAPS_KEY) {
+      const buf = gpsBufferRef.current;
+      buf.push(rawUserPos);
+      if (buf.length > 10) buf.shift();
+      if (!snapInflightRef.current && buf.length >= 2) {
+        snapInflightRef.current = true;
+        snapToRoad([...buf])
+          .then((res) => {
+            if (res) googleSnapRef.current = { pos: res.snapped, at: Date.now() };
+          })
+          .finally(() => {
+            snapInflightRef.current = false;
+          });
+      }
+    }
+
     const isApproachRoute = activeSnapRouteKey === "route-to-start";
     const maxLateral = isApproachRoute
       ? Math.min(80, Math.max(25, accuracyMeters * 1.4))
       : Math.min(55, Math.max(15, accuracyMeters * 1.1));
 
-    // If we're clearly off-route or low-confidence, show raw GPS.
-    // Recalculation logic (further down) will handle redrawing the route.
+    // Prefer Google snap if recent (≤ 2.5s) and within sane lateral range
+    const gs = googleSnapRef.current;
+    if (gs && now - gs.at < 2500) {
+      const dLat = gs.pos[0] - rawUserPos[0];
+      const dLng = gs.pos[1] - rawUserPos[1];
+      // ~ rough metric: 1 deg ~ 111km; check < 60m lateral
+      const distM = Math.sqrt(dLat * dLat + dLng * dLng) * 111000;
+      if (distM < 60) {
+        setUserPos(gs.pos);
+        return;
+      }
+    }
+
     if (state.lateralMeters > maxLateral || state.confidence < 0.2) {
       setUserPos(rawUserPos);
       return;
     }
 
-    // Blend matched vs raw position by confidence — fully snapped when we're sure.
     const blend = isApproachRoute ? 0.92 : Math.max(0.55, Math.min(0.95, state.confidence));
     const target = state.displayPos;
     setUserPos([
