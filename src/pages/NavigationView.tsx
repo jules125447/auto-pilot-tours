@@ -27,7 +27,12 @@ import {
   isNativePlatform,
 } from "@/lib/nativeGeolocation";
 import { activateWakeLock, releaseWakeLock } from "@/lib/nativeWakeLock";
-import { startBackgroundGps, stopBackgroundGps } from "@/lib/nativeBackgroundGeolocation";
+import {
+  startBackgroundGps,
+  stopBackgroundGps,
+  isAndroidNative,
+  type BackgroundPosition,
+} from "@/lib/nativeBackgroundGeolocation";
 import { applyAudioElementHints } from "@/lib/nativeAudioSession";
 
 const FADE_DURATION = 2000;
