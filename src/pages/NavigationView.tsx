@@ -1051,16 +1051,18 @@ const NavigationView = () => {
     };
   }, [circuit?.id, audioUnlocked]);
 
-  // Wake lock + background GPS — only while user is actively navigating
+  // Wake lock + (iOS-only) background GPS keep-alive.
+  // On Android the main GPS effect already runs background-geolocation as
+  // its primary source, so we don't start it twice here.
   useEffect(() => {
     if (!audioUnlocked) return;
     activateWakeLock();
     let started = false;
-    startBackgroundGps(() => {
-      // No-op: the regular watchPositionUnified is already feeding the
-      // pipeline; this watcher exists purely to keep the OS from
-      // suspending GPS when the screen turns off / app backgrounds.
-    }).then((ok) => { started = ok; });
+    if (!isAndroidNative()) {
+      startBackgroundGps(() => {
+        // No-op keep-alive watcher for iOS so GPS survives screen-off.
+      }).then((ok) => { started = ok; });
+    }
     return () => {
       releaseWakeLock();
       if (started) stopBackgroundGps();
