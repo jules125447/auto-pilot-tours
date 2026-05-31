@@ -3,12 +3,9 @@
  * or the screen is off. Native (iOS/Android) only.
  *
  * On web this is a no-op (browsers can't keep GPS alive in background).
- * The regular `watchPositionUnified` continues to work foreground.
- *
  * The plugin shows a persistent notification on Android (required by
  * Google Play for foreground location services) and uses the
- * `UIBackgroundModes: location` entitlement on iOS (must be set in
- * Info.plist after `npx cap add ios`).
+ * `UIBackgroundModes: location` entitlement on iOS.
  */
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
@@ -20,6 +17,11 @@ interface BackgroundGeolocationPlugin {
       requestPermissions?: boolean;
       stale?: boolean;
       distanceFilter?: number;
+      // Android-specific tuning (passed through to the native layer)
+      interval?: number;
+      fastestInterval?: number;
+      activitiesInterval?: number;
+      desiredAccuracy?: number;
     },
     callback: (
       position: {
@@ -37,11 +39,25 @@ interface BackgroundGeolocationPlugin {
   ): Promise<string>;
   removeWatcher(options: { id: string }): Promise<void>;
   openSettings(): Promise<void>;
+  // Plugin exposes accuracy constants as static-ish values; we keep a fallback.
+  DESIRED_ACCURACY_HIGH?: number;
 }
 
 const isNative = (() => {
   try { return Capacitor.isNativePlatform(); } catch { return false; }
 })();
+
+export const getNativePlatform = (): "android" | "ios" | "web" => {
+  try {
+    const p = Capacitor.getPlatform();
+    if (p === "android" || p === "ios") return p;
+    return "web";
+  } catch {
+    return "web";
+  }
+};
+
+export const isAndroidNative = (): boolean => getNativePlatform() === "android";
 
 let plugin: BackgroundGeolocationPlugin | null = null;
 let watcherId: string | null = null;
@@ -66,15 +82,44 @@ export interface BackgroundPosition {
   timestamp: number;
 }
 
+export interface BackgroundGpsOptions {
+  /** Minimum meters between two emitted fixes. Lower = smoother. */
+  distanceFilter?: number;
+  /** Desired interval between updates (ms). Android. */
+  interval?: number;
+  /** Fastest interval the OS will deliver updates (ms). Android. */
+  fastestInterval?: number;
+  /** Interval for activity recognition (ms). Android. */
+  activitiesInterval?: number;
+  /** Plugin accuracy constant; defaults to HIGH (0). */
+  desiredAccuracy?: number;
+}
+
+// Sensible high-accuracy navigation defaults (Waze-like cadence).
+const DEFAULT_OPTIONS: Required<BackgroundGpsOptions> = {
+  distanceFilter: 2,
+  interval: 500,
+  fastestInterval: 250,
+  activitiesInterval: 1000,
+  // The Capacitor community plugin uses 0 for HIGH accuracy when the
+  // constant is not exposed at runtime.
+  desiredAccuracy: 0,
+};
+
 /**
  * Start a background watcher. Returns true if started (native), false otherwise.
  */
 export async function startBackgroundGps(
-  onPosition: (pos: BackgroundPosition) => void
+  onPosition: (pos: BackgroundPosition) => void,
+  options: BackgroundGpsOptions = {}
 ): Promise<boolean> {
   const p = getPlugin();
   if (!p) return false;
   if (watcherId) return true;
+
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const desiredAccuracy =
+    options.desiredAccuracy ?? p.DESIRED_ACCURACY_HIGH ?? DEFAULT_OPTIONS.desiredAccuracy;
 
   try {
     watcherId = await p.addWatcher(
@@ -83,7 +128,11 @@ export async function startBackgroundGps(
         backgroundTitle: "Navigation Tilo en cours",
         requestPermissions: true,
         stale: false,
-        distanceFilter: 5, // meters
+        distanceFilter: opts.distanceFilter,
+        interval: opts.interval,
+        fastestInterval: opts.fastestInterval,
+        activitiesInterval: opts.activitiesInterval,
+        desiredAccuracy,
       },
       (location, error) => {
         if (error) return;
