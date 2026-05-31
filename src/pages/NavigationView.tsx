@@ -1012,6 +1012,7 @@ const NavigationView = () => {
     return () => {
       disposed = true;
       unifiedWatch?.clear();
+      if (bgGpsStarted) stopBackgroundGps();
       if (calibrationTimerRef.current) clearTimeout(calibrationTimerRef.current);
       window.clearInterval(recoveryInterval);
     };
