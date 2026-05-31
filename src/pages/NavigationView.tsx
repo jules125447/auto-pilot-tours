@@ -941,17 +941,60 @@ const NavigationView = () => {
 
     let unifiedWatch: { clear: () => void } | null = null;
 
+    let bgGpsStarted = false;
+
     (async () => {
       await ensureLocationPermission();
       if (disposed) return;
       requestSingleHighAccuracyFix("initial");
-      unifiedWatch = await watchPositionUnified(
-        (pos) => processPosition(pos as unknown as GeolocationPosition, "watch"),
-        (err) => {
-          logGps("warn", "watch_error", { code: err.code, message: err.message });
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
-      );
+
+      if (isAndroidNative()) {
+        // Android: use @capacitor-community/background-geolocation as the
+        // sole GPS source — much smoother + survives screen-off.
+        const ok = await startBackgroundGps(
+          (bg: BackgroundPosition) => {
+            if (disposed) return;
+            const synthetic = {
+              coords: {
+                latitude: bg.latitude,
+                longitude: bg.longitude,
+                accuracy: bg.accuracy,
+                altitude: null,
+                altitudeAccuracy: null,
+                heading: bg.heading,
+                speed: bg.speed,
+              },
+              timestamp: bg.timestamp,
+            } as unknown as GeolocationPosition;
+            processPosition(synthetic, "watch");
+          },
+          {
+            distanceFilter: 2,
+            interval: 500,
+            fastestInterval: 250,
+            activitiesInterval: 1000,
+            // DESIRED_ACCURACY_HIGH
+            desiredAccuracy: 0,
+          }
+        );
+        bgGpsStarted = ok;
+        if (!ok) {
+          // Fallback to the unified watcher if the plugin didn't start.
+          unifiedWatch = await watchPositionUnified(
+            (pos) => processPosition(pos as unknown as GeolocationPosition, "watch"),
+            (err) => logGps("warn", "watch_error", { code: err.code, message: err.message }),
+            { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
+          );
+        }
+      } else {
+        unifiedWatch = await watchPositionUnified(
+          (pos) => processPosition(pos as unknown as GeolocationPosition, "watch"),
+          (err) => {
+            logGps("warn", "watch_error", { code: err.code, message: err.message });
+          },
+          { enableHighAccuracy: true, maximumAge: 0, timeout: HIGH_ACCURACY_TIMEOUT_MS }
+        );
+      }
     })();
 
     const recoveryInterval = window.setInterval(() => {
